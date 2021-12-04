@@ -70,9 +70,6 @@ ext {
 
 dependencies {
 
-    compileOnly 'org.projectlombok:lombok:1.18.22'
-    annotationProcessor 'org.projectlombok:lombok:1.18.22'
-
     implementation('com.github.tomasharkema:RetrofitCurlPrinter:0.0.1')
 
     implementation "com.squareup.retrofit2:retrofit:$retrofit_version"

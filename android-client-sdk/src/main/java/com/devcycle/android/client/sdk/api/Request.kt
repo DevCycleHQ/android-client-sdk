@@ -1,6 +1,9 @@
 package com.devcycle.android.client.sdk.api
 
+import com.devcycle.android.client.sdk.exception.DVCException
 import com.devcycle.android.client.sdk.model.BucketedUserConfig
+import com.devcycle.android.client.sdk.model.ErrorResponse
+import com.devcycle.android.client.sdk.model.HttpResponseCode
 import com.devcycle.android.client.sdk.model.User
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
@@ -8,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.IOException
 
 internal class Request {
     private var api: DVCApi? = null
@@ -29,6 +33,23 @@ internal class Request {
                 if (response.isSuccessful) {
                     val config = response.body()
                     callback.onSuccess(config)
+                } else {
+                    val httpResponseCode = HttpResponseCode.byCode(response.code())
+                    var errorResponse = ErrorResponse("Unknown Error", null)
+                    var dvcException = DVCException(httpResponseCode, errorResponse)
+                    if (response.errorBody() != null) {
+                        try {
+                            errorResponse = objectMapper.readValue(
+                                response.errorBody()!!.string(),
+                                ErrorResponse::class.java
+                            )
+                            dvcException = DVCException(httpResponseCode, errorResponse)
+                        } catch (e: IOException) {
+                            errorResponse.message = e.message
+                            dvcException = DVCException(httpResponseCode, errorResponse)
+                        }
+                    }
+                    callback.onError(dvcException)
                 }
             }
 

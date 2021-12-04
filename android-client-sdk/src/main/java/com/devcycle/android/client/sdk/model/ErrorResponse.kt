@@ -1,6 +1,6 @@
 /*
  * DevCycle Client SDK API
- * Documents the DevCycle Client SDK API which powers bucketing and descisions for DevCycle's client SDKs.
+ * Documents the DevCycle Client SDK API which powers bucketing and decisions for DevCycle's client SDKs.
  *
  * OpenAPI spec version: 1-oas3
  * 
@@ -12,66 +12,70 @@
 package com.devcycle.android.client.sdk.model
 
 import io.swagger.v3.oas.annotations.media.Schema
-import java.lang.StringBuilder
-import java.util.*
 
-/**
- * ErrorResponse
- */
 class ErrorResponse {
-    /**
-     * Error message
-     * @return message
-     */
-    @get:Schema(required = true, description = "Error message")
+    @Schema(required = true, description = "Error message")
     var message: String? = null
 
-    /**
-     * Additional error information detailing the error reasoning
-     * @return data
-     */
-    @get:Schema(description = "Additional error information detailing the error reasoning")
+    @Schema(description = "Additional error information detailing the error reasoning")
     var data: Any? = null
-    fun message(message: String?): ErrorResponse {
+
+    constructor(message: String?, data: Any?) {
         this.message = message
-        return this
+        this.data = data
     }
 
-    fun data(data: Any?): ErrorResponse {
-        this.data = data
-        return this
+    constructor() {}
+
+    class ErrorResponseBuilder internal constructor() {
+        private var message: String? = null
+        private var data: Any? = null
+        fun message(message: String?): ErrorResponseBuilder {
+            this.message = message
+            return this
+        }
+
+        fun data(data: Any?): ErrorResponseBuilder {
+            this.data = data
+            return this
+        }
+
+        fun build(): ErrorResponse {
+            return ErrorResponse(message, data)
+        }
+
+        override fun toString(): String {
+            return "ErrorResponse.ErrorResponseBuilder(message=" + message + ", data=" + data + ")"
+        }
     }
 
     override fun equals(o: Any?): Boolean {
-        if (this === o) {
-            return true
-        }
-        if (o == null || javaClass != o.javaClass) {
+        if (o == null) {
             return false
         }
-        val errorResponse = o as ErrorResponse
-        return message == errorResponse.message &&
-                data == errorResponse.data
+        if (o !is ErrorResponse) {
+            return false
+        }
+        val errorResponse = o
+        return (message == errorResponse.message
+                && data == errorResponse.data)
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(message, data)
+        val prime = 31
+        var result = 1
+        result = prime * result + if (message == null) 0 else message.hashCode()
+        result = prime * result + if (data == null) 0 else data.hashCode()
+        return result
     }
 
     override fun toString(): String {
-        val sb = StringBuilder()
-        sb.append("class ErrorResponse {\n")
-        sb.append("    message: ").append(toIndentedString(message)).append("\n")
-        sb.append("    data: ").append(toIndentedString(data)).append("\n")
-        sb.append("}")
-        return sb.toString()
+        return "ErrorResponse(message=" + message + ", data=" + data + ")"
     }
 
-    /**
-     * Convert the given object to string with each line indented by 4 spaces
-     * (except the first line).
-     */
-    private fun toIndentedString(o: Any?): String {
-        return o?.toString()?.replace("\n", "\n    ") ?: "null"
+    companion object {
+        fun builder(): ErrorResponseBuilder {
+            return ErrorResponseBuilder()
+        }
     }
 }

@@ -20,7 +20,9 @@ class DVCClient private constructor(
                 callback.onSuccess("Config loaded")
             }
 
-            override fun onError(t: Throwable?) {}
+            override fun onError(t: Throwable?) {
+                callback.onError(t)
+            }
         })
     }
 
