@@ -70,7 +70,7 @@ ext {
 
 dependencies {
 
-    implementation('com.github.tomasharkema:RetrofitCurlPrinter:0.0.1')
+    //implementation('com.github.tomasharkema:RetrofitCurlPrinter:0.0.1')
 
     implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
     implementation("com.squareup.retrofit2:converter-jackson:$retrofit_version")

@@ -2,11 +2,12 @@ package com.devcycle.android.client.sdk.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import android.os.Build
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
-import lombok.Data
 import java.util.*
 
-@Data
+@JsonDeserialize(builder = User.Builder::class)
 class User private constructor(
     userId: String?,
     email: String?,
@@ -23,7 +24,8 @@ class User private constructor(
     deviceModel: String,
     sdkType: String,
     sdkVersion: String,
-    isAnonymous: Boolean
+    isAnonymous: Boolean,
+    lastSeenDate: Long?
 ) {
     @JsonProperty("isAnonymous")
     private val isAnonymous: Boolean
@@ -92,10 +94,79 @@ class User private constructor(
     @JsonProperty("sdkVersion")
     private val sdkVersion: String
 
+    fun getIsAnonymous(): Boolean {
+        return isAnonymous;
+    }
+
+    fun getUserId(): String {
+        return userId
+    }
+
+    fun getEmail(): String? {
+        return email
+    }
+
+    fun getName(): String? {
+        return name
+    }
+
+    fun getLanguage(): String? {
+        return language
+    }
+
+    fun getCountry(): String? {
+        return country
+    }
+
+    fun getAppVersion(): String? {
+        return appVersion
+    }
+
+    fun getAppBuild(): String? {
+        return appBuild
+    }
+
+    fun getCustomData(): Any? {
+        return customData
+    }
+
+    fun getPrivateCustomData(): Any? {
+        return privateCustomData
+    }
+
+    fun getCreatedDate(): Long {
+        return createdDate
+    }
+
+    fun getLastSeenDate(): Long {
+        return lastSeenDate
+    }
+
+    fun getPlatform(): String {
+        return platform
+    }
+
+    fun getPlatformVersion(): String {
+        return platformVersion
+    }
+
+    fun getDeviceModel(): String {
+        return deviceModel
+    }
+
+    fun getSdkType(): String {
+        return sdkType
+    }
+
+    fun getSdkVersion(): String {
+        return sdkVersion
+    }
+
     fun updateUser() {
         lastSeenDate = Calendar.getInstance().time.time
     }
 
+    @JsonPOJOBuilder
     class Builder internal constructor() {
         private var userId: String? = null
         private var email: String? = null
@@ -107,60 +178,97 @@ class User private constructor(
         private var customData: Any? = null
         private var privateCustomData: Any? = null
         private var isAnonymous = true
-        private val createdDate = Calendar.getInstance().time.time
-        private val platform = "Android"
-        private val platformVersion = Build.VERSION.RELEASE
-        private val deviceModel = Build.MODEL
-        private val sdkType = "client"
-        private val sdkVersion = "0.0.1"
+        private var createdDate = Calendar.getInstance().time.time
+        private var platform = "Android"
+        private var platformVersion = Build.VERSION.RELEASE
+        private var deviceModel = Build.MODEL
+        private var sdkType = "client"
+        private var sdkVersion = "0.0.1"
+        private var lastSeenDate: Long? = null
 
-        fun userId(userId: String?): Builder {
+        @JsonProperty("user_id")
+        fun withUserId(userId: String?): Builder {
             this.userId = userId
             return this
         }
 
-        fun email(email: String?): Builder {
+        fun withEmail(email: String?): Builder {
             this.email = email
             return this
         }
 
-        fun name(name: String?): Builder {
+        fun withName(name: String?): Builder {
             this.name = name
             return this
         }
 
-        fun language(language: String?): Builder {
+        fun withLanguage(language: String?): Builder {
             this.language = language
             return this
         }
 
-        fun country(country: String?): Builder {
+        fun withCountry(country: String?): Builder {
             this.country = country
             return this
         }
 
-        fun appVersion(appVersion: String?): Builder {
+        fun withAppVersion(appVersion: String?): Builder {
             this.appVersion = appVersion
             return this
         }
 
-        fun appBuild(appBuild: String?): Builder {
+        fun withAppBuild(appBuild: String?): Builder {
             this.appBuild = appBuild
             return this
         }
 
-        fun customData(customData: Any?): Builder {
+        fun withCustomData(customData: Any?): Builder {
             this.customData = customData
             return this
         }
 
-        fun privateCustomData(privateCustomData: Any?): Builder {
+        fun withPrivateCustomData(privateCustomData: Any?): Builder {
             this.privateCustomData = privateCustomData
             return this
         }
 
-        fun isAnonymous(isAnonymous: Boolean): Builder {
+        fun withIsAnonymous(isAnonymous: Boolean): Builder {
             this.isAnonymous = isAnonymous
+            return this
+        }
+
+        private fun withCreatedDate(createdDate: Long): Builder {
+            this.createdDate = createdDate
+            return this
+        }
+
+        private fun withPlatform(platform: String): Builder {
+            this.platform = platform
+            return this
+        }
+
+        private fun withPlatformVersion(platformVersion: String): Builder {
+            this.platformVersion = platformVersion
+            return this
+        }
+
+        private fun withDeviceModel(deviceModel: String): Builder {
+            this.deviceModel = deviceModel
+            return this
+        }
+
+        private fun withSdkType(sdkType: String): Builder {
+            this.sdkType = sdkType
+            return this
+        }
+
+        private fun withSdkVersion(sdkVersion: String): Builder {
+            this.sdkVersion = sdkVersion
+            return this
+        }
+
+        private fun withLastSeenDate(lastSeenDate: Long): Builder {
+            this.lastSeenDate = lastSeenDate
             return this
         }
 
@@ -181,7 +289,8 @@ class User private constructor(
                 deviceModel,
                 sdkType,
                 sdkVersion,
-                isAnonymous
+                isAnonymous,
+                lastSeenDate
             )
         }
 
@@ -213,6 +322,6 @@ class User private constructor(
         this.deviceModel = deviceModel
         this.sdkType = sdkType
         this.sdkVersion = sdkVersion
-        lastSeenDate = Calendar.getInstance().time.time
+        this.lastSeenDate = lastSeenDate ?: Calendar.getInstance().time.time
     }
 }
