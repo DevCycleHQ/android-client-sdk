@@ -8,7 +8,7 @@ import com.devcycle.android.client.sdk.util.DVCSharedPrefs
 class DVCClient private constructor(
     private val context: Context,
     private val environmentKey: String,
-    private val user: User,
+    private var user: User,
     options: DVCOptions?,
 ) {
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
@@ -19,10 +19,8 @@ class DVCClient private constructor(
     }
 
     fun initialize(callback: DVCCallback<String?>) {
-        request.getConfigJson(environmentKey, user, object : DVCCallback<BucketedUserConfig?> {
+        fetchConfig(object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
-                config = result
-                dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
                 callback.onSuccess("Config loaded")
             }
 
@@ -32,8 +30,22 @@ class DVCClient private constructor(
         })
     }
 
-    fun identifyUser(): Variable {
-        throw NotImplementedError()
+    fun identifyUser(userId: String, callback: DVCCallback<Map<String, Variable<Any>>>) {
+        if (user.getUserId() == userId) {
+            user.updateUser()
+        } else {
+            user = User.builder().build()
+        }
+        fetchConfig(object : DVCCallback<BucketedUserConfig?> {
+            override fun onSuccess(result: BucketedUserConfig?) {
+                saveUser()
+                config?.variables?.let { callback.onSuccess(it) }
+            }
+
+            override fun onError(t: Throwable?) {
+                callback.onError(t)
+            }
+        })
     }
 
     fun resetUser() {
@@ -44,11 +56,11 @@ class DVCClient private constructor(
         return if (config == null) emptyMap() else config!!.features
     }
 
-    fun allVariables(): Map<String, Variable>? {
+    fun allVariables(): Map<String, Variable<Any>>? {
         return if (config == null) emptyMap() else config!!.variables
     }
 
-    fun <T> variable(key: String?, defaultValue: T): Variable {
+    fun <T> variable(key: String?, defaultValue: T): Variable<T> {
         throw NotImplementedError()
     }
 
@@ -60,8 +72,18 @@ class DVCClient private constructor(
         throw NotImplementedError()
     }
 
-    fun fetchConfig() {
-        throw NotImplementedError()
+    private fun <T> fetchConfig(callback: DVCCallback<T>) {
+        request.getConfigJson(environmentKey, user, object : DVCCallback<BucketedUserConfig?> {
+            override fun onSuccess(result: BucketedUserConfig?) {
+                config = result
+                dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
+                callback.onSuccess(result as T)
+            }
+
+            override fun onError(t: Throwable?) {
+                callback.onError(t)
+            }
+        })
     }
 
     class DVCClientBuilder {
