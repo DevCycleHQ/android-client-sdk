@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 /**
  * Variable
  */
-class Variable {
+class Variable<T> {
     /**
      * unique database id
      * @return _id
@@ -74,24 +74,5 @@ class Variable {
         required = true,
         description = "Variable value can be a string, number, boolean, or JSON"
     )
-    var value: Any? = null
-    fun id(id: String?): Variable {
-        this.id = id
-        return this
-    }
-
-    fun key(key: String?): Variable {
-        this.key = key
-        return this
-    }
-
-    fun type(type: TypeEnum?): Variable {
-        this.type = type
-        return this
-    }
-
-    fun value(value: Any?): Variable {
-        this.value = value
-        return this
-    }
+    var value: T? = null
 }

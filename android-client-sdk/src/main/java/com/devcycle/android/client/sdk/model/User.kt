@@ -5,6 +5,7 @@ import android.os.Build
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
+import java.lang.IllegalArgumentException
 import java.util.*
 
 @JsonDeserialize(builder = User.Builder::class)
@@ -36,35 +37,35 @@ class User private constructor(
 
     @Schema(description = "User's email used to identify the user on the dashboard / target audiences")
     @JsonProperty("email")
-    private val email: String?
+    private var email: String?
 
     @Schema(description = "User's name used to identify the user on the dashboard / target audiences")
     @JsonProperty("name")
-    private val name: String?
+    private var name: String?
 
     @Schema(description = "User's language in ISO 639-1 format")
     @JsonProperty("language")
-    private val language: String?
+    private var language: String?
 
     @Schema(description = "User's country in ISO 3166 alpha-2 format")
     @JsonProperty("country")
-    private val country: String?
+    private var country: String?
 
     @Schema(description = "App Version of the running application")
     @JsonProperty("appVersion")
-    private val appVersion: String?
+    private var appVersion: String?
 
     @Schema(description = "App Build number of the running application")
     @JsonProperty("appBuild")
-    private val appBuild: String?
+    private var appBuild: String?
 
     @Schema(description = "User's custom data to target the user with, data will be logged to DevCycle for use in dashboard.")
     @JsonProperty("customData")
-    private val customData: Any?
+    private var customData: Any?
 
     @Schema(description = "User's custom data to target the user with, data will not be logged to DevCycle only used for feature bucketing.")
     @JsonProperty("privateCustomData")
-    private val privateCustomData: Any?
+    private var privateCustomData: Any?
 
     @Schema(description = "Date the user was created, Unix epoch timestamp format")
     @JsonProperty("createdDate")
@@ -95,7 +96,7 @@ class User private constructor(
     private val sdkVersion: String
 
     fun getIsAnonymous(): Boolean {
-        return isAnonymous;
+        return isAnonymous
     }
 
     fun getUserId(): String {
@@ -162,8 +163,21 @@ class User private constructor(
         return sdkVersion
     }
 
-    fun updateUser() {
+    @Throws(IllegalArgumentException::class)
+    internal fun updateUser(user: UserParam): User {
+        if (this.userId != user.userId) {
+            throw IllegalArgumentException("Cannot update a user with a different userId")
+        }
+        email = user.email
+        name = user.name
+        language = user.language
+        country = user.country
+        appVersion = user.appVersion
+        appBuild = user.appBuild
+        customData = user.customData
+        privateCustomData = user.privateCustomData
         lastSeenDate = Calendar.getInstance().time.time
+        return this;
     }
 
     @JsonPOJOBuilder
@@ -269,6 +283,20 @@ class User private constructor(
 
         private fun withLastSeenDate(lastSeenDate: Long): Builder {
             this.lastSeenDate = lastSeenDate
+            return this
+        }
+
+        internal fun withUserParam(user: UserParam): Builder {
+            this.isAnonymous = user.isAnonymous
+            this.userId = user.userId
+            this.email = user.email
+            this.name = user.name
+            this.language = user.language
+            this.country = user.country
+            this.appVersion = user.appVersion
+            this.appBuild = user.appBuild
+            this.customData = user.customData
+            this.privateCustomData = user.privateCustomData
             return this
         }
 
