@@ -40,12 +40,12 @@ class DVCClient private constructor(
         throw NotImplementedError()
     }
 
-    fun allFeatures(): Map<String, Feature> {
-        throw NotImplementedError()
+    fun allFeatures(): Map<String, Feature>? {
+        return if (config == null) emptyMap() else config!!.features
     }
 
-    fun allVariables(): Map<String, Feature> {
-        throw NotImplementedError()
+    fun allVariables(): Map<String, Variable>? {
+        return if (config == null) emptyMap() else config!!.variables
     }
 
     fun <T> variable(key: String?, defaultValue: T): Variable {
