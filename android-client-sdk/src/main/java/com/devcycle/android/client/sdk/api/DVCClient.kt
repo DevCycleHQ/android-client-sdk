@@ -1,7 +1,6 @@
 package com.devcycle.android.client.sdk.api
 
 import android.content.Context
-import android.util.Log
 import com.devcycle.android.client.sdk.model.*
 import com.devcycle.android.client.sdk.util.DVCSharedPrefs
 
@@ -30,11 +29,11 @@ class DVCClient private constructor(
         })
     }
 
-    fun identifyUser(userId: String, callback: DVCCallback<Map<String, Variable<Any>>>) {
-        if (user.getUserId() == userId) {
-            user.updateUser()
+    fun identifyUser(user: UserParam, callback: DVCCallback<Map<String, Variable<Any>>>) {
+        if (this.user.getUserId() == user.userId) {
+            this.user.updateUser(user)
         } else {
-            user = User.builder().build()
+            this.user = generateNewUser(user)
         }
         fetchConfig(object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
@@ -72,6 +71,21 @@ class DVCClient private constructor(
         throw NotImplementedError()
     }
 
+    private fun generateNewUser(user: UserParam): User {
+        return User.builder()
+            .withIsAnonymous(user.isAnonymous)
+            .withUserId(user.userId)
+            .withEmail(user.email)
+            .withName(user.name)
+            .withLanguage(user.language)
+            .withCountry(user.country)
+            .withAppVersion(user.appVersion)
+            .withAppBuild(user.appBuild)
+            .withCustomData(user.customData)
+            .withPrivateCustomData(user.privateCustomData)
+            .build()
+    }
+
     private fun <T> fetchConfig(callback: DVCCallback<T>) {
         request.getConfigJson(environmentKey, user, object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
@@ -87,13 +101,13 @@ class DVCClient private constructor(
     }
 
     class DVCClientBuilder {
-        private var context: Context? = null;
+        private var context: Context? = null
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
         fun withContext(context: Context?): DVCClientBuilder {
-            this.context = context;
-            return this;
+            this.context = context
+            return this
         }
         fun withEnvironmentKey(environmentKey: String?): DVCClientBuilder {
             this.environmentKey = environmentKey
