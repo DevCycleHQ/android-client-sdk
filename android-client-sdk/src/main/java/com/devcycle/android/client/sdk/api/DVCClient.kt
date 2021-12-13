@@ -1,22 +1,28 @@
 package com.devcycle.android.client.sdk.api
 
+import android.content.Context
+import android.util.Log
 import com.devcycle.android.client.sdk.model.*
+import com.devcycle.android.client.sdk.util.DVCSharedPrefs
 
 class DVCClient private constructor(
+    private val context: Context,
     private val environmentKey: String,
     private val user: User,
-    options: DVCOptions?
+    options: DVCOptions?,
 ) {
+    private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request()
     private var config: BucketedUserConfig? = null
     private fun saveUser() {
-        throw NotImplementedError()
+        dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
     fun initialize(callback: DVCCallback<String?>) {
         request.getConfigJson(environmentKey, user, object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
                 config = result
+                dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
                 callback.onSuccess("Config loaded")
             }
 
@@ -59,28 +65,34 @@ class DVCClient private constructor(
     }
 
     class DVCClientBuilder {
+        private var context: Context? = null;
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
-        fun environmentKey(environmentKey: String?): DVCClientBuilder {
+        fun withContext(context: Context?): DVCClientBuilder {
+            this.context = context;
+            return this;
+        }
+        fun withEnvironmentKey(environmentKey: String?): DVCClientBuilder {
             this.environmentKey = environmentKey
             return this
         }
 
-        fun user(user: User?): DVCClientBuilder {
+        fun withUser(user: User?): DVCClientBuilder {
             this.user = user
             return this
         }
 
-        fun options(options: DVCOptions?): DVCClientBuilder {
+        fun withOptions(options: DVCOptions?): DVCClientBuilder {
             this.options = options
             return this
         }
 
         fun build(): DVCClient {
+            requireNotNull(context) { "Context must be set" }
             require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
             requireNotNull(user) { "User must be set" }
-            return DVCClient(environmentKey!!, user!!, options)
+            return DVCClient(context!!, environmentKey!!, user!!, options)
         }
     }
 
@@ -88,6 +100,10 @@ class DVCClient private constructor(
         fun builder(): DVCClientBuilder {
             return DVCClientBuilder()
         }
+    }
+
+    init {
+        saveUser()
     }
 
 }

@@ -11,13 +11,14 @@
  */
 package com.devcycle.android.client.sdk.model
 
-import lombok.AllArgsConstructor
-import lombok.Data
-import lombok.NoArgsConstructor
-
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 class DVCResponse {
-    private val message: String? = null
+    private var message: String? = null
+
+    fun getMessage(): String? {
+        return message
+    }
+
+    fun setMessage(message: String?) {
+        this.message = message
+    }
 }
