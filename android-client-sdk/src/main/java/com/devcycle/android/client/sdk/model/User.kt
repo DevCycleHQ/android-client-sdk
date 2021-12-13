@@ -165,7 +165,7 @@ class User private constructor(
 
     @Throws(IllegalArgumentException::class)
     internal fun updateUser(user: UserParam): User {
-        if (this.userId !== user.userId) {
+        if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
         email = user.email
