@@ -33,7 +33,7 @@ class DVCClient private constructor(
         if (this.user.getUserId() == user.userId) {
             this.user.updateUser(user)
         } else {
-            this.user = generateNewUser(user)
+            this.user = User.builder().withUserParam(user).build()
         }
         fetchConfig(object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
@@ -69,21 +69,6 @@ class DVCClient private constructor(
 
     fun flushEvents() {
         throw NotImplementedError()
-    }
-
-    private fun generateNewUser(user: UserParam): User {
-        return User.builder()
-            .withIsAnonymous(user.isAnonymous)
-            .withUserId(user.userId)
-            .withEmail(user.email)
-            .withName(user.name)
-            .withLanguage(user.language)
-            .withCountry(user.country)
-            .withAppVersion(user.appVersion)
-            .withAppBuild(user.appBuild)
-            .withCustomData(user.customData)
-            .withPrivateCustomData(user.privateCustomData)
-            .build()
     }
 
     private fun <T> fetchConfig(callback: DVCCallback<T>) {

@@ -164,7 +164,7 @@ class User private constructor(
     }
 
     @Throws(IllegalArgumentException::class)
-    fun updateUser(user: UserParam): User {
+    internal fun updateUser(user: UserParam): User {
         if (this.userId !== user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
@@ -283,6 +283,20 @@ class User private constructor(
 
         private fun withLastSeenDate(lastSeenDate: Long): Builder {
             this.lastSeenDate = lastSeenDate
+            return this
+        }
+
+        internal fun withUserParam(user: UserParam): Builder {
+            this.isAnonymous = user.isAnonymous
+            this.userId = user.userId
+            this.email = user.email
+            this.name = user.name
+            this.language = user.language
+            this.country = user.country
+            this.appVersion = user.appVersion
+            this.appBuild = user.appBuild
+            this.customData = user.customData
+            this.privateCustomData = user.privateCustomData
             return this
         }
 
