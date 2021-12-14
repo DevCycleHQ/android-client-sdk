@@ -47,8 +47,23 @@ class DVCClient private constructor(
         })
     }
 
-    fun resetUser() {
-        throw NotImplementedError()
+    fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>) {
+        val user: User? = dvcSharedPrefs.getCache(DVCSharedPrefs.UserKey)
+        if (user == null || !user.getIsAnonymous()) {
+            this.user = User.builder()
+                .withIsAnonymous(true)
+                .build()
+        }
+        fetchConfig(object : DVCCallback<BucketedUserConfig?> {
+            override fun onSuccess(result: BucketedUserConfig?) {
+                saveUser()
+                config?.variables?.let { callback.onSuccess(it) }
+            }
+
+            override fun onError(t: Throwable?) {
+                callback.onError(t)
+            }
+        })
     }
 
     fun allFeatures(): Map<String, Feature>? {
