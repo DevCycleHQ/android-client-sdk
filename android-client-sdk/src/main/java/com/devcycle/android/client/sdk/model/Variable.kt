@@ -11,6 +11,7 @@
  */
 package com.devcycle.android.client.sdk.model
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
@@ -75,4 +76,37 @@ class Variable<T> {
         description = "Variable value can be a string, number, boolean, or JSON"
     )
     var value: T? = null
+
+    @JsonIgnore
+    var isDefaulted: Boolean? = null
+
+    @JsonIgnore
+    var evalReason: String? = null
+
+    fun updateVariable(variable: Variable<Any>) {
+        id = variable.id
+        value = variable.value as T?
+        isDefaulted = false
+        type = variable.type
+        evalReason = variable.evalReason
+    }
+
+    companion object {
+        internal fun <T> initializeFromVariable(key: String, defaultValue: T, variable: Variable<Any>?): Variable<T> {
+            val returnVariable = Variable<T>();
+            if (variable != null) {
+                returnVariable.id = variable.id
+                returnVariable.key = variable.key
+                returnVariable.value = variable.value as T?
+                returnVariable.type = variable.type
+                returnVariable.evalReason = variable.evalReason
+                returnVariable.isDefaulted = variable.isDefaulted
+            } else {
+                returnVariable.key = key
+                returnVariable.value = defaultValue
+                returnVariable.isDefaulted = true
+            }
+            return returnVariable
+        }
+    }
 }

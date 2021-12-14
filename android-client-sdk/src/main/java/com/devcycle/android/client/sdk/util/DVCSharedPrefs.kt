@@ -20,7 +20,7 @@ class DVCSharedPrefs(context: Context) {
     private val objectMapper: ObjectMapper = ObjectMapper()
 
     companion object {
-        private val TAG = DVCSharedPrefs::class.java.simpleName
+        private val TAG = DVCSharedPrefs::class.simpleName
         const val UserKey = "USER"
         const val ConfigKey = "CONFIG"
         private val prefs: MutableMap<String, TypeReference<*>> = HashMap()
