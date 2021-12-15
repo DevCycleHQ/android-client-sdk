@@ -8,11 +8,11 @@ class PCLClient {
     private var config: BucketedUserConfig? = null
     private val support: PropertyChangeSupport = PropertyChangeSupport(this)
 
-    fun addPropertyChangeListener(listener: PropertyChangeListener?) {
+    fun addPropertyChangeListener(listener: PropertyChangeListener) {
         support.addPropertyChangeListener(listener)
     }
 
-    fun removePropertyChangeListener(listener: PropertyChangeListener?) {
+    fun removePropertyChangeListener(listener: PropertyChangeListener) {
         support.removePropertyChangeListener(listener)
     }
 

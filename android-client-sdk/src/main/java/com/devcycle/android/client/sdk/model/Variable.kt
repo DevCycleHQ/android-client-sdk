@@ -21,7 +21,8 @@ import java.beans.PropertyChangeListener
 /**
  * Variable
  */
-class Variable<T>: PropertyChangeListener {
+class Variable<T> private constructor() : PropertyChangeListener {
+
     /**
      * unique database id
      * @return _id
@@ -85,7 +86,10 @@ class Variable<T>: PropertyChangeListener {
     @JsonIgnore
     var evalReason: String? = null
 
-    fun updateVariable(variable: Variable<Any>) {
+    @JsonIgnore
+    var defaultValue: T? = null
+
+    private fun updateVariable(variable: Variable<Any>) {
         id = variable.id
         value = variable.value as T?
         isDefaulted = false
@@ -94,7 +98,7 @@ class Variable<T>: PropertyChangeListener {
     }
 
     companion object {
-        internal fun <T> initializeFromVariable(key: String, defaultValue: T, variable: Variable<Any>?): Variable<T> {
+        @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, variable: Variable<Any>?): Variable<T> {
             val returnVariable = Variable<T>();
             if (variable != null) {
                 returnVariable.id = variable.id
@@ -106,15 +110,31 @@ class Variable<T>: PropertyChangeListener {
             } else {
                 returnVariable.key = key
                 returnVariable.value = defaultValue
+                returnVariable.defaultValue = defaultValue
                 returnVariable.isDefaulted = true
+                returnVariable.type = getType(defaultValue)
             }
             return returnVariable
         }
+
+        private fun <T: Any> getType(value: T): TypeEnum? {
+            val typeClass = value::class.java
+
+            val typeEnum = when {
+                typeClass.isAssignableFrom(String::class.java) -> TypeEnum.STRING
+                typeClass.isAssignableFrom(Number::class.java) -> TypeEnum.NUMBER
+                typeClass.isAssignableFrom(Boolean::class.java) -> TypeEnum.BOOLEAN
+                typeClass.isAssignableFrom(Any::class.java) -> TypeEnum.JSON
+                else -> null
+            }
+
+            return typeEnum
+        }
     }
 
-    override fun propertyChange(evt: PropertyChangeEvent?) {
-        val config = evt!!.newValue as BucketedUserConfig
-        val variable: Variable<Any>? = config?.variables?.get(key)
+    override fun propertyChange(evt: PropertyChangeEvent) {
+        val config = evt.newValue as BucketedUserConfig
+        val variable: Variable<Any>? = config.variables?.get(key)
         if (variable != null) {
             updateVariable(variable)
         }

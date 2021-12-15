@@ -5,13 +5,18 @@ import com.devcycle.android.client.sdk.listener.PCLClient
 import com.devcycle.android.client.sdk.model.*
 import com.devcycle.android.client.sdk.util.DVCSharedPrefs
 
+/**
+ * Main entry point for SDK user
+ * The class is constructed by calling DVCClient.builder().build()
+ * initialize(DVCCallback<String?> must be called to properly initialize the client and retrieve
+ * the configuration
+ */
 class DVCClient private constructor(
     private val context: Context,
     private val environmentKey: String,
     private var user: User,
     options: DVCOptions?,
 ) {
-    private val TAG = DVCClient::class.simpleName
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request()
     private val observable: PCLClient = PCLClient()
@@ -30,6 +35,14 @@ class DVCClient private constructor(
         })
     }
 
+    /**
+     * Updates or builds a new User and fetches the latest config for that User
+     *
+     * [user] is a lightweight User object that can identify and update the current User or will
+     * build a new one.
+     * [callback] is provided by the SDK user and will callback with the Map of Variables in the
+     * latest config when fetched from the API
+     */
     fun identifyUser(user: UserParam, callback: DVCCallback<Map<String, Variable<Any>>>) {
         if (this.user.getUserId() == user.userId) {
             this.user.updateUser(user)
@@ -48,6 +61,12 @@ class DVCClient private constructor(
         })
     }
 
+    /**
+     * Uses or builds a new Anonymous User and fetches the latest config
+     *
+     * [callback] is provided by the SDK user and will callback with the Map of Variables in the
+     * latest config when fetched from the API
+     */
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>) {
         val user: User? = dvcSharedPrefs.getCache(DVCSharedPrefs.UserKey)
         if (user == null || !user.getIsAnonymous()) {
@@ -67,21 +86,32 @@ class DVCClient private constructor(
         })
     }
 
+    /**
+     * Returns the Map of Features in the config
+     */
     fun allFeatures(): Map<String, Feature>? {
         return if (config == null) emptyMap() else config!!.features
     }
 
+    /**
+     * Returns the Map of Variables in the config
+     */
     fun allVariables(): Map<String, Variable<Any>>? {
         return if (config == null) emptyMap() else config!!.variables
     }
 
-    fun <T> variable(key: String, defaultValue: T): Variable<T> {
+    /**
+     * Retrieve a Variable from the config
+     *
+     * [key] is used to identify the Variable in the config
+     * [defaultValue] is set on the Variable and used to provide a default value if the Variable
+     * could not be fetched or does not exist
+     */
+    fun <T: Any> variable(key: String, defaultValue: T): Variable<T> {
         val variableByKey: Variable<Any>? = config?.variables?.get(key)
         val variable = Variable.initializeFromVariable(key, defaultValue, variableByKey)
 
-        if (variable.isDefaulted == true) {
-            observable.addPropertyChangeListener(variable)
-        }
+        observable.addPropertyChangeListener(variable)
 
         return variable
     }
@@ -117,16 +147,16 @@ class DVCClient private constructor(
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
-        fun withContext(context: Context?): DVCClientBuilder {
+        fun withContext(context: Context): DVCClientBuilder {
             this.context = context
             return this
         }
-        fun withEnvironmentKey(environmentKey: String?): DVCClientBuilder {
+        fun withEnvironmentKey(environmentKey: String): DVCClientBuilder {
             this.environmentKey = environmentKey
             return this
         }
 
-        fun withUser(user: User?): DVCClientBuilder {
+        fun withUser(user: User): DVCClientBuilder {
             this.user = user
             return this
         }
@@ -153,5 +183,4 @@ class DVCClient private constructor(
     init {
         saveUser()
     }
-
 }
