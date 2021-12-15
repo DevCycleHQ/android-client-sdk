@@ -1,15 +1,9 @@
 package com.devcycle.android.client.sdk.api
 
 import android.content.Context
-import android.util.Log
+import com.devcycle.android.client.sdk.listener.PCLClient
 import com.devcycle.android.client.sdk.model.*
 import com.devcycle.android.client.sdk.util.DVCSharedPrefs
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 class DVCClient private constructor(
     private val context: Context,
@@ -20,26 +14,13 @@ class DVCClient private constructor(
     private val TAG = DVCClient::class.simpleName
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request()
+    private val observable: PCLClient = PCLClient()
     private var config: BucketedUserConfig? = null
-    private val lock = ReentrantLock()
-    private val lockCondition = lock.newCondition()
-    private val isInitialized = AtomicBoolean(false)
-    private var onInitialized: Future<Boolean>? = null
-
-    private val executor = Executors.newSingleThreadExecutor { r: Runnable? ->
-        val t = Thread(r)
-        t.name = "DevCycle.DVCClient.InitThread"
-        t.isDaemon = true
-        t
-    }
 
     fun initialize(callback: DVCCallback<String?>) {
         fetchConfig(object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
-                isInitialized.set(true)
-                lock.withLock {
-                    lockCondition.signalAll()
-                }
+                observable.configInitialized(result)
                 callback.onSuccess("Config loaded")
             }
 
@@ -99,7 +80,7 @@ class DVCClient private constructor(
         val variable = Variable.initializeFromVariable(key, defaultValue, variableByKey)
 
         if (variable.isDefaulted == true) {
-            callbackVariableWhenInitialized(key, variable);
+            observable.addPropertyChangeListener(variable)
         }
 
         return variable
@@ -111,41 +92,6 @@ class DVCClient private constructor(
 
     fun flushEvents() {
         throw NotImplementedError()
-    }
-
-    private fun internalInitialize(): Future<Boolean>? {
-        return executor.submit<Boolean> {
-            while (!isInitialized.get()) {
-                lock.withLock {
-                    try {
-                        lockCondition.await()
-                    } catch (e: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        Log.e(TAG, "Thread interrupted", e)
-                    }
-                }
-            }
-            isInitialized.get()
-        }
-    }
-
-    private fun <T> callbackVariableWhenInitialized(key: String, variable: Variable<T>) {
-        executor.submit {
-            try {
-                val isInitialized = onInitialized!!.get()
-                if (isInitialized) {
-                    val initializedVariable: Variable<Any>? = config?.variables?.get(key)
-                    if (initializedVariable != null) {
-                        variable.updateVariable(initializedVariable)
-                    }
-                }
-            } catch (e: ExecutionException) {
-                Log.e(TAG, "Task aborted", e)
-            } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
-                Log.e(TAG, "Thread interrupted", e)
-            }
-        }
     }
 
     private fun saveUser() {
@@ -206,7 +152,6 @@ class DVCClient private constructor(
 
     init {
         saveUser()
-        onInitialized = internalInitialize()
     }
 
 }

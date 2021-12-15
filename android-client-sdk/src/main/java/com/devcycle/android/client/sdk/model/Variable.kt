@@ -15,11 +15,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
+import java.beans.PropertyChangeEvent
+import java.beans.PropertyChangeListener
 
 /**
  * Variable
  */
-class Variable<T> {
+class Variable<T>: PropertyChangeListener {
     /**
      * unique database id
      * @return _id
@@ -107,6 +109,14 @@ class Variable<T> {
                 returnVariable.isDefaulted = true
             }
             return returnVariable
+        }
+    }
+
+    override fun propertyChange(evt: PropertyChangeEvent?) {
+        val config = evt!!.newValue as BucketedUserConfig
+        val variable: Variable<Any>? = config?.variables?.get(key)
+        if (variable != null) {
+            updateVariable(variable)
         }
     }
 }
