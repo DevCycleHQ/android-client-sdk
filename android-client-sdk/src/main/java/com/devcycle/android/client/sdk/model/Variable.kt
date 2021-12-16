@@ -11,7 +11,7 @@
  */
 package com.devcycle.android.client.sdk.model
 
-import android.util.Log
+import com.devcycle.android.client.sdk.exception.DVCVariableException
 import com.devcycle.android.client.sdk.listener.BucketedUserConfigListener
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
+import java.lang.IllegalArgumentException
 
 /**
  * Variable
@@ -91,7 +92,11 @@ class Variable<T> private constructor() : PropertyChangeListener {
     @JsonIgnore
     var defaultValue: T? = null
 
+    @Throws(IllegalArgumentException::class)
     private fun updateVariable(variable: Variable<Any>) {
+        if (variable.type != type) {
+            throw DVCVariableException("Cannot update Variable with a different type", this as Variable<Any>, variable)
+        }
         id = variable.id
         if (variable.value != value) {
             // TODO: Notify SDK user listener that value has changed

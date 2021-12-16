@@ -1,6 +1,6 @@
 package com.devcycle.android.client.sdk.api
 
-import com.devcycle.android.client.sdk.exception.DVCException
+import com.devcycle.android.client.sdk.exception.DVCConfigRequestException
 import com.devcycle.android.client.sdk.model.BucketedUserConfig
 import com.devcycle.android.client.sdk.model.ErrorResponse
 import com.devcycle.android.client.sdk.model.HttpResponseCode
@@ -36,17 +36,17 @@ internal class Request {
                 } else {
                     val httpResponseCode = HttpResponseCode.byCode(response.code())
                     var errorResponse = ErrorResponse("Unknown Error", null)
-                    var dvcException = DVCException(httpResponseCode, errorResponse)
+                    var dvcException = DVCConfigRequestException(httpResponseCode, errorResponse)
                     if (response.errorBody() != null) {
                         try {
                             errorResponse = objectMapper.readValue(
                                 response.errorBody()!!.string(),
                                 ErrorResponse::class.java
                             )
-                            dvcException = DVCException(httpResponseCode, errorResponse)
+                            dvcException = DVCConfigRequestException(httpResponseCode, errorResponse)
                         } catch (e: IOException) {
                             errorResponse.message = e.message
-                            dvcException = DVCException(httpResponseCode, errorResponse)
+                            dvcException = DVCConfigRequestException(httpResponseCode, errorResponse)
                         }
                     }
                     callback.onError(dvcException)
