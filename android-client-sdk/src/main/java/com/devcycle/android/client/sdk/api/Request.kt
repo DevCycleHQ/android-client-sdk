@@ -14,18 +14,18 @@ import retrofit2.Response
 import java.io.IOException
 
 internal class Request {
-    private var api: DVCApi? = null
+    private val api = DVCApiClient().initialize()
     private val objectMapper = ObjectMapper()
     @Synchronized
     fun getConfigJson(
-        environmentKey: String?,
-        user: User?,
+        environmentKey: String,
+        user: User,
         callback: DVCCallback<BucketedUserConfig?>
     ) {
         val map =
-            objectMapper.convertValue(user, object : TypeReference<Map<String?, String?>?>() {})
-        val call = api!!.getConfigJson(environmentKey, map)
-        call!!.enqueue(object : Callback<BucketedUserConfig?> {
+            objectMapper.convertValue(user, object : TypeReference<Map<String, String>>() {})
+        val call = api.getConfigJson(environmentKey, map)
+        call.enqueue(object : Callback<BucketedUserConfig?> {
             override fun onResponse(
                 call: Call<BucketedUserConfig?>,
                 response: Response<BucketedUserConfig?>
@@ -60,7 +60,6 @@ internal class Request {
     }
 
     init {
-        api = DVCApiClient().initialize()
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
     }
 }
