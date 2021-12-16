@@ -23,7 +23,7 @@ class DVCClient private constructor(
                 callback.onSuccess("Config loaded")
             }
 
-            override fun onError(t: Throwable?) {
+            override fun onError(t: Throwable) {
                 callback.onError(t)
             }
         })
@@ -41,7 +41,7 @@ class DVCClient private constructor(
                 config?.variables?.let { callback.onSuccess(it) }
             }
 
-            override fun onError(t: Throwable?) {
+            override fun onError(t: Throwable) {
                 callback.onError(t)
             }
         })
@@ -60,7 +60,7 @@ class DVCClient private constructor(
                 config?.variables?.let { callback.onSuccess(it) }
             }
 
-            override fun onError(t: Throwable?) {
+            override fun onError(t: Throwable) {
                 callback.onError(t)
             }
         })
@@ -94,7 +94,7 @@ class DVCClient private constructor(
                 callback.onSuccess(result as T)
             }
 
-            override fun onError(t: Throwable?) {
+            override fun onError(t: Throwable) {
                 callback.onError(t)
             }
         })
