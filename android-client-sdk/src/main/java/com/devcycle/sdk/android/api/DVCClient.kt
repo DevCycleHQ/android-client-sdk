@@ -115,11 +115,25 @@ class DVCClient private constructor(
         return variable
     }
 
-    fun track(event: DVCEvent, callback: DVCCallback<DVCResponse?>? = null) {
+    /**
+     * Track a custom event for the current user. Requires the SDK to have finished initializing.
+     *
+     * [event] instance of an event object to submit
+     * [callback] callback which is called when the event has finished submitting (or failed)
+     */
+    fun track(event: DVCEvent, callback: DVCCallback<String?>? = null) {
         val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
 
         val parsedEvent = Event.fromDVCEvent(event, user, tmpConfig)
-        request.trackEvent(environmentKey, user, parsedEvent, callback)
+        request.trackEvent(environmentKey, user, parsedEvent, object : DVCCallback<DVCResponse?> {
+            override fun onSuccess(result: DVCResponse?) {
+                callback?.onSuccess("Successfully received event")
+            }
+
+            override fun onError(t: Throwable) {
+                callback?.onError(t)
+            }
+        })
     }
 
     fun flushEvents() {

@@ -10,8 +10,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.devcycle.sdk.android.helpers.WhiteBox;
-import com.devcycle.sdk.android.model.User;
-import com.devcycle.sdk.android.model.UserParam;
+import com.devcycle.sdk.android.model.DVCUser;
 import com.devcycle.sdk.android.model.Variable;
 
 import org.junit.Assert;
@@ -21,7 +20,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -56,10 +54,10 @@ public class DVCClientTest {
 
         client = DVCClient.Companion.builder()
                 .withContext(mockContext)
-                .withUser(User.Companion.builder()
-                        .withUserId("j_test")
-                        .withIsAnonymous(false)
-                        .build())
+                .withUser(DVCUser(
+                        userId = "j_test",
+                        isAnonymous = false
+                ))
                 .withEnvironmentKey("add-client-sdk")
                 .build();
 

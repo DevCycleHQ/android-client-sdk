@@ -18,11 +18,11 @@ class ErrorResponse {
     var message: String? = null
 
     @Schema(description = "Additional error information detailing the error reasoning")
-    var error: Any? = null
+    var data: Any? = null
 
     constructor(message: String?, data: Any?) {
         this.message = message
-        this.error = data
+        this.data = data
     }
 
     constructor() {}
@@ -58,19 +58,19 @@ class ErrorResponse {
         }
         val errorResponse = o
         return (message == errorResponse.message
-                && error == errorResponse.error)
+                && data == errorResponse.data)
     }
 
     override fun hashCode(): Int {
         val prime = 31
         var result = 1
         result = prime * result + if (message == null) 0 else message.hashCode()
-        result = prime * result + if (error == null) 0 else error.hashCode()
+        result = prime * result + if (data == null) 0 else data.hashCode()
         return result
     }
 
     override fun toString(): String {
-        return "ErrorResponse(message=" + message + ", data=" + error + ")"
+        return "ErrorResponse(message=" + message + ", data=" + data + ")"
     }
 
     companion object {

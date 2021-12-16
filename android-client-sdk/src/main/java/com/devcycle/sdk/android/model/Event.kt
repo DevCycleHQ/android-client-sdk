@@ -1,8 +1,6 @@
 package com.devcycle.sdk.android.model
 
-import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
-import java.util.*
 
 internal class Event private constructor(
     private var type: String,
@@ -11,9 +9,15 @@ internal class Event private constructor(
     private var target: String? = null,
     private var clientDate: Long,
     private var value: BigDecimal? = null,
-    private var metaData: Any? = null
+    private var metaData: Map<String, Any>? = null
 ){
+    private var date = clientDate
+
     fun getType(): String {
+        return "customType"
+    }
+
+    fun getCustomType(): String {
         return type
     }
 
@@ -33,11 +37,15 @@ internal class Event private constructor(
         return clientDate
     }
 
+    fun getDate(): Long {
+        return date
+    }
+
     fun getValue(): BigDecimal? {
         return value
     }
 
-    fun getMetaData(): Any? {
+    fun getMetaData(): Map<String, Any>? {
         return metaData
     }
 
@@ -57,7 +65,7 @@ internal class Event private constructor(
         this.value = value
     }
 
-    fun setMetaData(metaData: Any) {
+    fun setMetaData(metaData: Map<String, Any>) {
         this.metaData = metaData
     }
 
