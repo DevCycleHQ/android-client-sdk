@@ -1,6 +1,6 @@
 package com.devcycle.android.client.sdk.listener
 
-import com.devcycle.android.client.sdk.model.BucketedUserConfig
+import com.devcycle.sdk.android.model.BucketedUserConfig
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 

@@ -3,10 +3,10 @@ package com.devcycle.sdk.android.util
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.devcycle.sdk.android.R
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.devcycle.sdk.R
 import com.devcycle.sdk.android.model.User
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference

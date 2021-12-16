@@ -43,7 +43,7 @@ public class DVCClientTest {
     private final Request request = new Request();
 
     private DVCClient client;
-    //private Variable<String> not_activated;
+    private Variable<String> not_activated;
 
     @Before
     public void setup() {
@@ -95,34 +95,34 @@ public class DVCClientTest {
         countDownLatch.await();
     }
 
-//    @Test
-//    public void getVariableWhenClientInitialized() throws InterruptedException {
-//        when(apiInterface.getConfigJson(anyString(), anyMap())).thenReturn(dvcApiMock.getConfigJson(anyString(), anyMap()));
-//
-//        CountDownLatch countDownLatch = new CountDownLatch(1);
-//
-//        not_activated = client.variable("activate-flag", "Not activated");
-//
-//        client.initialize(new DVCCallback<String>() {
-//            @Override
-//            public void onSuccess(String result) {
-//                try {
-//                    Thread.sleep(1L);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//                Assert.assertEquals("Flag activated!", not_activated.getValue());
-//                countDownLatch.countDown();
-//            }
-//
-//            @Override
-//            public void onError(Throwable t) {
-//                countDownLatch.countDown();
-//            }
-//        });
-//
-//        countDownLatch.await();
-//    }
+    @Test
+    public void getVariableWhenClientInitialized() throws InterruptedException {
+        when(apiInterface.getConfigJson(anyString(), anyMap())).thenReturn(dvcApiMock.getConfigJson(anyString(), anyMap()));
+
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+
+        not_activated = client.variable("activate-flag", "Not activated");
+
+        client.initialize(new DVCCallback<String>() {
+            @Override
+            public void onSuccess(String result) {
+                try {
+                    Thread.sleep(1L);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Assert.assertEquals("Flag activated!", not_activated.getValue());
+                countDownLatch.countDown();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                countDownLatch.countDown();
+            }
+        });
+
+        countDownLatch.await();
+    }
 //
 //    @Test
 //    public void doStuff() throws InterruptedException {

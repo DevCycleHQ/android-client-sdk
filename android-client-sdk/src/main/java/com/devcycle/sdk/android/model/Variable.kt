@@ -11,8 +11,8 @@
  */
 package com.devcycle.sdk.android.model
 
-import com.devcycle.android.client.sdk.exception.DVCVariableException
 import com.devcycle.android.client.sdk.listener.BucketedUserConfigListener
+import com.devcycle.sdk.android.exception.DVCVariableException
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
