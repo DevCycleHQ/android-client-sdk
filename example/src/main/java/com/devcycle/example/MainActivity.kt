@@ -19,8 +19,7 @@ class MainActivity : AppCompatActivity() {
                     .withIsAnonymous(false)
                     .build()
             )
-            .withEnvironmentKey("client-5c500374-89ec-4af2-99b9-78b535387d2f")
-            //.environmentKey("add-client-sdk")
+            .withEnvironmentKey("add-client-sdk")
             .build()
 
         client.initialize(object : DVCCallback<String?> {
