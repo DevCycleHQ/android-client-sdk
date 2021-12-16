@@ -3,8 +3,8 @@ package com.devcycle.example
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.devcycle.android.client.sdk.api.DVCCallback
-import com.devcycle.android.client.sdk.api.DVCClient
+import com.devcycle.sdk.android.api.DVCCallback
+import com.devcycle.sdk.android.api.DVCClient
 
 class MainActivity : AppCompatActivity() {
 
@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
         val client: DVCClient = DVCClient.builder()
             .withContext(applicationContext)
             .withUser(
-                com.devcycle.android.client.sdk.model.User.Companion.builder()
+                com.devcycle.sdk.android.model.User.Companion.builder()
                     .withUserId("j_test")
                     .withIsAnonymous(false)
                     .build()
