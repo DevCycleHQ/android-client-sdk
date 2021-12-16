@@ -164,7 +164,7 @@ class User private constructor(
     }
 
     @Throws(IllegalArgumentException::class)
-    internal fun updateUser(user: UserParam): User {
+    internal fun updateUser(user: DVCUser): User {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
@@ -286,7 +286,7 @@ class User private constructor(
             return this
         }
 
-        internal fun withUserParam(user: UserParam): Builder {
+        internal fun withUserParam(user: DVCUser): Builder {
             this.isAnonymous = user.isAnonymous
             this.userId = user.userId
             this.email = user.email

@@ -2,7 +2,7 @@ package com.devcycle.sdk.android.model
 
 import java.util.ArrayList
 
-class UserAndEvents(private var user: User, private var events: MutableList<Event>?) {
+internal class UserAndEvents(private var user: User, private var events: MutableList<Event>?) {
     fun addEventItem(eventItem: Event): UserAndEvents {
         if (events == null) {
             events = ArrayList()

@@ -42,7 +42,7 @@ class DVCClient private constructor(
      * [callback] is provided by the SDK user and will callback with the Map of Variables in the
      * latest config when fetched from the API
      */
-    fun identifyUser(user: UserParam, callback: DVCCallback<Map<String, Variable<Any>>>) {
+    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>) {
         if (this.user.getUserId() == user.userId) {
             this.user.updateUser(user)
         } else {
@@ -115,8 +115,8 @@ class DVCClient private constructor(
         return variable
     }
 
-    fun track(): DVCResponse {
-        throw NotImplementedError()
+    fun track(event: DVCEvent, callback: DVCCallback<DVCResponse?>) {
+        request.trackEvent(environmentKey, user, Event.fromDVCEvent(event), callback)
     }
 
     fun flushEvents() {
