@@ -115,8 +115,11 @@ class DVCClient private constructor(
         return variable
     }
 
-    fun track(event: DVCEvent, callback: DVCCallback<DVCResponse?>) {
-        request.trackEvent(environmentKey, user, Event.fromDVCEvent(event), callback)
+    fun track(event: DVCEvent, callback: DVCCallback<DVCResponse?>? = null) {
+        val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
+
+        val parsedEvent = Event.fromDVCEvent(event, user, tmpConfig)
+        request.trackEvent(environmentKey, user, parsedEvent, callback)
     }
 
     fun flushEvents() {
@@ -156,12 +159,12 @@ class DVCClient private constructor(
             return this
         }
 
-        fun withUser(user: User): DVCClientBuilder {
-            this.user = user
+        fun withUser(user: DVCUser): DVCClientBuilder {
+            this.user = User.builder().withUserParam(user).build()
             return this
         }
 
-        fun withOptions(options: DVCOptions?): DVCClientBuilder {
+        fun withOptions(options: DVCOptions): DVCClientBuilder {
             this.options = options
             return this
         }

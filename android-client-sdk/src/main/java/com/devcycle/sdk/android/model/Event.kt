@@ -4,10 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 import java.util.*
 
-internal class Event constructor(
+internal class Event private constructor(
     private var type: String,
+    private var user_id: String,
+    private var featureVars: Map<String, String>,
     private var target: String? = null,
-    private var date: Long,
+    private var clientDate: Long,
     private var value: BigDecimal? = null,
     private var metaData: Any? = null
 ){
@@ -15,12 +17,20 @@ internal class Event constructor(
         return type
     }
 
+    fun getUser_id(): String {
+        return user_id
+    }
+
+    fun getFeatureVars(): Map<String, String> {
+        return featureVars
+    }
+
     fun getTarget(): String? {
         return target
     }
 
-    fun getDate(): Long {
-        return date
+    fun getClientDate(): Long {
+        return clientDate
     }
 
     fun getValue(): BigDecimal? {
@@ -39,8 +49,8 @@ internal class Event constructor(
         this.target = target
     }
 
-    fun setDate(date: Long) {
-        this.date = date
+    fun setClientDate(date: Long) {
+        this.clientDate = date
     }
 
     fun setValue(value: BigDecimal) {
@@ -52,11 +62,13 @@ internal class Event constructor(
     }
 
     companion object {
-        fun fromDVCEvent(dvcEvent: DVCEvent): Event {
+        fun fromDVCEvent(dvcEvent: DVCEvent, user: User, config: BucketedUserConfig): Event {
             return Event(
                 dvcEvent.type,
+                user.getUserId(),
+                config.featureVariationMap ?: emptyMap(),
                 dvcEvent.target,
-                dvcEvent.date.time,
+                dvcEvent.date?.time,
                 dvcEvent.value,
                 dvcEvent.metaData
             )

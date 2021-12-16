@@ -9,7 +9,7 @@ import java.lang.IllegalArgumentException
 import java.util.*
 
 @JsonDeserialize(builder = User.Builder::class)
-class User private constructor(
+internal class User private constructor(
     userId: String?,
     email: String?,
     name: String?,

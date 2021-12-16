@@ -19,14 +19,14 @@ internal class Request {
     private var eventApi: DVCEventsApi = DVCEventsApiClient().initialize()
     private val objectMapper = ObjectMapper()
 
-    private fun <T>getResponseHandler(callback: DVCCallback<T?>) = object : Callback<T?> {
+    private fun <T>getResponseHandler(callback: DVCCallback<T?>?) = object : Callback<T?> {
         override fun onResponse(
             call: Call<T?>,
             response: Response<T?>
         ) {
             if (response.isSuccessful) {
                 val config = response.body()
-                callback.onSuccess(config)
+                callback?.onSuccess(config)
             } else {
                 val httpResponseCode = HttpResponseCode.byCode(response.code())
                 var errorResponse = ErrorResponse("Unknown Error", null)
@@ -43,12 +43,12 @@ internal class Request {
                         dvcException = DVCConfigRequestException(httpResponseCode, errorResponse)
                     }
                 }
-                callback.onError(dvcException)
+                callback?.onError(dvcException)
             }
         }
 
         override fun onFailure(call: Call<T?>, t: Throwable) {
-            callback.onError(t)
+            callback?.onError(t)
         }
     }
 
@@ -69,7 +69,7 @@ internal class Request {
         environmentKey: String,
         user: User,
         event: Event,
-        callback: DVCCallback<DVCResponse?>
+        callback: DVCCallback<DVCResponse?>?
     ) {
         val userAndEvents = UserAndEvents(user, mutableListOf(event))
         val call = eventApi.trackEvents(environmentKey, userAndEvents)
