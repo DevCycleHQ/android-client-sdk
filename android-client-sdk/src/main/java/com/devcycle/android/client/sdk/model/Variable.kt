@@ -11,6 +11,8 @@
  */
 package com.devcycle.android.client.sdk.model
 
+import android.util.Log
+import com.devcycle.android.client.sdk.listener.BucketedUserConfigListener
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
@@ -91,9 +93,11 @@ class Variable<T> private constructor() : PropertyChangeListener {
 
     private fun updateVariable(variable: Variable<Any>) {
         id = variable.id
+        if (variable.value != value) {
+            // TODO: Notify SDK user listener that value has changed
+        }
         value = variable.value as T?
         isDefaulted = false
-        type = variable.type
         evalReason = variable.evalReason
     }
 
@@ -133,10 +137,12 @@ class Variable<T> private constructor() : PropertyChangeListener {
     }
 
     override fun propertyChange(evt: PropertyChangeEvent) {
-        val config = evt.newValue as BucketedUserConfig
-        val variable: Variable<Any>? = config.variables?.get(key)
-        if (variable != null) {
-            updateVariable(variable)
+        if (evt.propertyName == BucketedUserConfigListener.BucketedUserConfigObserverConstants.propertyChangeConfigUpdated) {
+            val config = evt.newValue as BucketedUserConfig
+            val variable: Variable<Any>? = config.variables?.get(key)
+            if (variable != null) {
+                updateVariable(variable)
+            }
         }
     }
 }

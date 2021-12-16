@@ -1,7 +1,7 @@
 package com.devcycle.android.client.sdk.api
 
 import android.content.Context
-import com.devcycle.android.client.sdk.listener.PCLClient
+import com.devcycle.android.client.sdk.listener.BucketedUserConfigListener
 import com.devcycle.android.client.sdk.model.*
 import com.devcycle.android.client.sdk.util.DVCSharedPrefs
 
@@ -19,13 +19,12 @@ class DVCClient private constructor(
 ) {
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request()
-    private val observable: PCLClient = PCLClient()
+    private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private var config: BucketedUserConfig? = null
 
     fun initialize(callback: DVCCallback<String?>) {
         fetchConfig(object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
-                observable.configInitialized(result)
                 callback.onSuccess("Config loaded")
             }
 
@@ -132,6 +131,7 @@ class DVCClient private constructor(
         request.getConfigJson(environmentKey, user, object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
                 config = result
+                observable.configUpdated(result)
                 dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
                 callback.onSuccess(result as T)
             }
