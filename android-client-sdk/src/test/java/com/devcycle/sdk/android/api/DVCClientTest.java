@@ -54,10 +54,7 @@ public class DVCClientTest {
 
         client = DVCClient.Companion.builder()
                 .withContext(mockContext)
-                .withUser(DVCUser(
-                        userId = "j_test",
-                        isAnonymous = false
-                ))
+                .withUser(new DVCUser(false, "j_test", null, null, null, null, null, null, null, null))
                 .withEnvironmentKey("add-client-sdk")
                 .build();
 
