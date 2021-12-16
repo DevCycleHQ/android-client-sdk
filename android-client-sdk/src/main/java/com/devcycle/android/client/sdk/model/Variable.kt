@@ -11,14 +11,21 @@
  */
 package com.devcycle.android.client.sdk.model
 
+import com.devcycle.android.client.sdk.exception.DVCVariableException
+import com.devcycle.android.client.sdk.listener.BucketedUserConfigListener
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
+import java.beans.PropertyChangeEvent
+import java.beans.PropertyChangeListener
+import java.lang.IllegalArgumentException
 
 /**
  * Variable
  */
-class Variable<T> {
+class Variable<T> private constructor() : PropertyChangeListener {
+
     /**
      * unique database id
      * @return _id
@@ -75,4 +82,72 @@ class Variable<T> {
         description = "Variable value can be a string, number, boolean, or JSON"
     )
     var value: T? = null
+
+    @JsonIgnore
+    var isDefaulted: Boolean? = null
+
+    @JsonIgnore
+    var evalReason: String? = null
+
+    @JsonIgnore
+    var defaultValue: T? = null
+
+    @Throws(IllegalArgumentException::class)
+    private fun updateVariable(variable: Variable<Any>) {
+        if (variable.type != type) {
+            throw DVCVariableException("Cannot update Variable with a different type", this as Variable<Any>, variable)
+        }
+        id = variable.id
+        if (variable.value != value) {
+            // TODO: Notify SDK user listener that value has changed
+        }
+        value = variable.value as T?
+        isDefaulted = false
+        evalReason = variable.evalReason
+    }
+
+    companion object {
+        @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, variable: Variable<Any>?): Variable<T> {
+            val returnVariable = Variable<T>();
+            if (variable != null) {
+                returnVariable.id = variable.id
+                returnVariable.key = variable.key
+                returnVariable.value = variable.value as T?
+                returnVariable.type = variable.type
+                returnVariable.evalReason = variable.evalReason
+                returnVariable.isDefaulted = variable.isDefaulted
+            } else {
+                returnVariable.key = key
+                returnVariable.value = defaultValue
+                returnVariable.defaultValue = defaultValue
+                returnVariable.isDefaulted = true
+                returnVariable.type = getType(defaultValue)
+            }
+            return returnVariable
+        }
+
+        private fun <T: Any> getType(value: T): TypeEnum? {
+            val typeClass = value::class.java
+
+            val typeEnum = when {
+                typeClass.isAssignableFrom(String::class.java) -> TypeEnum.STRING
+                typeClass.isAssignableFrom(Number::class.java) -> TypeEnum.NUMBER
+                typeClass.isAssignableFrom(Boolean::class.java) -> TypeEnum.BOOLEAN
+                typeClass.isAssignableFrom(Any::class.java) -> TypeEnum.JSON
+                else -> null
+            }
+
+            return typeEnum
+        }
+    }
+
+    override fun propertyChange(evt: PropertyChangeEvent) {
+        if (evt.propertyName == BucketedUserConfigListener.BucketedUserConfigObserverConstants.propertyChangeConfigUpdated) {
+            val config = evt.newValue as BucketedUserConfig
+            val variable: Variable<Any>? = config.variables?.get(key)
+            if (variable != null) {
+                updateVariable(variable)
+            }
+        }
+    }
 }

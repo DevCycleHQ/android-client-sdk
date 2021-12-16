@@ -2,7 +2,7 @@ package com.devcycle.android.client.sdk.model
 
 import java.util.*
 
-class UserParam private constructor(
+class UserParam(
     var isAnonymous: Boolean,
     userId: String?,
     var email: String?,
