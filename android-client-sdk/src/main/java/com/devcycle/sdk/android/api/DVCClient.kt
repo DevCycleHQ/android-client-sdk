@@ -4,12 +4,16 @@ import android.content.Context
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Main entry point for SDK user
- * The class is constructed by calling DVCClient.builder().build()
- * initialize(DVCCallback<String?> must be called to properly initialize the client and retrieve
- * the configuration
+ * The class is constructed by calling DVCClient.builder(){builder options}.build()
+ * [initialize] must be called to properly initialize the client and retrieve
+ * the configuration.
+ *
+ * All methods that make requests to the APIs or access [config] and [user] are [Synchronized] to
+ * ensure thread-safety
  */
 class DVCClient private constructor(
     private val context: Context,
@@ -22,16 +26,34 @@ class DVCClient private constructor(
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private var config: BucketedUserConfig? = null
 
-    fun initialize(callback: DVCCallback<String?>) {
-        fetchConfig(object : DVCCallback<BucketedUserConfig?> {
-            override fun onSuccess(result: BucketedUserConfig?) {
-                callback.onSuccess("Config loaded")
-            }
+    private val isInitialized = AtomicBoolean(false)
+    private val isExecuting = AtomicBoolean(false)
 
-            override fun onError(t: Throwable) {
-                callback.onError(t)
+    @Synchronized
+    fun initialize(callback: DVCCallback<String?>) {
+        if (!isExecuting.get()) {
+            isExecuting.set(true)
+            if (!isInitialized.get()) {
+
+                fetchConfig(object : DVCCallback<BucketedUserConfig?> {
+                    override fun onSuccess(result: BucketedUserConfig?) {
+                        isInitialized.set(true)
+                        isExecuting.set(false)
+                        callback.onSuccess("Config loaded")
+                    }
+
+                    override fun onError(t: Throwable) {
+                        isExecuting.set(false)
+                        callback.onError(t)
+                    }
+                })
+            } else {
+                isExecuting.set(false)
+                callback.onError(IllegalStateException("DVCClient already initialized"))
             }
-        })
+        } else {
+            callback.onError(IllegalStateException("DVCClient already initializing"))
+        }
     }
 
     /**
@@ -42,6 +64,7 @@ class DVCClient private constructor(
      * [callback] is provided by the SDK user and will callback with the Map of Variables in the
      * latest config when fetched from the API
      */
+    @Synchronized
     fun identifyUser(user: UserParam, callback: DVCCallback<Map<String, Variable<Any>>>) {
         if (this.user.getUserId() == user.userId) {
             this.user.updateUser(user)
@@ -66,6 +89,7 @@ class DVCClient private constructor(
      * [callback] is provided by the SDK user and will callback with the Map of Variables in the
      * latest config when fetched from the API
      */
+    @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>) {
         val user: User? = dvcSharedPrefs.getCache(DVCSharedPrefs.UserKey)
         if (user == null || !user.getIsAnonymous()) {
@@ -88,6 +112,7 @@ class DVCClient private constructor(
     /**
      * Returns the Map of Features in the config
      */
+    @Synchronized
     fun allFeatures(): Map<String, Feature>? {
         return if (config == null) emptyMap() else config!!.features
     }
@@ -95,17 +120,20 @@ class DVCClient private constructor(
     /**
      * Returns the Map of Variables in the config
      */
+    @Synchronized
     fun allVariables(): Map<String, Variable<Any>>? {
         return if (config == null) emptyMap() else config!!.variables
     }
 
     /**
-     * Retrieve a Variable from the config
+     * Retrieve a Variable from the config. Update the Variable whenever the Config is updated using
+     * [java.beans.PropertyChangeListener]
      *
      * [key] is used to identify the Variable in the config
      * [defaultValue] is set on the Variable and used to provide a default value if the Variable
      * could not be fetched or does not exist
      */
+    @Synchronized
     fun <T: Any> variable(key: String, defaultValue: T): Variable<T> {
         val variableByKey: Variable<Any>? = config?.variables?.get(key)
         val variable = Variable.initializeFromVariable(key, defaultValue, variableByKey)

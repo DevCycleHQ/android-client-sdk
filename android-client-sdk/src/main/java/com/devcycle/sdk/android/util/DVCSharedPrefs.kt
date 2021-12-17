@@ -31,6 +31,7 @@ class DVCSharedPrefs(context: Context) {
         }
     }
 
+    @Synchronized
     fun <T> save(objectToSave: T, key: String?) {
         try {
             val jsonString = objectMapper.writeValueAsString(objectToSave)
@@ -40,6 +41,7 @@ class DVCSharedPrefs(context: Context) {
         }
     }
 
+    @Synchronized
     fun <T> getCache(key: String): T? {
         val jsonString = preferences.getString(key, null)
         if (jsonString == null) {

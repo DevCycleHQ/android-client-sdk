@@ -88,6 +88,7 @@ public class DVCClientTest {
 
             @Override
             public void onError(Throwable t) {
+                Assert.fail(t.getMessage());
                 countDownLatch.countDown();
             }
         });
@@ -109,7 +110,7 @@ public class DVCClientTest {
                 try {
                     Thread.sleep(1L);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Assert.fail(e.getMessage());
                 }
                 Assert.assertEquals("Flag activated!", not_activated.getValue());
                 countDownLatch.countDown();
@@ -117,6 +118,7 @@ public class DVCClientTest {
 
             @Override
             public void onError(Throwable t) {
+                Assert.fail(t.getMessage());
                 countDownLatch.countDown();
             }
         });
