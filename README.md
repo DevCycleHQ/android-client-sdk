@@ -2,7 +2,6 @@
 
 The DeCycle Android Client SDK.
 
-
 ## Requirements
 
 This version of the DevCycle Android Client SDK supports a minimum Android Version 21.
@@ -23,7 +22,7 @@ Using the builder patter we can initialize the DevCycle SDK by providing the `ap
 DVCUser, and DevCycle mobile environment key:
 
 ```kotlin
-val client: DVCClient = DVCClient.builder()
+val dvcClient: DVCClient = DVCClient.builder()
     .withContext(applicationContext)
     .withUser(
         DVCUser.builder()
@@ -34,7 +33,7 @@ val client: DVCClient = DVCClient.builder()
     .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
     .build()
 
-client.initialize(object : DVCCallback<String?> {
+dvcClient.initialize(object : DVCCallback<String?> {
     override fun onSuccess(result: String?) {
         // User Configuration loaded successfully from DevCycle
     }
@@ -54,10 +53,10 @@ the variable's identifier `key` coupled with a default value. The default value 
 string, boolean, number, or JSONObject:
 
 ```kotlin
-var strVariable: Variable<String> = client.variable("str_key", "default")
-var boolVariable: Variable<Boolean> = client.variable("bool_key", false)
-var numVariable: Variable<Number> = client.variable("bool_key", 0)
-var jsonVariable: Variable<JSONObject> = client.variable("json_key", JSONObject("{ \"key\": \"value\" }"))
+var strVariable: Variable<String> = dvcClient.variable("str_key", "default")
+var boolVariable: Variable<Boolean> = dvcClient.variable("bool_key", false)
+var numVariable: Variable<Number> = dvcClient.variable("bool_key", 0)
+var jsonVariable: Variable<JSONObject> = dvcClient.variable("json_key", JSONObject("{ \"key\": \"value\" }"))
 ```
 
 To grab the value, there is a property on the object returned to grab the value:
@@ -78,21 +77,15 @@ The `Variable` object also contains the following params:
     - `isDefaulted`: if the Variable is using the `defaultValue`
     - `evalReason`: evaluation reason for why the variable was bucketed into its value
 
-If the value is not ready, it will return the default value passed in the creation of the variable. 
-To get notified when the variable is loaded:
-
-// TODO: do we have something like this?
-```
-// TODO
-```
+If the value is not ready, it will return the default value passed in the creation of the variable.
 
 ## Grabbing All Features / Variables
 
 To grab all the Features or Variables returned in the config:
 
 ```kotlin
-var features: Map<String, Feature>? = client.allFeatures()
-var variables: Map<String, Variable<Any>>? = client.allVariables()
+var features: Map<String, Feature>? = dvcClient.allFeatures()
+var variables: Map<String, Variable<Any>>? = dvcClient.allVariables()
 ```
 
 If the SDK has not finished initializing, these methods will return an empty object.
@@ -100,44 +93,66 @@ If the SDK has not finished initializing, these methods will return an empty obj
 ## Identifying User
 
 To identify a different user, or the same user passed into the initialize with more attributes, 
-pass in the entire user attribute object into `identifyUser`:
+build a DVCUser object and pass it into `identifyUser`:
 
-```
-// TODO
+```kotlin
+var user = DVCUser.builder()
+                .withUserId("test_user")
+                .withEmail("test_user@devcycle.com")
+                .withCustomData(mapOf("custom_key" to "value"))
+                .build()
+dvcClient.identifyUser(user)
 ```
 
-To wait on Variables that will be returned from the identify call, you can pass in a callback 
-or use the Promise returned if no callback is passed in:
+To wait on Variables that will be returned from the identify call, you can pass in a DVCCallback:
 
-```
-// TODO
+```kotlin
+dvcClient.identifyUser(user, object: DVCCallback<Map<String, Variable<Any>>> {
+    override fun onSuccess(result: Map<String, Variable<Any>>) {
+    }
+
+    override fun onError(t: Throwable) {
+    }
+})
 ```
 
 ## Reset User
 
-To reset the user into an anonymous user, `resetUser` will reset to the anonymous user created before or will create one with an anonymous `user_id`.
+To reset the user into an anonymous user, `resetUser` will reset to the anonymous user created before 
+or will create one with an anonymous `user_id`.
 
-```
-// TODO
-```
-
-To wait on the Features of the anonymous user, you can pass in a callback or use the Promise returned if no callback is passed in:
-
-```
-// TODO
+```kotlin
+dvcClient.resetUser()
 ```
 
+To wait on the Features of the anonymous user, you can pass in a DVCCallback:
+
+```kotlin
+dvcClient.resetUser(object : DVCCallback<Map<String, Variable<Any>>> {
+    override fun onSuccess(result: Map<String, Variable<Any>>) {
+    }
+
+    override fun onError(t: Throwable) {
+    }
+})
+```
 
 ## Tracking Events
 
 To track events, pass in an object with at least a `type` key:
 
-```
-// TODO
+```kotlin
+var event = DVCEvent.builder()
+                .withType("custom_event_type")
+                .withTarget("custom_event_target")
+                .withValue(BigDecimal(10.0))
+                .withMetaData(mapOf("custom_key" to "value"))
+                .build()
+dvcClient.track(event)
 ```
 
 The SDK will flush events every 10s or `flushEventsMS` specified in the options. To manually flush events, call:
 
-```
-// TODO
+```kotlin
+dvcClient.flushEvents()
 ```
