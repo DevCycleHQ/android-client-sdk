@@ -7,12 +7,14 @@ import androidx.appcompat.app.AppCompatActivity
 import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.api.DVCClient
 import com.devcycle.sdk.android.model.DVCEvent
-import com.devcycle.sdk.android.model.DVCResponse
 import com.devcycle.sdk.android.model.DVCUser
+import com.devcycle.sdk.android.model.Variable
 
 class MainActivity : AppCompatActivity() {
 
     val TAG = "MainActivity"
+
+    var variable: Variable<String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,30 +22,26 @@ class MainActivity : AppCompatActivity() {
         val client: DVCClient = DVCClient.builder()
             .withContext(applicationContext)
             .withUser(
-                DVCUser(
-                    userId = "user_test",
-                    isAnonymous = false
-                )
+                DVCUser.builder()
+                    .withUserId("nic_test")
+                    .build()
             )
-            .withEnvironmentKey("add-client-sdk")
+            .withEnvironmentKey("add-mobile-sdk")
             .build()
+
+        variable = client.variable("activate-flag", "not activated")
+        Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
 
         client.initialize(object : DVCCallback<String?> {
             override fun onSuccess(result: String?) {
-                Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
+                //Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
 
-                client.track(DVCEvent(
-                    type = "testEvent",
-                    metaData = mapOf("test" to "value")
-                ), object: DVCCallback<String?> {
-                    override fun onSuccess(result: String?) {
-                        Log.i(TAG, result ?: "Success Event")
-                    }
+                client.track(DVCEvent.builder()
+                    .withType("testEvent")
+                    .withMetaData(mapOf("test" to "value"))
+                    .build())
 
-                    override fun onError(t: Throwable) {
-                        Log.e(TAG, "Failed Event", t)
-                    }
-                })
+                Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
             }
 
             override fun onError(t: Throwable) {

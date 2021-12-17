@@ -1,29 +1,14 @@
 package com.devcycle.sdk.android.model
 
-import java.util.ArrayList
+import com.fasterxml.jackson.annotation.JsonProperty
 
-internal class UserAndEvents(private var user: User, private var events: MutableList<Event>?) {
-    fun addEventItem(eventItem: Event): UserAndEvents {
-        if (events == null) {
-            events = ArrayList()
-        }
-        events!!.add(eventItem)
-        return this
-    }
+internal class UserAndEvents(
+    user: User,
+    events: MutableList<Event>?
+) {
+    @JsonProperty("user")
+    private val user: User = user
 
-    fun getEvents(): List<Event?>? {
-        return events
-    }
-
-    fun getUser(): User? {
-        return user
-    }
-
-    fun setEvents(events: MutableList<Event>?) {
-        this.events = events
-    }
-
-    fun setUser(user: User?) {
-        this.user = user!!
-    }
+    @JsonProperty("events")
+    private val events: MutableList<Event>? = events
 }

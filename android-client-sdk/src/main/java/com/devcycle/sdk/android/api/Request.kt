@@ -64,12 +64,11 @@ internal class Request constructor(envKey: String) {
 
     fun trackEvent(
         user: User,
-        event: Event,
-        callback: DVCCallback<DVCResponse?>?
+        event: Event
     ) {
         val userAndEvents = UserAndEvents(user, mutableListOf(event))
         val call = eventApi.trackEvents(userAndEvents)
-        call.enqueue(this.getResponseHandler(callback))
+        call.enqueue(this.getResponseHandler(null))
     }
 
     init {

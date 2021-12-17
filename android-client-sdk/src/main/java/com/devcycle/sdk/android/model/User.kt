@@ -2,12 +2,14 @@ package com.devcycle.sdk.android.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import android.os.Build
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
 import java.lang.IllegalArgumentException
 import java.util.*
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
 internal class User private constructor(
     userId: String?,
