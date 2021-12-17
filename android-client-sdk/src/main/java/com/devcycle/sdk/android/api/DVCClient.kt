@@ -65,7 +65,7 @@ class DVCClient private constructor(
      * latest config when fetched from the API
      */
     @Synchronized
-    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>) {
+    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         if (this.user.getUserId() == user.userId) {
             this.user.updateUser(user)
         } else {
@@ -74,11 +74,11 @@ class DVCClient private constructor(
         fetchConfig(object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
                 saveUser()
-                config?.variables?.let { callback.onSuccess(it) }
+                config?.variables?.let { callback?.onSuccess(it) }
             }
 
             override fun onError(t: Throwable) {
-                callback.onError(t)
+                callback?.onError(t)
             }
         })
     }
@@ -90,7 +90,7 @@ class DVCClient private constructor(
      * latest config when fetched from the API
      */
     @Synchronized
-    fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>) {
+    fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         val user: User? = dvcSharedPrefs.getCache(DVCSharedPrefs.UserKey)
         if (user == null || !user.getIsAnonymous()) {
             this.user = User.builder()
@@ -100,11 +100,11 @@ class DVCClient private constructor(
         fetchConfig(object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
                 saveUser()
-                config?.variables?.let { callback.onSuccess(it) }
+                config?.variables?.let { callback?.onSuccess(it) }
             }
 
             override fun onError(t: Throwable) {
-                callback.onError(t)
+                callback?.onError(t)
             }
         })
     }
