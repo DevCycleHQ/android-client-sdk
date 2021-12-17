@@ -140,6 +140,11 @@ class Variable<T> private constructor() : PropertyChangeListener {
 
             return typeEnum
         }
+
+        @JvmSynthetic internal fun <T: Any> validateType(defaultValue: T) {
+            getType(defaultValue)
+                ?: throw IllegalArgumentException("${defaultValue::class.java} is not a valid type. Must be String / Number / Boolean or JSONObject")
+        }
     }
 
     override fun propertyChange(evt: PropertyChangeEvent) {

@@ -135,6 +135,7 @@ class DVCClient private constructor(
      */
     @Synchronized
     fun <T: Any> variable(key: String, defaultValue: T): Variable<T> {
+        Variable.validateType(defaultValue)
         val variableByKey: Variable<Any>? = config?.variables?.get(key)
         val variable = Variable.initializeFromVariable(key, defaultValue, variableByKey)
 
