@@ -7,7 +7,7 @@ import retrofit2.http.Query
 import retrofit2.http.QueryMap
 
 interface DVCApi {
-    @GET("/v1/sdkConfig")
+    @GET("/v1/mobileSDKConfig")
     fun getConfigJson(
         @Query("envKey") envKey: String,
         @QueryMap params: Map<String, String>
