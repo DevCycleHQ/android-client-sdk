@@ -6,9 +6,9 @@ import retrofit2.Call
 import retrofit2.http.*
 
 internal interface DVCEventsApi {
+    @Headers("Content-Type:application/json")
     @POST("/v1/events")
     fun trackEvents(
-        @Header("Authorization") envKey: String,
         @Body eventsBody: UserAndEvents
     ): Call<DVCResponse?>
 }

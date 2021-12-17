@@ -1,5 +1,6 @@
 package com.devcycle.sdk.android.api
 
+import com.devcycle.sdk.android.interceptor.AuthorizationHeaderInterceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
@@ -10,7 +11,8 @@ internal class DVCEventsApiClient {
         .baseUrl(BASE_URL)
         .addConverterFactory(JacksonConverterFactory.create())
 
-    fun initialize(): DVCEventsApi {
+    fun initialize(envKey: String): DVCEventsApi {
+        okBuilder.addInterceptor(AuthorizationHeaderInterceptor(envKey))
         return adapterBuilder
             .client(okBuilder.build())
             .build()

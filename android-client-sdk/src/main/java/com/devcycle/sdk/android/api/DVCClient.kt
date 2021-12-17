@@ -22,7 +22,7 @@ class DVCClient private constructor(
     options: DVCOptions?,
 ) {
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request()
+    private val request: Request = Request(environmentKey)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private var config: BucketedUserConfig? = null
 
@@ -153,7 +153,7 @@ class DVCClient private constructor(
         val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
 
         val parsedEvent = Event.fromDVCEvent(event, user, tmpConfig)
-        request.trackEvent(environmentKey, user, parsedEvent, object : DVCCallback<DVCResponse?> {
+        request.trackEvent(user, parsedEvent, object : DVCCallback<DVCResponse?> {
             override fun onSuccess(result: DVCResponse?) {
                 callback?.onSuccess("Successfully received event")
             }

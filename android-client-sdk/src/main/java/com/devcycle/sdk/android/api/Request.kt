@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.api
 
-import android.util.Log
 import com.devcycle.sdk.android.exception.DVCConfigRequestException
 
 import com.devcycle.sdk.android.model.*
@@ -13,11 +12,9 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.IOException
 
-
-
-internal class Request {
+internal class Request constructor(envKey: String) {
     private var api: DVCApi = DVCApiClient().initialize()
-    private var eventApi: DVCEventsApi = DVCEventsApiClient().initialize()
+    private var eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
     private val objectMapper = ObjectMapper()
 
     private fun <T>getResponseHandler(callback: DVCCallback<T?>?) = object : Callback<T?> {
@@ -66,13 +63,12 @@ internal class Request {
     }
 
     fun trackEvent(
-        environmentKey: String,
         user: User,
         event: Event,
         callback: DVCCallback<DVCResponse?>?
     ) {
         val userAndEvents = UserAndEvents(user, mutableListOf(event))
-        val call = eventApi.trackEvents(environmentKey, userAndEvents)
+        val call = eventApi.trackEvents(userAndEvents)
         call.enqueue(this.getResponseHandler(callback))
     }
 
