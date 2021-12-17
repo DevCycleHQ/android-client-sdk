@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
+import org.json.JSONObject
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
@@ -133,7 +134,7 @@ class Variable<T> private constructor() : PropertyChangeListener {
                 typeClass.isAssignableFrom(String::class.java) -> TypeEnum.STRING
                 typeClass.isAssignableFrom(Number::class.java) -> TypeEnum.NUMBER
                 typeClass.isAssignableFrom(Boolean::class.java) -> TypeEnum.BOOLEAN
-                typeClass.isAssignableFrom(Any::class.java) -> TypeEnum.JSON
+                typeClass.isAssignableFrom(JSONObject::class.java) -> TypeEnum.JSON
                 else -> null
             }
 

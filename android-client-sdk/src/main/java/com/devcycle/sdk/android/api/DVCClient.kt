@@ -22,7 +22,7 @@ class DVCClient private constructor(
     options: DVCOptions?,
 ) {
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request()
+    private val request: Request = Request(environmentKey)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private var config: BucketedUserConfig? = null
 
@@ -65,7 +65,7 @@ class DVCClient private constructor(
      * latest config when fetched from the API
      */
     @Synchronized
-    fun identifyUser(user: UserParam, callback: DVCCallback<Map<String, Variable<Any>>>) {
+    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>) {
         if (this.user.getUserId() == user.userId) {
             this.user.updateUser(user)
         } else {
@@ -143,8 +143,16 @@ class DVCClient private constructor(
         return variable
     }
 
-    fun track(): DVCResponse {
-        throw NotImplementedError()
+    /**
+     * Track a custom event for the current user. Requires the SDK to have finished initializing.
+     *
+     * [event] instance of an event object to submit
+     */
+    fun track(event: DVCEvent) {
+        val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
+
+        val parsedEvent = Event.fromDVCEvent(event, user, tmpConfig)
+        request.trackEvent(user, parsedEvent)
     }
 
     fun flushEvents() {
@@ -184,12 +192,12 @@ class DVCClient private constructor(
             return this
         }
 
-        fun withUser(user: User): DVCClientBuilder {
-            this.user = user
+        fun withUser(user: DVCUser): DVCClientBuilder {
+            this.user = User.builder().withUserParam(user).build()
             return this
         }
 
-        fun withOptions(options: DVCOptions?): DVCClientBuilder {
+        fun withOptions(options: DVCOptions): DVCClientBuilder {
             this.options = options
             return this
         }

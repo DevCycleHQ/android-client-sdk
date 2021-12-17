@@ -1,61 +1,61 @@
 package com.devcycle.sdk.android.model
 
-import io.swagger.v3.oas.annotations.media.Schema
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
-class Event {
-    @Schema(required = true, description = "Custom event type")
-    private var type: String? = null
+@JsonInclude(JsonInclude.Include.NON_NULL)
+internal class Event private constructor(
+    type: String,
+    userId: String,
+    featureVars: Map<String, String>,
+    target: String?,
+    clientDate: Long,
+    value: BigDecimal?,
+    metaData: Map<String, Any>?
+){
+    @JsonProperty("type")
+    private var type: String = "customType"
 
-    @Schema(description = "Custom event target / subject of event. Contextual to event type")
+    @JsonProperty("user_id")
+    private val userId: String = userId
+
+    @JsonProperty("customType")
+    private var customType: String = type
+
+    @JsonProperty("featureVars")
+    private var featureVars: Map<String, String>? = null
+    @JsonProperty("target")
     private var target: String? = null
-
-    @Schema(description = "Unix epoch time the event occurred according to client")
-    private var date: Long? = null
-
-    @Schema(description = "Value for numerical events. Contextual to event type")
+    @JsonProperty("clientDate")
+    private var clientDate: Long? = null
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("value")
     private var value: BigDecimal? = null
+    @JsonProperty("metaData")
+    private var metaData: Map<String, Any>? = null
+    @JsonProperty("date")
+    private var date = clientDate
 
-    @Schema(description = "Extra JSON metadata for event. Contextual to event type")
-    private var metaData: Any? = null
-
-    fun getType(): String? {
-        return type
+    companion object {
+        fun fromDVCEvent(dvcEvent: DVCEvent, user: User, config: BucketedUserConfig): Event {
+            return Event(
+                dvcEvent.type,
+                user.getUserId(),
+                config.featureVariationMap ?: emptyMap(),
+                dvcEvent.target,
+                dvcEvent.date.time,
+                dvcEvent.value,
+                dvcEvent.metaData
+            )
+        }
     }
 
-    fun getTarget(): String? {
-        return target
-    }
-
-    fun getDate(): Long? {
-        return date
-    }
-
-    fun getValue(): BigDecimal? {
-        return value
-    }
-
-    fun getMetaData(): Any? {
-        return metaData
-    }
-
-    fun setType(type: String?) {
-        this.type = type
-    }
-
-    fun setTarget(target: String?) {
+    init {
+        this.featureVars = featureVars
         this.target = target
-    }
-
-    fun setDate(date: Long?) {
-        this.date = date
-    }
-
-    fun setValue(value: BigDecimal?) {
+        this.clientDate = clientDate
         this.value = value
-    }
-
-    fun setMetaData(metaData: Any?) {
         this.metaData = metaData
     }
 }

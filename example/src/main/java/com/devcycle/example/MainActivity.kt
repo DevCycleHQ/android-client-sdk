@@ -1,12 +1,20 @@
 package com.devcycle.example
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.api.DVCClient
+import com.devcycle.sdk.android.model.DVCEvent
+import com.devcycle.sdk.android.model.DVCUser
+import com.devcycle.sdk.android.model.Variable
 
 class MainActivity : AppCompatActivity() {
+
+    val TAG = "MainActivity"
+
+    var variable: Variable<String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -14,17 +22,26 @@ class MainActivity : AppCompatActivity() {
         val client: DVCClient = DVCClient.builder()
             .withContext(applicationContext)
             .withUser(
-                com.devcycle.sdk.android.model.User.Companion.builder()
-                    .withUserId("j_test")
-                    .withIsAnonymous(false)
+                DVCUser.builder()
+                    .withUserId("nic_test")
                     .build()
             )
-            .withEnvironmentKey("add-client-sdk")
+            .withEnvironmentKey("add-mobile-sdk")
             .build()
+
+        variable = client.variable("activate-flag", "not activated")
+        Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
 
         client.initialize(object : DVCCallback<String?> {
             override fun onSuccess(result: String?) {
-                Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
+                //Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
+
+                client.track(DVCEvent.builder()
+                    .withType("testEvent")
+                    .withMetaData(mapOf("test" to "value"))
+                    .build())
+
+                Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
             }
 
             override fun onError(t: Throwable) {

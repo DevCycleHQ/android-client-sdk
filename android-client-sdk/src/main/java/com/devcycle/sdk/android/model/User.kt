@@ -2,14 +2,16 @@ package com.devcycle.sdk.android.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import android.os.Build
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
 import java.lang.IllegalArgumentException
 import java.util.*
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
-class User private constructor(
+internal class User private constructor(
     userId: String?,
     email: String?,
     name: String?,
@@ -164,7 +166,7 @@ class User private constructor(
     }
 
     @Throws(IllegalArgumentException::class)
-    internal fun updateUser(user: UserParam): User {
+    internal fun updateUser(user: DVCUser): User {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
@@ -286,7 +288,7 @@ class User private constructor(
             return this
         }
 
-        internal fun withUserParam(user: UserParam): Builder {
+        internal fun withUserParam(user: DVCUser): Builder {
             this.isAnonymous = user.isAnonymous
             this.userId = user.userId
             this.email = user.email
