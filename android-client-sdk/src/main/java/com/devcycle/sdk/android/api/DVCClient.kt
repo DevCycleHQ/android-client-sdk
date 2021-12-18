@@ -180,15 +180,7 @@ class DVCClient private constructor(
     fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
         val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
 
-        eventQueue.flushEvents(object : DVCCallback<DVCResponse?> {
-            override fun onSuccess(result: DVCResponse?) {
-                callback?.onSuccess(result)
-            }
-
-            override fun onError(t: Throwable) {
-                callback?.onError(t)
-            }
-        })
+        eventQueue.flushEvents(callback)
     }
 
     private fun saveUser() {
