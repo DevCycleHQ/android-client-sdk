@@ -20,10 +20,15 @@ internal class EventQueue constructor(
 
     @Synchronized
     fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
+        if (config == null) {
+            Log.e(TAG, "DVCClient not initialized to flush events!")
+            return
+        }
         val eventsToFlush = eventQueue.toMutableList()
         eventsToFlush.addAll(eventsFromAggregateEventMap())
 
         if (eventsToFlush.size == 0) {
+            Log.i(TAG, "No events to flush.")
             return
         }
 

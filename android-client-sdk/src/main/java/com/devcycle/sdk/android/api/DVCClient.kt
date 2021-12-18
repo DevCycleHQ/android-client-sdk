@@ -165,6 +165,7 @@ class DVCClient private constructor(
      *
      * [event] instance of an event object to submit
      */
+    @Throws(Throwable::class)
     fun track(event: DVCEvent) {
         val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
 
@@ -177,8 +178,9 @@ class DVCClient private constructor(
      *
      * [callback] optional callback to be notified on success or failure
      */
+    @Throws(Throwable::class)
     fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
-        val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
+        config ?: throw Throwable("DVCClient has not been initialized")
 
         eventQueue.flushEvents(callback)
     }
