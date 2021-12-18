@@ -12,13 +12,5 @@
 package com.devcycle.sdk.android.model
 
 class DVCResponse {
-    private var message: String? = null
-
-    fun getMessage(): String? {
-        return message
-    }
-
-    fun setMessage(message: String?) {
-        this.message = message
-    }
+    var message: String? = null
 }

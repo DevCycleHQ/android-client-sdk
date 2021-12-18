@@ -1,9 +1,11 @@
 package com.devcycle.sdk.android.api
 
 import android.content.Context
+import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -16,18 +18,24 @@ import java.util.concurrent.atomic.AtomicBoolean
  * ensure thread-safety
  */
 class DVCClient private constructor(
-    private val context: Context,
+    context: Context,
     private val environmentKey: String,
     private var user: User,
     options: DVCOptions?,
 ) {
+    private val TAG: String = DVCClient::class.java.simpleName
+
+    internal var config: BucketedUserConfig? = null
+    private val defaultIntervalInMs: Long = 10000
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request(environmentKey)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private var config: BucketedUserConfig? = null
+    private val eventQueue: EventQueue = EventQueue(request, user, config)
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
+
+    private val timer: Timer = Timer("DevCycle.EventQueue.Timer", true)
 
     @Synchronized
     fun initialize(callback: DVCCallback<String?>) {
@@ -141,6 +149,14 @@ class DVCClient private constructor(
 
         observable.addPropertyChangeListener(variable)
 
+        val event: DVCRequestEvent = Event.aggregateEvent(variable.isDefaulted, variable.key)
+
+        try {
+            eventQueue.queueAggregateEvent(event)
+        } catch(e: IllegalArgumentException) {
+            e.message?.let { Log.i(TAG, it) }
+        }
+
         return variable
     }
 
@@ -153,11 +169,26 @@ class DVCClient private constructor(
         val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
 
         val parsedEvent = Event.fromDVCEvent(event, user, tmpConfig)
-        request.trackEvent(user, parsedEvent)
+        eventQueue.queueEvent(parsedEvent)
     }
 
-    fun flushEvents() {
-        throw NotImplementedError()
+    /**
+     * Manually send all queued events to the API. Requires the SDK to have finished initializing.
+     *
+     * [callback] optional callback to be notified on success or failure
+     */
+    fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
+        val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
+
+        eventQueue.flushEvents(object : DVCCallback<DVCResponse?> {
+            override fun onSuccess(result: DVCResponse?) {
+                callback?.onSuccess(result)
+            }
+
+            override fun onError(t: Throwable) {
+                callback?.onError(t)
+            }
+        })
     }
 
     private fun saveUser() {
@@ -219,5 +250,7 @@ class DVCClient private constructor(
 
     init {
         saveUser()
+        val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
+        timer.schedule(eventQueue, flushInMs, flushInMs)
     }
 }

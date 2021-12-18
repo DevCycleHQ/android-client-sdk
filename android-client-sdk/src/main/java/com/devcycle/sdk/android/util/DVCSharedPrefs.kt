@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
 import java.util.HashMap
 
+// TODO: access disk on background thread
 class DVCSharedPrefs(context: Context) {
     private var preferences: SharedPreferences = context.getSharedPreferences(
         context.getString(R.string.cached_data),

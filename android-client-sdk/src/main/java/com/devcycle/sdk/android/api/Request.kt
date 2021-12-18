@@ -13,18 +13,18 @@ import retrofit2.Response
 import java.io.IOException
 
 internal class Request constructor(envKey: String) {
-    private var api: DVCApi = DVCApiClient().initialize()
-    private var eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
+    private val api: DVCApi = DVCApiClient().initialize()
+    private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
     private val objectMapper = ObjectMapper()
 
-    private fun <T>getResponseHandler(callback: DVCCallback<T?>?) = object : Callback<T?> {
+    private fun <T> getResponseHandler(callback: DVCCallback<T?>?) = object : Callback<T?> {
         override fun onResponse(
             call: Call<T?>,
             response: Response<T?>
         ) {
             if (response.isSuccessful) {
-                val config = response.body()
-                callback?.onSuccess(config)
+                val result = response.body()
+                callback?.onSuccess(result)
             } else {
                 val httpResponseCode = HttpResponseCode.byCode(response.code())
                 var errorResponse = ErrorResponse("Unknown Error", null)
@@ -62,13 +62,10 @@ internal class Request constructor(envKey: String) {
         call.enqueue(this.getResponseHandler(callback))
     }
 
-    fun trackEvent(
-        user: User,
-        event: Event
-    ) {
-        val userAndEvents = UserAndEvents(user, mutableListOf(event))
+    fun publishEvents(user: User, events: MutableList<Event>, callback: DVCCallback<DVCResponse?>?) {
+        val userAndEvents = UserAndEvents(user, events)
         val call = eventApi.trackEvents(userAndEvents)
-        call.enqueue(this.getResponseHandler(null))
+        call.enqueue(this.getResponseHandler(callback))
     }
 
     init {
