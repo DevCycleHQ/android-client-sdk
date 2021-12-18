@@ -154,7 +154,7 @@ class DVCClient private constructor(
         try {
             eventQueue.queueAggregateEvent(event)
         } catch(e: IllegalArgumentException) {
-            e.message?.let { Log.i(TAG, it) }
+            e.message?.let { Log.e(TAG, it) }
         }
 
         return variable
