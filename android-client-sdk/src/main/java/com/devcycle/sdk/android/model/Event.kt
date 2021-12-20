@@ -8,6 +8,7 @@ import java.util.*
 @JsonInclude(JsonInclude.Include.NON_NULL)
 internal class Event internal constructor(
     type: String,
+    customType: String?,
     userId: String,
     featureVars: Map<String, String>,
     @field:JsonProperty("target") val target: String?,
@@ -16,13 +17,13 @@ internal class Event internal constructor(
     metaData: Map<String, Any>? = null
 ){
     @JsonProperty("type")
-    var type: String = "customType"
+    var type: String = type
 
     @JsonProperty("user_id")
     val userId: String = userId
 
     @JsonProperty("customType")
-    val customType: String = type
+    val customType: String? = customType
 
     @JsonProperty("featureVars")
     var featureVars: Map<String, String>? = null
@@ -38,11 +39,12 @@ internal class Event internal constructor(
     var date = clientDate
 
     companion object {
-        @JvmSynthetic internal fun fromDVCEvent(dvcEvent: DVCEvent, user: User, config: BucketedUserConfig): Event {
+        @JvmSynthetic internal fun fromDVCEvent(dvcEvent: DVCEvent, user: User, featureVars: Map<String, String>?): Event {
             return Event(
+                EventTypes.customEvent,
                 dvcEvent.type,
                 user.getUserId(),
-                config.featureVariationMap ?: emptyMap(),
+                featureVars ?: emptyMap(),
                 dvcEvent.target,
                 dvcEvent.date.time,
                 dvcEvent.value,
@@ -53,22 +55,32 @@ internal class Event internal constructor(
         internal object EventTypes {
             const val variableEvaluated: String = "variableEvaluated"
             const val variableDefaulted: String = "variableDefaulted"
+            const val userConfig: String = "userConfig"
+            const val customEvent: String = "customEvent"
         }
 
-        @JvmSynthetic internal fun aggregateEvent(defaulted: Boolean?, key: String?): DVCRequestEvent {
+        @JvmSynthetic internal fun userConfigEvent(value: BigDecimal): InternalEvent {
+            return InternalEvent(
+                type = EventTypes.userConfig,
+                value = value
+            )
+        }
+
+        @JvmSynthetic internal fun variableEvent(defaulted: Boolean?, key: String?): InternalEvent {
             val type = if (defaulted == true) EventTypes.variableDefaulted else EventTypes.variableEvaluated
 
-            return DVCRequestEvent(
+            return InternalEvent(
                 type,
                 key
             )
         }
 
-        @JvmSynthetic internal fun fromAggregateEvent(event: DVCRequestEvent, user: User, config: BucketedUserConfig?) : Event {
+        @JvmSynthetic internal fun fromInternalEvent(event: InternalEvent, user: User, featureVars: Map<String, String>?) : Event {
             return Event(
                 event.type,
+                null,
                 user.getUserId(),
-                config?.featureVariationMap ?: emptyMap(),
+                featureVars ?: emptyMap(),
                 event.target,
                 event.date ?: Calendar.getInstance().time.time,
                 event.value,
