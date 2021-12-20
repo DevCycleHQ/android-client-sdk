@@ -21,7 +21,7 @@ class DVCClient private constructor(
     context: Context,
     private val environmentKey: String,
     private var user: User,
-    options: DVCOptions?,
+    private var options: DVCOptions?,
 ) {
     private val TAG: String = DVCClient::class.java.simpleName
 
@@ -47,7 +47,9 @@ class DVCClient private constructor(
                     override fun onSuccess(result: BucketedUserConfig?) {
                         isInitialized.set(true)
                         isExecuting.set(false)
-                        result?.let { eventQueue.initialize(it) }
+                        if (result != null) {
+                            initializeEventQueue(result)
+                        }
                         callback.onSuccess("Config loaded")
                     }
 
@@ -182,6 +184,12 @@ class DVCClient private constructor(
         eventQueue.flushEvents(callback)
     }
 
+    private fun initializeEventQueue(config: BucketedUserConfig) {
+        eventQueue.initialize(config)
+        val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
+        timer.schedule(eventQueue, flushInMs, flushInMs)
+    }
+
     private fun saveUser() {
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
@@ -241,7 +249,5 @@ class DVCClient private constructor(
 
     init {
         saveUser()
-        val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
-        timer.schedule(eventQueue, flushInMs, flushInMs)
     }
 }
