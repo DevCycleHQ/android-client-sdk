@@ -12,11 +12,16 @@ import kotlin.collections.HashMap
 internal class EventQueue constructor(
     private val request: Request,
     private var user: User,
-    private var config: BucketedUserConfig?,
-    private var eventQueue: MutableList<Event> = mutableListOf(),
-    private var aggregateEventMap: HashMap<String, HashMap<String, DVCRequestEvent>> = hashMapOf(),
+    private val eventQueue: MutableList<DVCEvent> = mutableListOf(),
+    private val eventsToFlush: MutableList<Event> = mutableListOf(),
+    private val aggregateEventMap: HashMap<String, HashMap<String, DVCRequestEvent>> = hashMapOf(),
 ) : TimerTask(){
     private val TAG = EventQueue::class.java.simpleName
+    private var config: BucketedUserConfig? = null
+
+    fun initialize(config: BucketedUserConfig) {
+        this.config = config
+    }
 
     @Synchronized
     fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
@@ -24,7 +29,8 @@ internal class EventQueue constructor(
             Log.e(TAG, "DVCClient not initialized to flush events!")
             return
         }
-        val eventsToFlush = eventQueue.toMutableList()
+        val currentEventQueue = eventQueue.toMutableList()
+        eventsToFlush.addAll(eventsFromDvcEvent(currentEventQueue))
         eventsToFlush.addAll(eventsFromAggregateEventMap())
 
         if (eventsToFlush.size == 0) {
@@ -40,11 +46,11 @@ internal class EventQueue constructor(
         request.publishEvents(user, eventsToFlush, object : DVCCallback<DVCResponse?> {
             override fun onSuccess(result: DVCResponse?) {
                 Log.i(TAG, "DVC Flushed ${eventsToFlush.size} Events.")
+                eventsToFlush.clear()
                 callback?.onSuccess(result)
             }
 
             override fun onError(t: Throwable) {
-                eventQueue.addAll(eventsToFlush)
                 callback?.onError(t)
             }
         })
@@ -53,7 +59,7 @@ internal class EventQueue constructor(
     /**
      * Queue Event for producing
      */
-    fun queueEvent(event: Event) {
+    fun queueEvent(event: DVCEvent) {
         eventQueue.add(event)
     }
 
@@ -86,6 +92,13 @@ internal class EventQueue constructor(
                 aggEventType[event.target] = event
             }
         }
+    }
+
+    private fun eventsFromDvcEvent(currentEventQueue: List<DVCEvent>) : List<Event> {
+        val eventList = mutableListOf<Event>()
+        mutableListOf<Event>()
+        currentEventQueue.forEach { eventList += Event.fromDVCEvent(it, user, config!!) }
+        return eventList
     }
 
     private fun eventsFromAggregateEventMap(): List<Event> {

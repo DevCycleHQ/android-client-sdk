@@ -30,7 +30,7 @@ class DVCClient private constructor(
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request(environmentKey)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, user, config)
+    private val eventQueue: EventQueue = EventQueue(request, user)
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
@@ -47,6 +47,7 @@ class DVCClient private constructor(
                     override fun onSuccess(result: BucketedUserConfig?) {
                         isInitialized.set(true)
                         isExecuting.set(false)
+                        result?.let { eventQueue.initialize(it) }
                         callback.onSuccess("Config loaded")
                     }
 
@@ -161,16 +162,12 @@ class DVCClient private constructor(
     }
 
     /**
-     * Track a custom event for the current user. Requires the SDK to have finished initializing.
+     * Track a custom event for the current user.
      *
      * [event] instance of an event object to submit
      */
-    @Throws(Throwable::class)
     fun track(event: DVCEvent) {
-        val tmpConfig = config ?: throw Throwable("DVCClient has not been initialized")
-
-        val parsedEvent = Event.fromDVCEvent(event, user, tmpConfig)
-        eventQueue.queueEvent(parsedEvent)
+        eventQueue.queueEvent(event)
     }
 
     /**
