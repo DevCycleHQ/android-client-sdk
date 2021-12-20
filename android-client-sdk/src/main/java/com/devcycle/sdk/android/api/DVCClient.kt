@@ -5,6 +5,7 @@ import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -30,7 +31,7 @@ class DVCClient private constructor(
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request(environmentKey)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, user)
+    private val eventQueue: EventQueue = EventQueue(request, ::user)
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
@@ -42,14 +43,25 @@ class DVCClient private constructor(
         if (!isExecuting.get()) {
             isExecuting.set(true)
             if (!isInitialized.get()) {
-
+                val now = System.currentTimeMillis()
                 fetchConfig(object : DVCCallback<BucketedUserConfig?> {
                     override fun onSuccess(result: BucketedUserConfig?) {
                         isInitialized.set(true)
                         isExecuting.set(false)
                         if (result != null) {
-                            initializeEventQueue(result)
+                            initializeEventQueue()
+
+                            eventQueue.queueEvent(
+                                Event.fromInternalEvent(
+                                    Event.userConfigEvent(
+                                        BigDecimal(System.currentTimeMillis() - now)
+                                    ),
+                                    user,
+                                    result.featureVariationMap
+                                )
+                            )
                         }
+
                         callback.onSuccess("Config loaded")
                     }
 
@@ -152,7 +164,12 @@ class DVCClient private constructor(
 
         observable.addPropertyChangeListener(variable)
 
-        val event: DVCRequestEvent = Event.aggregateEvent(variable.isDefaulted, variable.key)
+        val tmpConfig = config
+        val event: Event = Event.fromInternalEvent(
+            Event.variableEvent(variable.isDefaulted, variable.key),
+            user,
+            tmpConfig?.featureVariationMap
+        )
 
         try {
             eventQueue.queueAggregateEvent(event)
@@ -160,32 +177,29 @@ class DVCClient private constructor(
             e.message?.let { Log.e(TAG, it) }
         }
 
+
         return variable
     }
 
     /**
-     * Track a custom event for the current user.
+     * Track a custom event for the current user. Requires the SDK to have finished initializing.
      *
      * [event] instance of an event object to submit
      */
     fun track(event: DVCEvent) {
-        eventQueue.queueEvent(event)
+        eventQueue.queueEvent(Event.fromDVCEvent(event, user, config?.featureVariationMap))
     }
 
     /**
-     * Manually send all queued events to the API. Requires the SDK to have finished initializing.
+     * Manually send all queued events to the API.
      *
      * [callback] optional callback to be notified on success or failure
      */
-    @Throws(Throwable::class)
     fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
-        config ?: throw Throwable("DVCClient has not been initialized")
-
         eventQueue.flushEvents(callback)
     }
 
-    private fun initializeEventQueue(config: BucketedUserConfig) {
-        eventQueue.initialize(config)
+    private fun initializeEventQueue() {
         val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
         timer.schedule(eventQueue, flushInMs, flushInMs)
     }
