@@ -6,7 +6,7 @@ import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.model.Event
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -15,7 +15,7 @@ import java.io.IOException
 internal class Request constructor(envKey: String) {
     private val api: DVCApi = DVCApiClient().initialize()
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
-    private val objectMapper = ObjectMapper()
+    private val objectMapper = jacksonObjectMapper()
 
     private fun <T> getResponseHandler(callback: DVCCallback<T?>?) = object : Callback<T?> {
         override fun onResponse(

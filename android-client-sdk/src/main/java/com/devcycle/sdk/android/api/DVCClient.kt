@@ -44,7 +44,7 @@ class DVCClient private constructor(
             isExecuting.set(true)
             if (!isInitialized.get()) {
                 val now = System.currentTimeMillis()
-                fetchConfig(object : DVCCallback<BucketedUserConfig?> {
+                fetchConfig(user, object : DVCCallback<BucketedUserConfig?> {
                     override fun onSuccess(result: BucketedUserConfig?) {
                         isInitialized.set(true)
                         isExecuting.set(false)
@@ -89,13 +89,17 @@ class DVCClient private constructor(
      */
     @Synchronized
     fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        if (this.user.getUserId() == user.userId) {
-            this.user.updateUser(user)
+        var updatedUser: User
+        if (this.user.userId == user.userId) {
+            updatedUser = this.user.updateUser(user)
         } else {
-            this.user = User.builder().withUserParam(user).build()
+            updatedUser = User.builder().withUserParam(user).build()
         }
-        fetchConfig(object : DVCCallback<BucketedUserConfig?> {
+
+        val self = this
+        fetchConfig(updatedUser, object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
+                self.user = updatedUser
                 saveUser()
                 config?.variables?.let { callback?.onSuccess(it) }
             }
@@ -114,14 +118,13 @@ class DVCClient private constructor(
      */
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        val user: User? = dvcSharedPrefs.getCache(DVCSharedPrefs.UserKey)
-        if (user == null || !user.getIsAnonymous()) {
-            this.user = User.builder()
-                .withIsAnonymous(true)
-                .build()
-        }
-        fetchConfig(object : DVCCallback<BucketedUserConfig?> {
+        val newUser: User = User.builder()
+                    .build()
+
+        val self = this
+        fetchConfig(newUser, object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
+                self.user = newUser
                 saveUser()
                 config?.variables?.let { callback?.onSuccess(it) }
             }
@@ -208,7 +211,7 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    private fun <T> fetchConfig(callback: DVCCallback<T>) {
+    private fun <T> fetchConfig(user: User, callback: DVCCallback<T>) {
         request.getConfigJson(environmentKey, user, object : DVCCallback<BucketedUserConfig?> {
             override fun onSuccess(result: BucketedUserConfig?) {
                 config = result
