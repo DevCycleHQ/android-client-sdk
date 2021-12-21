@@ -3,7 +3,6 @@ package com.devcycle.sdk.android.model
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class DVCUser private constructor(
-    var isAnonymous: Boolean,
     var userId: String? = null,
     var email: String? = null,
     var name: String? = null,
@@ -24,7 +23,6 @@ class DVCUser private constructor(
         private var appBuild: String? = null
         private var customData: Any? = null
         private var privateCustomData: Any? = null
-        private var isAnonymous = true
 
         @JsonProperty("user_id")
         fun withUserId(userId: String?): Builder {
@@ -72,14 +70,8 @@ class DVCUser private constructor(
             return this
         }
 
-        fun withIsAnonymous(isAnonymous: Boolean): Builder {
-            this.isAnonymous = isAnonymous
-            return this
-        }
-
         fun build(): DVCUser {
             return DVCUser(
-                isAnonymous,
                 userId,
                 email,
                 name,

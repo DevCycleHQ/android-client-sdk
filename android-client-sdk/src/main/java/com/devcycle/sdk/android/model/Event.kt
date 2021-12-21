@@ -43,7 +43,7 @@ internal class Event internal constructor(
             return Event(
                 EventTypes.customEvent,
                 dvcEvent.type,
-                user.getUserId(),
+                user.userId,
                 featureVars ?: emptyMap(),
                 dvcEvent.target,
                 dvcEvent.date.time,
@@ -79,7 +79,7 @@ internal class Event internal constructor(
             return Event(
                 event.type,
                 null,
-                user.getUserId(),
+                user.userId,
                 featureVars ?: emptyMap(),
                 event.target,
                 event.date ?: Calendar.getInstance().time.time,
