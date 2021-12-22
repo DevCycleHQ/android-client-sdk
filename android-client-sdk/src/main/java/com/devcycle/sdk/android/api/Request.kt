@@ -1,9 +1,8 @@
 package com.devcycle.sdk.android.api
 
-import com.devcycle.sdk.android.exception.DVCConfigRequestException
+import com.devcycle.sdk.android.exception.DVCRequestException
 
 import com.devcycle.sdk.android.model.*
-import com.devcycle.sdk.android.model.Event
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -24,19 +23,20 @@ internal class Request constructor(envKey: String) {
         } else {
             val httpResponseCode = HttpResponseCode.byCode(response.code())
             var errorResponse = ErrorResponse("Unknown Error", null)
+
             if (response.errorBody() != null) {
                 try {
                     errorResponse = objectMapper.readValue(
                         response.errorBody()!!.string(),
                         ErrorResponse::class.java
                     )
-                    throw DVCConfigRequestException(httpResponseCode, errorResponse)
+                    throw DVCRequestException(httpResponseCode, errorResponse)
                 } catch (e: IOException) {
                     errorResponse = ErrorResponse(e.message, null)
-                    throw DVCConfigRequestException(httpResponseCode, errorResponse)
+                    throw DVCRequestException(httpResponseCode, errorResponse)
                 }
             }
-            throw DVCConfigRequestException(httpResponseCode, errorResponse)
+            throw DVCRequestException(httpResponseCode, errorResponse)
         }
     }
 
@@ -53,9 +53,8 @@ internal class Request constructor(envKey: String) {
         }
     }
 
-    suspend fun publishEvents(user: User, events: MutableList<Event>): DVCResponse {
-        val userAndEvents = UserAndEvents(user, events)
-        val response = eventApi.trackEvents(userAndEvents)
+    suspend fun publishEvents(payload: UserAndEvents): DVCResponse {
+        val response = eventApi.trackEvents(payload)
 
         return getResponseHandler(response)
     }

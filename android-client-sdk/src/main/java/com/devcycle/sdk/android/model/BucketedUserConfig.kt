@@ -23,40 +23,40 @@ class BucketedUserConfig {
      * @return project
      */
     @get:Schema(required = true, description = "")
-    var project: Project? = null
+    val project: Project? = null
 
     /**
      * Get environment
      * @return environment
      */
     @get:Schema(required = true, description = "")
-    var environment: Environment? = null
+    val environment: Environment? = null
 
     /**
      * Mapping of &#x60;Feature.key&#x60; to &#x60;Feature&#x60; schema values.
      * @return features
      */
     @get:Schema(description = "Mapping of `Feature.key` to `Feature` schema values.")
-    var features: Map<String, Feature>? = null
+    val features: Map<String, Feature>? = null
 
     /**
      * Map of &#x60;Feature._id&#x60; to &#x60;Feature._variation&#x60; used for event logging.
      * @return featureVariationMap
      */
     @get:Schema(description = "Map of `Feature._id` to `Feature._variation` used for event logging.")
-    var featureVariationMap: Map<String, String>? = null
+    val featureVariationMap: Map<String, String>? = null
 
     /**
      * Map of &#x60;Variable.key&#x60; to &#x60;Variable&#x60; values.
      * @return variables
      */
     @get:Schema(description = "Map of `Variable.key` to `Variable` values.")
-    var variables: Map<String, Variable<Any>>? = null
+    val variables: Map<String, Variable<Any>>? = null
 
     /**
      * Hashes &#x60;murmurhash.v3(variable.key + environment.apiKey)&#x60; of all known variable keys not contained in the &#x60;variables&#x60; object.
      * @return knownVariableKeys
      */
     @get:Schema(description = "Hashes `murmurhash.v3(variable.key + environment.apiKey)` of all known variable keys not contained in the `variables` object.")
-    var knownVariableKeys: List<BigDecimal>? = null
+    val knownVariableKeys: List<BigDecimal>? = null
 }

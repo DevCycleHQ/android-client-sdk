@@ -94,7 +94,9 @@ class DVCClient private constructor(
      */
     @Synchronized
     fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        var updatedUser: User
+        flushEvents()
+
+        val updatedUser: User
         if (this.user.userId == user.userId) {
             updatedUser = this.user.updateUser(user)
         } else {
@@ -123,6 +125,7 @@ class DVCClient private constructor(
      */
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+        flushEvents()
         val newUser: User = User.builder()
                     .build()
 
@@ -206,7 +209,7 @@ class DVCClient private constructor(
     fun flushEvents(callback: DVCCallback<String>? = null) {
         coroutineScope.launch {
             try {
-                eventQueue.flushEvents()
+                eventQueue.flushEvents(background = false)
                 callback?.onSuccess("")
             } catch (t: Throwable) {
                 callback?.onError(t)
@@ -223,6 +226,7 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
+    @Synchronized
     private fun fetchConfig(user: User, callback: DVCCallback<BucketedUserConfig>) {
         coroutineScope.launch {
             try {
