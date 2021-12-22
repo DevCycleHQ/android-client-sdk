@@ -6,6 +6,5 @@ internal data class UserAndEvents(
     @JsonProperty("user")
     val user: User,
     @JsonProperty("events")
-    val events: List<Event>?
-) {
-}
+    val events: List<Event>
+) {}

@@ -1,10 +1,15 @@
 package com.devcycle.sdk.android.api
 
 import android.util.Log
+import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.User
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
+import com.devcycle.sdk.android.model.UserAndEvents
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import java.util.*
 import kotlin.collections.HashMap
@@ -16,31 +21,66 @@ internal class EventQueue constructor(
     private val TAG = EventQueue::class.java.simpleName
 
     private val eventQueue: MutableList<Event> = mutableListOf()
-    private val eventsToFlush: MutableList<Event> = mutableListOf()
+    private val eventPayloadsToFlush: MutableList<UserAndEvents> = mutableListOf()
     private val aggregateEventMap: HashMap<String, HashMap<String, Event>> = hashMapOf()
     private val coroutineScope = MainScope()
+    private val flushMutex = Mutex()
 
-    suspend fun flushEvents() {
-        val user = getUser()
-        val currentEventQueue = eventQueue.toMutableList()
-        eventsToFlush.addAll(currentEventQueue)
-        eventsToFlush.addAll(eventsFromAggregateEventMap())
 
-        if (eventsToFlush.size == 0) {
-            Log.i(TAG, "No events to flush.")
-            return
+    suspend fun flushEvents(background: Boolean = true) = coroutineScope {
+        flushMutex.withLock {
+            val user = getUser()
+            val currentEventQueue = eventQueue.toMutableList()
+            val eventsToFlush: MutableList<Event> = mutableListOf()
+            eventsToFlush.addAll(currentEventQueue)
+            eventsToFlush.addAll(eventsFromAggregateEventMap())
+
+            if (eventsToFlush.size == 0) {
+                Log.i(TAG, "No events to flush.")
+                return@coroutineScope
+            }
+
+            Log.i(TAG, "DVC Flush ${eventsToFlush.size} Events")
+
+            // TODO copy user data here
+            val payload = UserAndEvents(user, eventsToFlush)
+
+            eventPayloadsToFlush.add(payload)
+
+            eventQueue.clear()
+            aggregateEventMap.clear()
+            eventsToFlush.clear()
+
+            var firstError: Throwable? = null
+
+            val jobs = flow {
+                eventPayloadsToFlush.map {
+                    try {
+                        request.publishEvents(it)
+                        emit(payload)
+                        Log.i(TAG, "DVC Flushed ${payload.events.size} Events.")
+                    } catch (t: DVCRequestException) {
+                        if (t.isRetryable) {
+                            Log.e(TAG, "Error with event flushing, will be retried", t)
+                            // Don't raise the error but keep the payload in the queue, it will be
+                            // retried on the next flush
+                            firstError = firstError ?: t
+                        } else {
+                            Log.e(TAG, "Non-retryable error with event flushing.", t)
+                            emit(payload)
+                        }
+                    }
+                }
+            }
+
+            val successful = jobs.toList()
+
+            eventPayloadsToFlush.removeAll(successful)
+
+            if (eventPayloadsToFlush.size > 0 && !background) {
+                throw Throwable("Failed to completely flush events queue.", firstError)
+            }
         }
-
-        Log.i(TAG, "DVC Flush ${eventsToFlush.size} Events")
-
-        eventQueue.clear()
-        aggregateEventMap.clear()
-
-        request.publishEvents(user, eventsToFlush)
-        Log.i(TAG, "DVC Flushed ${eventsToFlush.size} Events.")
-        eventsToFlush.clear()
-
-        return
     }
 
     /**
@@ -88,6 +128,11 @@ internal class EventQueue constructor(
     }
 
     override fun run() {
+        if (flushMutex.isLocked) {
+            Log.i(TAG, "Skipping event flush due to pending flush operation")
+
+            return
+        }
         coroutineScope.launch {
             try {
                 flushEvents()
