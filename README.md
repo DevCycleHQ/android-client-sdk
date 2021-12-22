@@ -1,10 +1,12 @@
 # DevCycle Android SDK
 
-The DeCycle Android Client SDK.
+The DevCycle Android Client SDK. This SDK uses our Client SDK APIs to perform all user segmentation 
+and bucketing for the SDK, providing fast response times using our globally distributed edge workers 
+all around the world.
 
 ## Requirements
 
-This version of the DevCycle Android Client SDK supports a minimum Android Version 21.
+This version of the DevCycle Android Client SDK supports a minimum Android API Version 21.
 
 ## Installation
 
@@ -18,7 +20,7 @@ implementation("com.devcycle:android-client-sdk:1.0.0")
 
 ### Initializing the SDK
 
-Using the builder patter we can initialize the DevCycle SDK by providing the `applicationContext`, 
+Using the builder pattern we can initialize the DevCycle SDK by providing the `applicationContext`, 
 DVCUser, and DevCycle mobile environment key:
 
 ```kotlin
@@ -27,7 +29,6 @@ val dvcClient: DVCClient = DVCClient.builder()
     .withUser(
         DVCUser.builder()
             .withUserId("test_user")
-            .withIsAnonymous(false)
             .build()
     )
     .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
@@ -92,7 +93,7 @@ If the SDK has not finished initializing, these methods will return an empty obj
 
 ## Identifying User
 
-To identify a different user, or the same user passed into the initialize with more attributes, 
+To identify a different user, or the same user passed into the initialize method with more attributes, 
 build a DVCUser object and pass it into `identifyUser`:
 
 ```kotlin
@@ -116,6 +117,8 @@ dvcClient.identifyUser(user, object: DVCCallback<Map<String, Variable<Any>>> {
 })
 ```
 
+If `onError` is called the user's configuration will not be updated and previous user's data will persist.
+
 ## Reset User
 
 To reset the user into an anonymous user, `resetUser` will reset to the anonymous user created before 
@@ -136,6 +139,8 @@ dvcClient.resetUser(object : DVCCallback<Map<String, Variable<Any>>> {
     }
 })
 ```
+
+If `onError` is called the user's configuration will not be updated and previous user's data will persist.
 
 ## Tracking Events
 
