@@ -223,7 +223,6 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-
     private fun fetchConfig(user: User, callback: DVCCallback<BucketedUserConfig>) {
         coroutineScope.launch {
             try {

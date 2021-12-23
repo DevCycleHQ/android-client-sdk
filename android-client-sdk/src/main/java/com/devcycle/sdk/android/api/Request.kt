@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.api
 
-import android.util.Log
 import com.devcycle.sdk.android.exception.DVCConfigRequestException
 
 import com.devcycle.sdk.android.model.*
