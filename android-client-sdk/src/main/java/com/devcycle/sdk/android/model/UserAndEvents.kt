@@ -2,13 +2,10 @@ package com.devcycle.sdk.android.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-internal class UserAndEvents(
-    user: User,
-    events: MutableList<Event>?
-) {
+internal data class UserAndEvents(
     @JsonProperty("user")
-    private val user: User = user
-
+    val user: User,
     @JsonProperty("events")
-    private val events: MutableList<Event>? = events
+    val events: List<Event>?
+) {
 }
