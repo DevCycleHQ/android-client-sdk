@@ -68,17 +68,18 @@ ext {
     jackson_version = "2.13.0"
     jackson_kotlin_version = "2.13.0"
     mockito_core_version = "4.0.0"
+    coroutines_version = "1.6.0"
 }
 
 dependencies {
-
-    //implementation('com.github.tomasharkema:RetrofitCurlPrinter:0.0.1')
-
+    
     implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
     implementation("com.squareup.retrofit2:converter-jackson:$retrofit_version")
     implementation "io.swagger.core.v3:swagger-annotations:$swagger_annotations_version"
     implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_kotlin_version}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version")
 
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.4.0'

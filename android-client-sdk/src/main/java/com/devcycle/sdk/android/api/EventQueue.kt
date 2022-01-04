@@ -1,9 +1,10 @@
 package com.devcycle.sdk.android.api
 
 import android.util.Log
-import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.User
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.*
 import kotlin.collections.HashMap
@@ -17,9 +18,9 @@ internal class EventQueue constructor(
     private val eventQueue: MutableList<Event> = mutableListOf()
     private val eventsToFlush: MutableList<Event> = mutableListOf()
     private val aggregateEventMap: HashMap<String, HashMap<String, Event>> = hashMapOf()
+    private val coroutineScope = MainScope()
 
-    @Synchronized
-    fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
+    suspend fun flushEvents() {
         val user = getUser()
         val currentEventQueue = eventQueue.toMutableList()
         eventsToFlush.addAll(currentEventQueue)
@@ -35,17 +36,11 @@ internal class EventQueue constructor(
         eventQueue.clear()
         aggregateEventMap.clear()
 
-        request.publishEvents(user, eventsToFlush, object : DVCCallback<DVCResponse?> {
-            override fun onSuccess(result: DVCResponse?) {
-                Log.i(TAG, "DVC Flushed ${eventsToFlush.size} Events.")
-                eventsToFlush.clear()
-                callback?.onSuccess(result)
-            }
+        request.publishEvents(user, eventsToFlush)
+        Log.i(TAG, "DVC Flushed ${eventsToFlush.size} Events.")
+        eventsToFlush.clear()
 
-            override fun onError(t: Throwable) {
-                callback?.onError(t)
-            }
-        })
+        return
     }
 
     /**
@@ -93,6 +88,12 @@ internal class EventQueue constructor(
     }
 
     override fun run() {
-        flushEvents()
+        coroutineScope.launch {
+            try {
+                flushEvents()
+            } catch (t: Throwable) {
+                Log.e(TAG, "Error flushing events in background", t)
+            }
+        }
     }
 }

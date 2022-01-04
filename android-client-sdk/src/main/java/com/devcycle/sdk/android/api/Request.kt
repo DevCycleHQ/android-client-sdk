@@ -1,5 +1,6 @@
 package com.devcycle.sdk.android.api
 
+import android.util.Log
 import com.devcycle.sdk.android.exception.DVCConfigRequestException
 
 import com.devcycle.sdk.android.model.*
@@ -7,8 +8,8 @@ import com.devcycle.sdk.android.model.Event
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import retrofit2.Call
-import retrofit2.Callback
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import retrofit2.Response
 import java.io.IOException
 
@@ -16,56 +17,48 @@ internal class Request constructor(envKey: String) {
     private val api: DVCApi = DVCApiClient().initialize()
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
     private val objectMapper = jacksonObjectMapper()
+    private val configMutex = Mutex()
 
-    private fun <T> getResponseHandler(callback: DVCCallback<T?>?) = object : Callback<T?> {
-        override fun onResponse(
-            call: Call<T?>,
-            response: Response<T?>
-        ) {
-            if (response.isSuccessful) {
-                val result = response.body()
-                callback?.onSuccess(result)
-            } else {
-                val httpResponseCode = HttpResponseCode.byCode(response.code())
-                var errorResponse = ErrorResponse("Unknown Error", null)
-                var dvcException = DVCConfigRequestException(httpResponseCode, errorResponse)
-                if (response.errorBody() != null) {
-                    try {
-                        errorResponse = objectMapper.readValue(
-                            response.errorBody()!!.string(),
-                            ErrorResponse::class.java
-                        )
-                        dvcException = DVCConfigRequestException(httpResponseCode, errorResponse)
-                    } catch (e: IOException) {
-                        errorResponse.message = e.message
-                        dvcException = DVCConfigRequestException(httpResponseCode, errorResponse)
-                    }
+    private fun <T> getResponseHandler(response: Response<T>): T {
+        if (response.isSuccessful) {
+            return response.body() ?: throw Throwable("Unexpected result from API")
+        } else {
+            val httpResponseCode = HttpResponseCode.byCode(response.code())
+            var errorResponse = ErrorResponse("Unknown Error", null)
+            if (response.errorBody() != null) {
+                try {
+                    errorResponse = objectMapper.readValue(
+                        response.errorBody()!!.string(),
+                        ErrorResponse::class.java
+                    )
+                    throw DVCConfigRequestException(httpResponseCode, errorResponse)
+                } catch (e: IOException) {
+                    errorResponse = ErrorResponse(e.message, null)
+                    throw DVCConfigRequestException(httpResponseCode, errorResponse)
                 }
-                callback?.onError(dvcException)
             }
-        }
-
-        override fun onFailure(call: Call<T?>, t: Throwable) {
-            callback?.onError(t)
+            throw DVCConfigRequestException(httpResponseCode, errorResponse)
         }
     }
 
-    @Synchronized
-    fun getConfigJson(
+    suspend fun getConfigJson(
         environmentKey: String,
-        user: User,
-        callback: DVCCallback<BucketedUserConfig?>
-    ) {
+        user: User
+    ): BucketedUserConfig {
         val map =
             objectMapper.convertValue(user, object : TypeReference<Map<String, String>>() {})
-        val call = api.getConfigJson(environmentKey, map)
-        call.enqueue(this.getResponseHandler(callback))
+
+        configMutex.withLock {
+            val response = api.getConfigJson(environmentKey, map)
+            return getResponseHandler(response)
+        }
     }
 
-    fun publishEvents(user: User, events: MutableList<Event>, callback: DVCCallback<DVCResponse?>?) {
+    suspend fun publishEvents(user: User, events: MutableList<Event>): DVCResponse {
         val userAndEvents = UserAndEvents(user, events)
-        val call = eventApi.trackEvents(userAndEvents)
-        call.enqueue(this.getResponseHandler(callback))
+        val response = eventApi.trackEvents(userAndEvents)
+
+        return getResponseHandler(response)
     }
 
     init {

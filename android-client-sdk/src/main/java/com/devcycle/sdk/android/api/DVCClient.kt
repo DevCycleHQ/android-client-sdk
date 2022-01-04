@@ -5,6 +5,8 @@ import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -38,45 +40,48 @@ class DVCClient private constructor(
 
     private val timer: Timer = Timer("DevCycle.EventQueue.Timer", true)
 
+    private val coroutineScope = MainScope()
+
     @Synchronized
     fun initialize(callback: DVCCallback<String?>) {
-        if (!isExecuting.get()) {
-            isExecuting.set(true)
-            if (!isInitialized.get()) {
-                val now = System.currentTimeMillis()
-                fetchConfig(user, object : DVCCallback<BucketedUserConfig?> {
-                    override fun onSuccess(result: BucketedUserConfig?) {
-                        isInitialized.set(true)
-                        isExecuting.set(false)
-                        if (result != null) {
-                            initializeEventQueue()
-
-                            eventQueue.queueEvent(
-                                Event.fromInternalEvent(
-                                    Event.userConfigEvent(
-                                        BigDecimal(System.currentTimeMillis() - now)
-                                    ),
-                                    user,
-                                    result.featureVariationMap
-                                )
-                            )
-                        }
-
-                        callback.onSuccess("Config loaded")
-                    }
-
-                    override fun onError(t: Throwable) {
-                        isExecuting.set(false)
-                        callback.onError(t)
-                    }
-                })
-            } else {
-                isExecuting.set(false)
-                callback.onError(IllegalStateException("DVCClient already initialized"))
-            }
-        } else {
+        if (isExecuting.get()) {
             callback.onError(IllegalStateException("DVCClient already initializing"))
+            return
         }
+
+        isExecuting.set(true)
+
+        if (isInitialized.get()) {
+            isExecuting.set(false)
+            callback.onError(IllegalStateException("DVCClient already initialized"))
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        fetchConfig(user, object : DVCCallback<BucketedUserConfig> {
+            override fun onSuccess(result: BucketedUserConfig) {
+                isInitialized.set(true)
+                isExecuting.set(false)
+                initializeEventQueue()
+
+                eventQueue.queueEvent(
+                    Event.fromInternalEvent(
+                        Event.userConfigEvent(
+                            BigDecimal(System.currentTimeMillis() - now)
+                        ),
+                        user,
+                        result.featureVariationMap
+                    )
+                )
+
+                callback.onSuccess("Config loaded")
+            }
+
+            override fun onError(t: Throwable) {
+                isExecuting.set(false)
+                callback.onError(t)
+            }
+        })
     }
 
     /**
@@ -97,8 +102,8 @@ class DVCClient private constructor(
         }
 
         val self = this
-        fetchConfig(updatedUser, object : DVCCallback<BucketedUserConfig?> {
-            override fun onSuccess(result: BucketedUserConfig?) {
+        fetchConfig(updatedUser, object : DVCCallback<BucketedUserConfig> {
+            override fun onSuccess(result: BucketedUserConfig) {
                 self.user = updatedUser
                 saveUser()
                 config?.variables?.let { callback?.onSuccess(it) }
@@ -122,8 +127,8 @@ class DVCClient private constructor(
                     .build()
 
         val self = this
-        fetchConfig(newUser, object : DVCCallback<BucketedUserConfig?> {
-            override fun onSuccess(result: BucketedUserConfig?) {
+        fetchConfig(newUser, object : DVCCallback<BucketedUserConfig> {
+            override fun onSuccess(result: BucketedUserConfig) {
                 self.user = newUser
                 saveUser()
                 config?.variables?.let { callback?.onSuccess(it) }
@@ -198,8 +203,15 @@ class DVCClient private constructor(
      *
      * [callback] optional callback to be notified on success or failure
      */
-    fun flushEvents(callback: DVCCallback<DVCResponse?>? = null) {
-        eventQueue.flushEvents(callback)
+    fun flushEvents(callback: DVCCallback<String>? = null) {
+        coroutineScope.launch {
+            try {
+                eventQueue.flushEvents()
+                callback?.onSuccess("")
+            } catch (t: Throwable) {
+                callback?.onError(t)
+            }
+        }
     }
 
     private fun initializeEventQueue() {
@@ -211,19 +223,19 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    private fun <T> fetchConfig(user: User, callback: DVCCallback<T>) {
-        request.getConfigJson(environmentKey, user, object : DVCCallback<BucketedUserConfig?> {
-            override fun onSuccess(result: BucketedUserConfig?) {
+
+    private fun fetchConfig(user: User, callback: DVCCallback<BucketedUserConfig>) {
+        coroutineScope.launch {
+            try {
+                val result = request.getConfigJson(environmentKey, user)
                 config = result
                 observable.configUpdated(result)
                 dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
-                callback.onSuccess(result as T)
-            }
-
-            override fun onError(t: Throwable) {
+                callback.onSuccess(result)
+            } catch (t: Throwable) {
                 callback.onError(t)
             }
-        })
+        }
     }
 
     class DVCClientBuilder {
