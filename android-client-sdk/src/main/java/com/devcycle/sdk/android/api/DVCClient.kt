@@ -5,6 +5,7 @@ import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -25,6 +26,7 @@ class DVCClient private constructor(
     private val environmentKey: String,
     private var user: User,
     private var options: DVCOptions?,
+    private val coroutineScope: CoroutineScope = MainScope()
 ) {
     private val TAG: String = DVCClient::class.java.simpleName
 
@@ -33,14 +35,12 @@ class DVCClient private constructor(
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request(environmentKey)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, ::user)
+    private val eventQueue: EventQueue = EventQueue(request, ::user, coroutineScope)
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
 
     private val timer: Timer = Timer("DevCycle.EventQueue.Timer", true)
-
-    private val coroutineScope = MainScope()
 
     @Synchronized
     fun initialize(callback: DVCCallback<String?>) {
@@ -209,7 +209,7 @@ class DVCClient private constructor(
     fun flushEvents(callback: DVCCallback<String>? = null) {
         coroutineScope.launch {
             try {
-                eventQueue.flushEvents(background = false)
+                eventQueue.flushEvents(throwOnFailure = true)
                 callback?.onSuccess("")
             } catch (t: Throwable) {
                 callback?.onError(t)

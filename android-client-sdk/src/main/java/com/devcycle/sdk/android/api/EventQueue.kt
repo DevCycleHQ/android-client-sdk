@@ -12,44 +12,51 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import java.util.*
-import kotlin.collections.HashMap
 
 internal class EventQueue constructor(
     private val request: Request,
-    private val getUser: () -> User
+    private val getUser: () -> User,
+    private val coroutineScope: CoroutineScope
 ) : TimerTask(){
     private val TAG = EventQueue::class.java.simpleName
 
     private val eventQueue: MutableList<Event> = mutableListOf()
     private val eventPayloadsToFlush: MutableList<UserAndEvents> = mutableListOf()
-    private val aggregateEventMap: HashMap<String, HashMap<String, Event>> = hashMapOf()
-    private val coroutineScope = MainScope()
+    private val aggregateEventMap: HashMap<String, HashMap<String, Event>> = HashMap()
+
+    // mutex to control flushing events, ensuring only one operation at a time
     private val flushMutex = Mutex()
+    // mutex to gate modifications to the aggregateEventMap
+    private val aggregateMutex = Mutex()
+    // mutex to gate modifications to the eventQueue
+    private val queueMutex = Mutex()
 
-
-    suspend fun flushEvents(background: Boolean = true) = coroutineScope {
+    suspend fun flushEvents(throwOnFailure: Boolean = false) {
         flushMutex.withLock {
             val user = getUser()
             val currentEventQueue = eventQueue.toMutableList()
             val eventsToFlush: MutableList<Event> = mutableListOf()
             eventsToFlush.addAll(currentEventQueue)
-            eventsToFlush.addAll(eventsFromAggregateEventMap())
+
+            queueMutex.withLock {
+                eventQueue.removeAll(currentEventQueue)
+            }
+
+            aggregateMutex.withLock {
+                eventsToFlush.addAll(eventsFromAggregateEventMap())
+                aggregateEventMap.clear()
+            }
 
             if (eventsToFlush.size == 0) {
                 Log.i(TAG, "No events to flush.")
-                return@coroutineScope
+                return
             }
 
             Log.i(TAG, "DVC Flush ${eventsToFlush.size} Events")
 
-            // TODO copy user data here
-            val payload = UserAndEvents(user, eventsToFlush)
+            val payload = UserAndEvents(user.copy(), eventsToFlush)
 
             eventPayloadsToFlush.add(payload)
-
-            eventQueue.clear()
-            aggregateEventMap.clear()
-            eventsToFlush.clear()
 
             var firstError: Throwable? = null
 
@@ -57,7 +64,7 @@ internal class EventQueue constructor(
                 eventPayloadsToFlush.map {
                     try {
                         request.publishEvents(it)
-                        emit(payload)
+                        emit(it)
                         Log.i(TAG, "DVC Flushed ${payload.events.size} Events.")
                     } catch (t: DVCRequestException) {
                         if (t.isRetryable) {
@@ -67,7 +74,7 @@ internal class EventQueue constructor(
                             firstError = firstError ?: t
                         } else {
                             Log.e(TAG, "Non-retryable error with event flushing.", t)
-                            emit(payload)
+                            emit(it)
                         }
                     }
                 }
@@ -77,7 +84,7 @@ internal class EventQueue constructor(
 
             eventPayloadsToFlush.removeAll(successful)
 
-            if (eventPayloadsToFlush.size > 0 && !background) {
+            if (eventPayloadsToFlush.size > 0 && throwOnFailure) {
                 throw Throwable("Failed to completely flush events queue.", firstError)
             }
         }
@@ -87,7 +94,11 @@ internal class EventQueue constructor(
      * Queue Event for producing
      */
     fun queueEvent(event: Event) {
-        eventQueue.add(event)
+        runBlocking {
+            queueMutex.withLock {
+                eventQueue.add(event)
+            }
+        }
     }
 
     /**
@@ -96,27 +107,30 @@ internal class EventQueue constructor(
      */
     @Throws(IllegalArgumentException::class)
     fun queueAggregateEvent(event: Event) {
-        if (event.target == null || event.target == "") {
-            throw IllegalArgumentException("Target must be set")
-        }
-        if (event.type == "") {
-            throw IllegalArgumentException("Type must be set")
-        }
-        event.date = Calendar.getInstance().time.time
-        event.value = BigDecimal.valueOf(1)
+        runBlocking {
+            aggregateMutex.withLock {
+                if (event.target == null || event.target == "") {
+                    throw IllegalArgumentException("Target must be set")
+                }
+                if (event.type == "") {
+                    throw IllegalArgumentException("Type must be set")
+                }
 
-        val aggEventType = aggregateEventMap[event.type]
-        when {
-            aggEventType == null -> {
-                aggregateEventMap[event.type] = hashMapOf()
-                val map = aggregateEventMap[event.type]
-                map!![event.target] = event
-            }
-            aggEventType.containsKey(event.target) -> {
-                aggEventType[event.target]!!.value = aggEventType[event.target]!!.value?.plus(BigDecimal.ONE)
-            }
-            else -> {
-                aggEventType[event.target] = event
+                val aggEventType = aggregateEventMap[event.type]
+                when {
+                    aggEventType == null -> {
+                        val map = aggregateEventMap.getOrPut(event.type, { HashMap<String, Event>() })
+                        map[event.target] = event
+                    }
+                    aggEventType.containsKey(event.target) -> {
+                        aggEventType[event.target] = event.copy(
+                            value = aggEventType[event.target]?.value?.plus(BigDecimal.ONE)
+                        )
+                    }
+                    else -> {
+                        aggEventType[event.target] = event
+                    }
+                }
             }
         }
     }
