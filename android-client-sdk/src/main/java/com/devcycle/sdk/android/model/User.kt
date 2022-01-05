@@ -11,7 +11,7 @@ import java.util.*
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
-internal data class User private constructor(
+internal data class User(
     @Schema(required = true, description = "Unique id to identify the user")
     @JsonProperty("user_id")
     val userId: String,
