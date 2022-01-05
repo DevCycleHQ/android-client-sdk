@@ -15,5 +15,5 @@ class DVCRequestException(
         return errorResponse
     }
 
-    val isRetryable get() = httpResponseCode.code() >= 500
+    val isRetryable get() = httpResponseCode.code >= 500
 }
