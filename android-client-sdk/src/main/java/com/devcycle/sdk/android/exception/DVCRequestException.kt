@@ -5,7 +5,7 @@ import com.devcycle.sdk.android.model.HttpResponseCode
 
 class DVCRequestException(
     private val httpResponseCode:HttpResponseCode,
-    private val errorResponse: ErrorResponse): Exception(errorResponse.message) {
+    private val errorResponse: ErrorResponse): Exception(errorResponse.message?.getOrNull(0)) {
 
     fun getHttpResponseCode(): HttpResponseCode {
         return httpResponseCode

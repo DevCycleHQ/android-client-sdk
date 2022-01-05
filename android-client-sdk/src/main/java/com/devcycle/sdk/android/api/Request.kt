@@ -22,7 +22,7 @@ internal class Request constructor(envKey: String) {
             return response.body() ?: throw Throwable("Unexpected result from API")
         } else {
             val httpResponseCode = HttpResponseCode.byCode(response.code())
-            var errorResponse = ErrorResponse("Unknown Error", null)
+            var errorResponse = ErrorResponse(listOf("Unknown Error"), null)
 
             if (response.errorBody() != null) {
                 try {
@@ -32,7 +32,7 @@ internal class Request constructor(envKey: String) {
                     )
                     throw DVCRequestException(httpResponseCode, errorResponse)
                 } catch (e: IOException) {
-                    errorResponse = ErrorResponse(e.message, null)
+                    errorResponse = ErrorResponse(listOf(e.message ?: ""), null)
                     throw DVCRequestException(httpResponseCode, errorResponse)
                 }
             }
