@@ -5,9 +5,7 @@ import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -39,29 +37,17 @@ class DVCClient private constructor(
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
+    private val initializeJob: Deferred<Any>
 
     private val timer: Timer = Timer("DevCycle.EventQueue.Timer", true)
 
-    @Synchronized
-    fun initialize(callback: DVCCallback<String?>) {
-        if (isExecuting.get()) {
-            callback.onError(IllegalStateException("DVCClient already initializing"))
-            return
-        }
-
-        isExecuting.set(true)
-
-        if (isInitialized.get()) {
-            isExecuting.set(false)
-            callback.onError(IllegalStateException("DVCClient already initialized"))
-            return
-        }
-
-        val now = System.currentTimeMillis()
-        fetchConfig(user, object : DVCCallback<BucketedUserConfig> {
-            override fun onSuccess(result: BucketedUserConfig) {
+    init {
+        initializeJob = coroutineScope.async {
+            isExecuting.set(true)
+            val now = System.currentTimeMillis()
+            try {
+                val result = fetchConfig(user)
                 isInitialized.set(true)
-                isExecuting.set(false)
                 initializeEventQueue()
 
                 eventQueue.queueEvent(
@@ -73,15 +59,28 @@ class DVCClient private constructor(
                         result.featureVariationMap
                     )
                 )
-
-                callback.onSuccess("Config loaded")
+            } catch (t: Throwable) {
+                Log.e(TAG, "DevCycle SDK Failed to Initialize!", t)
+                throw t
             }
+            isExecuting.set(false)
+        }
+    }
 
-            override fun onError(t: Throwable) {
-                isExecuting.set(false)
+    fun onInitialized(callback: DVCCallback<String>) {
+        if (isInitialized.get()) {
+            callback.onSuccess("Config loaded")
+            return
+        }
+
+        coroutineScope.launch {
+            try {
+                initializeJob.await()
+                callback.onSuccess("Config loaded")
+            } catch (t: Throwable) {
                 callback.onError(t)
             }
-        })
+        }
     }
 
     /**
@@ -103,18 +102,16 @@ class DVCClient private constructor(
             updatedUser = User.builder().withUserParam(user).build()
         }
 
-        val self = this
-        fetchConfig(updatedUser, object : DVCCallback<BucketedUserConfig> {
-            override fun onSuccess(result: BucketedUserConfig) {
-                self.user = updatedUser
+        coroutineScope.launch {
+            try {
+                fetchConfig(updatedUser)
+                this@DVCClient.user = updatedUser
                 saveUser()
                 config?.variables?.let { callback?.onSuccess(it) }
-            }
-
-            override fun onError(t: Throwable) {
+            } catch (t: Throwable) {
                 callback?.onError(t)
             }
-        })
+        }
     }
 
     /**
@@ -129,18 +126,16 @@ class DVCClient private constructor(
         val newUser: User = User.builder()
                     .build()
 
-        val self = this
-        fetchConfig(newUser, object : DVCCallback<BucketedUserConfig> {
-            override fun onSuccess(result: BucketedUserConfig) {
-                self.user = newUser
+        coroutineScope.launch {
+            try {
+                fetchConfig(newUser)
+                this@DVCClient.user = newUser
                 saveUser()
                 config?.variables?.let { callback?.onSuccess(it) }
-            }
-
-            override fun onError(t: Throwable) {
+            } catch (t: Throwable) {
                 callback?.onError(t)
             }
-        })
+        }
     }
 
     /**
@@ -226,19 +221,12 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    @Synchronized
-    private fun fetchConfig(user: User, callback: DVCCallback<BucketedUserConfig>) {
-        coroutineScope.launch {
-            try {
-                val result = request.getConfigJson(environmentKey, user)
-                config = result
-                observable.configUpdated(result)
-                dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
-                callback.onSuccess(result)
-            } catch (t: Throwable) {
-                callback.onError(t)
-            }
-        }
+    private suspend fun fetchConfig(user: User): BucketedUserConfig {
+        val result = request.getConfigJson(environmentKey, user)
+        config = result
+        observable.configUpdated(result)
+        dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
+        return result
     }
 
     class DVCClientBuilder {
