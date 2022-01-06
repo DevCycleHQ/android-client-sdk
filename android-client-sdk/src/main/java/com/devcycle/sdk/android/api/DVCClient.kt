@@ -5,9 +5,11 @@ import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import com.devcycle.sdk.android.util.LogTree
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -26,10 +28,9 @@ class DVCClient private constructor(
     private val environmentKey: String,
     private var user: User,
     private var options: DVCOptions?,
+    logLevel: Int = Log.ERROR,
     private val coroutineScope: CoroutineScope = MainScope()
 ) {
-    private val TAG: String = DVCClient::class.java.simpleName
-
     internal var config: BucketedUserConfig? = null
     private val defaultIntervalInMs: Long = 10000
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
@@ -185,7 +186,7 @@ class DVCClient private constructor(
         try {
             eventQueue.queueAggregateEvent(event)
         } catch(e: IllegalArgumentException) {
-            e.message?.let { Log.e(TAG, it) }
+            e.message?.let { Timber.e(it) }
         }
 
 
@@ -246,6 +247,8 @@ class DVCClient private constructor(
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
+        private var logLevel: Int = Log.ERROR
+
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
             return this
@@ -265,11 +268,16 @@ class DVCClient private constructor(
             return this
         }
 
+        fun withLogLevel(logLevel: Int): DVCClientBuilder {
+            this.logLevel = logLevel
+            return this
+        }
+
         fun build(): DVCClient {
             requireNotNull(context) { "Context must be set" }
             require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
             requireNotNull(user) { "User must be set" }
-            return DVCClient(context!!, environmentKey!!, user!!, options)
+            return DVCClient(context!!, environmentKey!!, user!!, options, logLevel)
         }
     }
 
@@ -281,5 +289,8 @@ class DVCClient private constructor(
 
     init {
         saveUser()
+        if (logLevel > 0) {
+            Timber.plant(LogTree(logLevel))
+        }
     }
 }
