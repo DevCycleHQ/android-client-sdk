@@ -25,7 +25,7 @@ import java.lang.IllegalArgumentException
 /**
  * Variable
  */
-class Variable<T> private constructor() : PropertyChangeListener {
+class Variable<T> internal constructor() : PropertyChangeListener {
 
     /**
      * unique database id

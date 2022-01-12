@@ -50,7 +50,7 @@ internal data class User(
 ) {
 
     @Throws(IllegalArgumentException::class)
-    internal fun updateUser(user: DVCUser): User {
+    internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): User {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }

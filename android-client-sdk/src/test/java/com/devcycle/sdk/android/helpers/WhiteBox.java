@@ -30,6 +30,16 @@ public final class WhiteBox {
         }
     }
 
+    public static void makePublic(Object target, String field) {
+        Class<?> c = target.getClass();
+        try {
+            Field f = getFieldFromHierarchy(c, field);
+            f.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to set internal state on a private field.", e);
+        }
+    }
+
     private static Field getFieldFromHierarchy(Class<?> clazz, String field) {
         Field f = getField(clazz, field);
         while (f == null && clazz != Object.class) {

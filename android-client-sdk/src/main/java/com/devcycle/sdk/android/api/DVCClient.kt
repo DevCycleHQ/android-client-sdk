@@ -6,15 +6,15 @@ import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import kotlinx.coroutines.*
+import org.jetbrains.annotations.TestOnly
 import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Main entry point for SDK user
  * The class is constructed by calling DVCClient.builder(){builder options}.build()
- * [initialize] must be called to properly initialize the client and retrieve
- * the configuration.
  *
  * All methods that make requests to the APIs or access [config] and [user] are [Synchronized] to
  * ensure thread-safety
@@ -24,16 +24,18 @@ class DVCClient private constructor(
     private val environmentKey: String,
     private var user: User,
     private var options: DVCOptions?,
-    private val coroutineScope: CoroutineScope = MainScope()
+    apiUrl: String,
+    private val coroutineScope: CoroutineScope = MainScope(),
+    private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private val TAG: String = DVCClient::class.java.simpleName
 
-    internal var config: BucketedUserConfig? = null
+    private var config: BucketedUserConfig? = null
     private val defaultIntervalInMs: Long = 10000
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request(environmentKey)
+    private val request: Request = Request(environmentKey, apiUrl)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, ::user, coroutineScope)
+    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext))
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
@@ -42,7 +44,7 @@ class DVCClient private constructor(
     private val timer: Timer = Timer("DevCycle.EventQueue.Timer", true)
 
     init {
-        initializeJob = coroutineScope.async {
+        initializeJob = CoroutineScope(coroutineContext).async {
             isExecuting.set(true)
             val now = System.currentTimeMillis()
             try {
@@ -95,14 +97,13 @@ class DVCClient private constructor(
     fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         flushEvents()
 
-        val updatedUser: User
-        if (this.user.userId == user.userId) {
-            updatedUser = this.user.updateUser(user)
+        val updatedUser: User = if (this.user.userId == user.userId) {
+            this.user.copyUserAndUpdateFromDVCUser(user)
         } else {
-            updatedUser = User.builder().withUserParam(user).build()
+            User.builder().withUserParam(user).build()
         }
 
-        coroutineScope.launch {
+        CoroutineScope(coroutineContext).launch {
             try {
                 fetchConfig(updatedUser)
                 this@DVCClient.user = updatedUser
@@ -123,10 +124,9 @@ class DVCClient private constructor(
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         flushEvents()
-        val newUser: User = User.builder()
-                    .build()
+        val newUser: User = User.builder().build()
 
-        coroutineScope.launch {
+        CoroutineScope(coroutineContext).launch {
             try {
                 fetchConfig(newUser)
                 this@DVCClient.user = newUser
@@ -183,7 +183,6 @@ class DVCClient private constructor(
             e.message?.let { Log.e(TAG, it) }
         }
 
-
         return variable
     }
 
@@ -204,8 +203,10 @@ class DVCClient private constructor(
     fun flushEvents(callback: DVCCallback<String>? = null) {
         coroutineScope.launch {
             try {
-                eventQueue.flushEvents(throwOnFailure = true)
-                callback?.onSuccess("")
+                withContext(coroutineContext) {
+                    eventQueue.flushEvents(throwOnFailure = true)
+                }
+                callback?.onSuccess("Successfully flushed events")
             } catch (t: Throwable) {
                 callback?.onError(t)
             }
@@ -234,6 +235,7 @@ class DVCClient private constructor(
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
+        private var apiUrl: String = DVCApiClient.BASE_URL
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
             return this
@@ -253,11 +255,17 @@ class DVCClient private constructor(
             return this
         }
 
+        @TestOnly
+        internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
+            this.apiUrl = apiUrl
+            return this
+        }
+
         fun build(): DVCClient {
             requireNotNull(context) { "Context must be set" }
             require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
             requireNotNull(user) { "User must be set" }
-            return DVCClient(context!!, environmentKey!!, user!!, options)
+            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl)
         }
     }
 
