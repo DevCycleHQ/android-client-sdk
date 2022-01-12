@@ -314,9 +314,6 @@ class DVCClient private constructor(
         config = result
         observable.configUpdated(result)
         dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
-
-
-
         return result
     }
 
