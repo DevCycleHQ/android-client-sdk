@@ -51,7 +51,7 @@ class BucketedUserConfig {
      * @return variables
      */
     @get:Schema(description = "Map of `Variable.key` to `Variable` values.")
-    val variables: Map<String, Variable<Any>>? = null
+    var variables: Map<String, Variable<Any>>? = null
 
     /**
      * Hashes &#x60;murmurhash.v3(variable.key + environment.apiKey)&#x60; of all known variable keys not contained in the &#x60;variables&#x60; object.

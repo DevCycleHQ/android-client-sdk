@@ -9,18 +9,17 @@ internal class DVCApiClient {
     private val okBuilder: OkHttpClient.Builder = OkHttpClient.Builder()
     private val objectMapper = jacksonObjectMapper()
     private val adapterBuilder: Retrofit.Builder = Retrofit.Builder()
-        .baseUrl(BASE_URL)
         .addConverterFactory(JacksonConverterFactory.create(objectMapper))
 
-    fun initialize(): DVCApi {
+    fun initialize(baseUrl: String): DVCApi {
         return adapterBuilder
+            .baseUrl(baseUrl)
             .client(okBuilder.build())
             .build()
             .create(DVCApi::class.java)
     }
 
     companion object {
-        private const val BASE_URL = "https://sdk-api.devcycle.com/"
+        internal const val BASE_URL = "https://sdk-api.devcycle.com/"
     }
-
 }

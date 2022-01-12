@@ -32,8 +32,8 @@ class MainActivity : AppCompatActivity() {
         variable = client.variable("activate-flag", "not activated")
         Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
 
-        client.initialize(object : DVCCallback<String?> {
-            override fun onSuccess(result: String?) {
+        client.onInitialized(object : DVCCallback<String> {
+            override fun onSuccess(result: String) {
                 //Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
 
                 client.track(DVCEvent.builder()
@@ -41,11 +41,16 @@ class MainActivity : AppCompatActivity() {
                     .withMetaData(mapOf("test" to "value"))
                     .build())
 
-                Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
+                //this@MainActivity.runOnUiThread {
+                    Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
+                //}
             }
 
             override fun onError(t: Throwable) {
-                Toast.makeText(this@MainActivity, "Error: " + t.message, Toast.LENGTH_SHORT).show()
+                //this@MainActivity.runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Error: " + t.message, Toast.LENGTH_SHORT)
+                        .show()
+                //}
             }
         })
     }

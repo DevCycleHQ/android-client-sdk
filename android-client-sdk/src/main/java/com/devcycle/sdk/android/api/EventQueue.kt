@@ -144,7 +144,6 @@ internal class EventQueue constructor(
     override fun run() {
         if (flushMutex.isLocked) {
             Log.i(TAG, "Skipping event flush due to pending flush operation")
-
             return
         }
         coroutineScope.launch {
