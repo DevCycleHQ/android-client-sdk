@@ -235,30 +235,35 @@ class DVCClient private constructor(
     private fun handleQueuedEvents() {
         CoroutineScope(coroutineContext).launch {
             configRequestMutex.withLock {
-                if (configRequestQueue.isNotEmpty()) {
-                    var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
-                    val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> = mutableListOf()
-                    
-                    if (latestUserAndCallback.callback != null) {
-                        callbacks.add(latestUserAndCallback.callback!!)
+                if (configRequestQueue.isEmpty()) {
+                    return@withLock
+                }
+
+                var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
+                val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> =
+                    mutableListOf()
+
+                if (latestUserAndCallback.callback != null) {
+                    callbacks.add(latestUserAndCallback.callback!!)
+                }
+                val itr = configRequestQueue.iterator()
+
+                while (itr.hasNext()) {
+                    val userAndCallback = itr.next()
+                    if (userAndCallback.now > latestUserAndCallback.now) {
+                        latestUserAndCallback = userAndCallback
                     }
-                    val itr = configRequestQueue.iterator()
-
-                    while (itr.hasNext()) {
-                        val userAndCallback = itr.next()
-                        if (userAndCallback.now > latestUserAndCallback.now) {
-                            latestUserAndCallback = userAndCallback
-                        }
-                        if (userAndCallback.callback != null) {
-                            callbacks.add(userAndCallback.callback)
-                        }
-                        itr.remove()
+                    if (userAndCallback.callback != null) {
+                        callbacks.add(userAndCallback.callback)
                     }
+                    itr.remove()
+                }
 
-                    val now = System.currentTimeMillis()
-                    val user = latestUserAndCallback.user
+                val now = System.currentTimeMillis()
+                val user = latestUserAndCallback.user
 
-                    val localUser: User = if (latestUserAndCallback.userAction == UserAction.IDENTIFY_USER) {
+                val localUser: User =
+                    if (latestUserAndCallback.userAction == UserAction.IDENTIFY_USER) {
                         if (this@DVCClient.user.userId == user.userId) {
                             this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
                         } else {
@@ -268,20 +273,19 @@ class DVCClient private constructor(
                         User.builder().build()
                     }
 
-                    try {
-                        val result = fetchConfig(localUser)
-                        this@DVCClient.user = localUser
-                        saveUser()
-                        addUserConfigResultToEventQueue(now, this@DVCClient.user, result)
-                        config?.variables?.let { v ->
-                            callbacks.forEach {
-                                it.onSuccess(v)
-                            }
-                        }
-                    } catch (t: Throwable) {
+                try {
+                    val result = fetchConfig(localUser)
+                    this@DVCClient.user = localUser
+                    saveUser()
+                    addUserConfigResultToEventQueue(now, this@DVCClient.user, result)
+                    config?.variables?.let { v ->
                         callbacks.forEach {
-                            it.onError(t)
+                            it.onSuccess(v)
                         }
+                    }
+                } catch (t: Throwable) {
+                    callbacks.forEach {
+                        it.onError(t)
                     }
                 }
             }
