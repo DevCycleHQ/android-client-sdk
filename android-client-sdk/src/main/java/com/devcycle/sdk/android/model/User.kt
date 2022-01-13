@@ -11,7 +11,7 @@ import java.util.*
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
-internal data class User private constructor(
+internal data class User(
     @Schema(required = true, description = "Unique id to identify the user")
     @JsonProperty("user_id")
     val userId: String,
@@ -50,7 +50,7 @@ internal data class User private constructor(
 ) {
 
     @Throws(IllegalArgumentException::class)
-    internal fun updateUser(user: DVCUser): User {
+    internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): User {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }

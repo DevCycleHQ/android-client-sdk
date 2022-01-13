@@ -143,7 +143,6 @@ internal class EventQueue constructor(
     override fun run() {
         if (flushMutex.isLocked) {
             Timber.i("Skipping event flush due to pending flush operation")
-
             return
         }
         coroutineScope.launch {

@@ -12,65 +12,42 @@
 package com.devcycle.sdk.android.model
 
 import io.swagger.v3.oas.annotations.media.Schema
+import com.fasterxml.jackson.annotation.JsonFormat
 
-class ErrorResponse {
+data class ErrorResponse (
     @Schema(required = true, description = "Error message")
-    var message: String? = null
-
+    @JsonFormat(with = [JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY])
+    val message: List<String>? = null,
     @Schema(description = "Additional error information detailing the error reasoning")
-    var data: Any? = null
-
-    constructor(message: String?, data: Any?) {
-        this.message = message
-        this.data = data
-    }
-
-    constructor() {}
+    val error: String? = null,
+    @Schema(description = "Status code of the response, also present in the response body")
+    val statusCode: Number? = null
+) {
 
     class ErrorResponseBuilder internal constructor() {
-        private var message: String? = null
-        private var data: Any? = null
-        fun message(message: String?): ErrorResponseBuilder {
+        private var message: List<String>? = null
+        private var error: String? = null
+        private var statusCode: Number? = null
+
+        fun message(message: List<String>): ErrorResponseBuilder {
             this.message = message
             return this
         }
 
-        fun data(data: Any?): ErrorResponseBuilder {
-            this.data = data
+        fun error(error: String): ErrorResponseBuilder {
+            this.error = error
             return this
         }
 
+        fun statusCode(statusCode: Number): ErrorResponseBuilder {
+            this.statusCode = statusCode
+            return this
+        }
+
+
         fun build(): ErrorResponse {
-            return ErrorResponse(message, data)
+            return ErrorResponse(message, error, statusCode)
         }
-
-        override fun toString(): String {
-            return "ErrorResponse.ErrorResponseBuilder(message=" + message + ", data=" + data + ")"
-        }
-    }
-
-    override fun equals(o: Any?): Boolean {
-        if (o == null) {
-            return false
-        }
-        if (o !is ErrorResponse) {
-            return false
-        }
-        val errorResponse = o
-        return (message == errorResponse.message
-                && data == errorResponse.data)
-    }
-
-    override fun hashCode(): Int {
-        val prime = 31
-        var result = 1
-        result = prime * result + if (message == null) 0 else message.hashCode()
-        result = prime * result + if (data == null) 0 else data.hashCode()
-        return result
-    }
-
-    override fun toString(): String {
-        return "ErrorResponse(message=" + message + ", data=" + data + ")"
     }
 
     companion object {

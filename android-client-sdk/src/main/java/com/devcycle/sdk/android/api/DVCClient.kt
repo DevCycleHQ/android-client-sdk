@@ -11,15 +11,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.jetbrains.annotations.TestOnly
 import java.math.BigDecimal
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Main entry point for SDK user
  * The class is constructed by calling DVCClient.builder(){builder options}.build()
- * [initialize] must be called to properly initialize the client and retrieve
- * the configuration.
  *
  * All methods that make requests to the APIs or access [config] and [user] are [Synchronized] to
  * ensure thread-safety
@@ -30,60 +34,63 @@ class DVCClient private constructor(
     private var user: User,
     private var options: DVCOptions?,
     logLevel: LogLevel,
-    private val coroutineScope: CoroutineScope = MainScope()
+    apiUrl: String,
+    private val coroutineScope: CoroutineScope = MainScope(),
+    private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
-    internal var config: BucketedUserConfig? = null
+    private val TAG: String = DVCClient::class.java.simpleName
+
+    private var config: BucketedUserConfig? = null
+
     private val defaultIntervalInMs: Long = 10000
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request(environmentKey)
+    private val request: Request = Request(environmentKey, apiUrl)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, ::user, coroutineScope)
+    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext))
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
+    private val initializeJob: Deferred<Any>
 
     private val timer: Timer = Timer("DevCycle.EventQueue.Timer", true)
 
-    @Synchronized
-    fun initialize(callback: DVCCallback<String?>) {
-        if (isExecuting.get()) {
-            callback.onError(IllegalStateException("DVCClient already initializing"))
-            return
-        }
+    private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
+    private val configRequestMutex = Mutex()
 
-        isExecuting.set(true)
-
-        if (isInitialized.get()) {
-            isExecuting.set(false)
-            callback.onError(IllegalStateException("DVCClient already initialized"))
-            return
-        }
-
-        val now = System.currentTimeMillis()
-        fetchConfig(user, object : DVCCallback<BucketedUserConfig> {
-            override fun onSuccess(result: BucketedUserConfig) {
+    init {
+        initializeJob = CoroutineScope(coroutineContext).async {
+            isExecuting.set(true)
+            val now = System.currentTimeMillis()
+            try {
+                val result = fetchConfig(user)
                 isInitialized.set(true)
-                isExecuting.set(false)
                 initializeEventQueue()
 
-                eventQueue.queueEvent(
-                    Event.fromInternalEvent(
-                        Event.userConfigEvent(
-                            BigDecimal(System.currentTimeMillis() - now)
-                        ),
-                        user,
-                        result.featureVariationMap
-                    )
-                )
-
-                callback.onSuccess("Config loaded")
-            }
-
-            override fun onError(t: Throwable) {
+                addUserConfigResultToEventQueue(now, user, result)
+            } catch (t: Throwable) {
+                Log.e(TAG, "DevCycle SDK Failed to Initialize!", t)
+                throw t
+            } finally {
+                handleQueuedEvents()
                 isExecuting.set(false)
+            }
+        }
+    }
+
+    fun onInitialized(callback: DVCCallback<String>) {
+        if (isInitialized.get()) {
+            callback.onSuccess("Config loaded")
+            return
+        }
+
+        coroutineScope.launch {
+            try {
+                initializeJob.await()
+                callback.onSuccess("Config loaded")
+            } catch (t: Throwable) {
                 callback.onError(t)
             }
-        })
+        }
     }
 
     /**
@@ -91,58 +98,71 @@ class DVCClient private constructor(
      *
      * [user] is a lightweight User object that can identify and update the current User or will
      * build a new one.
-     * [callback] is provided by the SDK user and will callback with the Map of Variables in the
-     * latest config when fetched from the API
+     * [callback] is optional and provided by the SDK user and will callback with the Map of
+     * Variables in the latest config when fetched from the API
      */
     @Synchronized
     fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        flushEvents()
-
-        val updatedUser: User
-        if (this.user.userId == user.userId) {
-            updatedUser = this.user.updateUser(user)
+        if (isExecuting.get()) {
+            configRequestQueue.add(UserAndCallback(user, callback, UserAction.IDENTIFY_USER))
         } else {
-            updatedUser = User.builder().withUserParam(user).build()
+            flushEvents()
+
+            CoroutineScope(coroutineContext).launch {
+                isExecuting.set(true)
+                val updatedUser: User = if (this@DVCClient.user.userId == user.userId) {
+                    this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
+                } else {
+                    User.builder().withUserParam(user).build()
+                }
+                val now = System.currentTimeMillis()
+                try {
+                    val result = fetchConfig(updatedUser)
+                    this@DVCClient.user = updatedUser
+                    saveUser()
+                    addUserConfigResultToEventQueue(now, this@DVCClient.user, result)
+                    config?.variables?.let { callback?.onSuccess(it) }
+                } catch (t: Throwable) {
+                    callback?.onError(t)
+                } finally {
+                    handleQueuedEvents()
+                    isExecuting.set(false)
+                }
+            }
         }
-
-        val self = this
-        fetchConfig(updatedUser, object : DVCCallback<BucketedUserConfig> {
-            override fun onSuccess(result: BucketedUserConfig) {
-                self.user = updatedUser
-                saveUser()
-                config?.variables?.let { callback?.onSuccess(it) }
-            }
-
-            override fun onError(t: Throwable) {
-                callback?.onError(t)
-            }
-        })
     }
 
     /**
-     * Uses or builds a new Anonymous User and fetches the latest config
+     * Builds a new Anonymous User and fetches the latest config
      *
-     * [callback] is provided by the SDK user and will callback with the Map of Variables in the
-     * latest config when fetched from the API
+     * [callback] is optional and provided by the SDK user and will callback with the Map of
+     * Variables in the latest config when fetched from the API
      */
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        flushEvents()
-        val newUser: User = User.builder()
-                    .build()
+        if (isExecuting.get()) {
+            configRequestQueue.add(UserAndCallback(DVCUser.builder().build(), callback, UserAction.RESET_USER))
+        } else {
+            flushEvents()
+            val newUser: User = User.builder().build()
 
-        val self = this
-        fetchConfig(newUser, object : DVCCallback<BucketedUserConfig> {
-            override fun onSuccess(result: BucketedUserConfig) {
-                self.user = newUser
-                saveUser()
-                config?.variables?.let { callback?.onSuccess(it) }
+            CoroutineScope(coroutineContext).launch {
+                isExecuting.set(true)
+                val now = System.currentTimeMillis()
+                try {
+                    val result = fetchConfig(newUser)
+                    this@DVCClient.user = newUser
+                    saveUser()
+                    addUserConfigResultToEventQueue(now, this@DVCClient.user, result)
+                    config?.variables?.let { callback?.onSuccess(it) }
+                } catch (t: Throwable) {
+                    callback?.onError(t)
+                } finally {
+                    handleQueuedEvents()
+                    isExecuting.set(false)
+                }
             }
-
-            override fun onError(t: Throwable) {
-                callback?.onError(t)
-            }
-        })
+        }
     }
 
     /**
@@ -190,7 +210,6 @@ class DVCClient private constructor(
             e.message?.let { Timber.e(it) }
         }
 
-
         return variable
     }
 
@@ -211,12 +230,86 @@ class DVCClient private constructor(
     fun flushEvents(callback: DVCCallback<String>? = null) {
         coroutineScope.launch {
             try {
-                eventQueue.flushEvents(throwOnFailure = true)
-                callback?.onSuccess("")
+                withContext(coroutineContext) {
+                    eventQueue.flushEvents(throwOnFailure = true)
+                }
+                callback?.onSuccess("Successfully flushed events")
             } catch (t: Throwable) {
                 callback?.onError(t)
             }
         }
+    }
+
+    private fun handleQueuedEvents() {
+        CoroutineScope(coroutineContext).launch {
+            configRequestMutex.withLock {
+                if (configRequestQueue.isEmpty()) {
+                    return@withLock
+                }
+
+                var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
+                val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> =
+                    mutableListOf()
+
+                if (latestUserAndCallback.callback != null) {
+                    callbacks.add(latestUserAndCallback.callback!!)
+                }
+                val itr = configRequestQueue.iterator()
+
+                while (itr.hasNext()) {
+                    val userAndCallback = itr.next()
+                    if (userAndCallback.now > latestUserAndCallback.now) {
+                        latestUserAndCallback = userAndCallback
+                    }
+                    if (userAndCallback.callback != null) {
+                        callbacks.add(userAndCallback.callback)
+                    }
+                    itr.remove()
+                }
+
+                val now = System.currentTimeMillis()
+                val user = latestUserAndCallback.user
+
+                val localUser: User =
+                    if (latestUserAndCallback.userAction == UserAction.IDENTIFY_USER) {
+                        if (this@DVCClient.user.userId == user.userId) {
+                            this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
+                        } else {
+                            User.builder().withUserParam(user).build()
+                        }
+                    } else {
+                        User.builder().build()
+                    }
+
+                try {
+                    val result = fetchConfig(localUser)
+                    this@DVCClient.user = localUser
+                    saveUser()
+                    addUserConfigResultToEventQueue(now, this@DVCClient.user, result)
+                    config?.variables?.let { v ->
+                        callbacks.forEach {
+                            it.onSuccess(v)
+                        }
+                    }
+                } catch (t: Throwable) {
+                    callbacks.forEach {
+                        it.onError(t)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun addUserConfigResultToEventQueue(now: Long, user: User, result: BucketedUserConfig) {
+        eventQueue.queueEvent(
+            Event.fromInternalEvent(
+                Event.userConfigEvent(
+                    BigDecimal(System.currentTimeMillis() - now)
+                ),
+                user,
+                result.featureVariationMap
+            )
+        )
     }
 
     private fun initializeEventQueue() {
@@ -228,19 +321,12 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    @Synchronized
-    private fun fetchConfig(user: User, callback: DVCCallback<BucketedUserConfig>) {
-        coroutineScope.launch {
-            try {
-                val result = request.getConfigJson(environmentKey, user)
-                config = result
-                observable.configUpdated(result)
-                dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
-                callback.onSuccess(result)
-            } catch (t: Throwable) {
-                callback.onError(t)
-            }
-        }
+    private suspend fun fetchConfig(user: User): BucketedUserConfig {
+        val result = request.getConfigJson(environmentKey, user)
+        config = result
+        observable.configUpdated(result)
+        dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
+        return result
     }
 
     class DVCClientBuilder {
@@ -249,6 +335,7 @@ class DVCClient private constructor(
         private var user: User? = null
         private var options: DVCOptions? = null
         private var logLevel: LogLevel = LogLevel.ERROR
+        private var apiUrl: String = DVCApiClient.BASE_URL
 
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
@@ -274,11 +361,17 @@ class DVCClient private constructor(
             return this
         }
 
+        @TestOnly
+        internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
+            this.apiUrl = apiUrl
+            return this
+        }
+
         fun build(): DVCClient {
             requireNotNull(context) { "Context must be set" }
             require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
             requireNotNull(user) { "User must be set" }
-            return DVCClient(context!!, environmentKey!!, user!!, options, logLevel)
+            return DVCClient(context!!, environmentKey!!, user!!, options, logLevel, apiUrl)
         }
     }
 
