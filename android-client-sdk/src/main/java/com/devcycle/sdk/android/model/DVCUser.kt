@@ -6,10 +6,7 @@ class DVCUser private constructor(
     var userId: String? = null,
     var email: String? = null,
     var name: String? = null,
-    var language: String? = null,
     var country: String? = null,
-    var appVersion: String? = null,
-    var appBuild: String? = null,
     var customData: Any? = null,
     var privateCustomData: Any? = null
 ) {
@@ -17,10 +14,7 @@ class DVCUser private constructor(
         private var userId: String? = null
         private var email: String? = null
         private var name: String? = null
-        private var language: String? = null
         private var country: String? = null
-        private var appVersion: String? = null
-        private var appBuild: String? = null
         private var customData: Any? = null
         private var privateCustomData: Any? = null
 
@@ -40,23 +34,8 @@ class DVCUser private constructor(
             return this
         }
 
-        fun withLanguage(language: String?): Builder {
-            this.language = language
-            return this
-        }
-
         fun withCountry(country: String?): Builder {
             this.country = country
-            return this
-        }
-
-        fun withAppVersion(appVersion: String?): Builder {
-            this.appVersion = appVersion
-            return this
-        }
-
-        fun withAppBuild(appBuild: String?): Builder {
-            this.appBuild = appBuild
             return this
         }
 
@@ -75,17 +54,14 @@ class DVCUser private constructor(
                 userId,
                 email,
                 name,
-                language,
                 country,
-                appVersion,
-                appBuild,
                 customData,
                 privateCustomData
             )
         }
 
         override fun toString(): String {
-            return "User.UserBuilder(userId=$userId, email=$email, name=$name, language=$language, country=$country, appVersion=$appVersion, appBuild=$appBuild, customData=$customData, privateCustomData=$privateCustomData)"
+            return "User.UserBuilder(userId=$userId, email=$email, name=$name, country=$country, customData=$customData, privateCustomData=$privateCustomData)"
         }
     }
 

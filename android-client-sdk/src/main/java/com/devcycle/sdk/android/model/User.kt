@@ -1,13 +1,16 @@
 package com.devcycle.sdk.android.model
 
+import android.content.Context
 import com.fasterxml.jackson.annotation.JsonProperty
 import android.os.Build
+import com.devcycle.sdk.android.BuildConfig
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
 import java.lang.IllegalArgumentException
 import java.util.*
+import android.content.pm.PackageInfo
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
@@ -48,7 +51,6 @@ internal data class User(
     @Schema(description = "Date the user was last seen, Unix epoch timestamp format")
     val lastSeenDate: Long?
 ) {
-
     @Throws(IllegalArgumentException::class)
     internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): User {
         if (this.userId != user.userId) {
@@ -58,10 +60,7 @@ internal data class User(
         return this.copy(
             email = user.email,
             name = user.name,
-            language = user.language,
             country = user.country,
-            appVersion = user.appVersion,
-            appBuild = user.appBuild,
             customData = user.customData,
             privateCustomData = user.privateCustomData,
             lastSeenDate = Calendar.getInstance().time.time
@@ -79,13 +78,14 @@ internal data class User(
         private var appBuild: String? = null
         private var customData: Any? = null
         private var privateCustomData: Any? = null
+
         private var createdDate = Calendar.getInstance().time.time
         private var platform = "Android"
         private var platformVersion = Build.VERSION.RELEASE
         private var deviceModel = Build.MODEL
         private var sdkType = "client"
-        private var sdkVersion = "0.0.1"
-        private var lastSeenDate: Long? = null
+        private var sdkVersion = BuildConfig.VERSION_NAME
+        private var lastSeenDate = Calendar.getInstance().time.time
 
         @JsonProperty("user_id")
         fun withUserId(userId: String?): Builder {
@@ -103,23 +103,8 @@ internal data class User(
             return this
         }
 
-        fun withLanguage(language: String?): Builder {
-            this.language = language
-            return this
-        }
-
         fun withCountry(country: String?): Builder {
             this.country = country
-            return this
-        }
-
-        fun withAppVersion(appVersion: String?): Builder {
-            this.appVersion = appVersion
-            return this
-        }
-
-        fun withAppBuild(appBuild: String?): Builder {
-            this.appBuild = appBuild
             return this
         }
 
@@ -130,6 +115,21 @@ internal data class User(
 
         fun withPrivateCustomData(privateCustomData: Any?): Builder {
             this.privateCustomData = privateCustomData
+            return this
+        }
+
+        private fun withLanguage(language: String?): Builder {
+            this.language = language
+            return this
+        }
+
+        private fun withAppVersion(appVersion: String?): Builder {
+            this.appVersion = appVersion
+            return this
+        }
+
+        private fun withAppBuild(appBuild: String?): Builder {
+            this.appBuild = appBuild
             return this
         }
 
@@ -168,16 +168,33 @@ internal data class User(
             return this
         }
 
-        internal fun withUserParam(user: DVCUser): Builder {
+        internal fun withUserParam(user: DVCUser, context: Context): Builder {
             this.userId = user.userId
             this.email = user.email
             this.name = user.name
-            this.language = user.language
             this.country = user.country
-            this.appVersion = user.appVersion
-            this.appBuild = user.appBuild
             this.customData = user.customData
             this.privateCustomData = user.privateCustomData
+
+            this.lastSeenDate = Calendar.getInstance().time.time
+
+            val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                context.resources.configuration.locales[0]
+            } else {
+                context.resources.configuration.locale
+            }
+
+            val packageManager = context.packageManager
+            val packageInfo: PackageInfo = packageManager.getPackageInfo(context.packageName, 0)
+
+            this.appVersion = packageInfo.versionName
+            this.appBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.longVersionCode.toString()
+            } else {
+                packageInfo.versionCode.toString()
+            }
+            this.language = locale.language
+
             return this
         }
 
@@ -200,7 +217,7 @@ internal data class User(
                 sdkType,
                 sdkVersion,
                 isAnonymous,
-                lastSeenDate ?: Calendar.getInstance().time.time
+                lastSeenDate
             )
         }
 
