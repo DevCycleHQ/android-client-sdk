@@ -5,6 +5,7 @@ import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import com.devcycle.sdk.android.util.LogLevel
 import com.devcycle.sdk.android.util.LogTree
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
@@ -28,7 +29,7 @@ class DVCClient private constructor(
     private val environmentKey: String,
     private var user: User,
     private var options: DVCOptions?,
-    logLevel: Int = Log.ERROR,
+    logLevel: LogLevel,
     private val coroutineScope: CoroutineScope = MainScope()
 ) {
     internal var config: BucketedUserConfig? = null
@@ -247,7 +248,7 @@ class DVCClient private constructor(
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
-        private var logLevel: Int = Log.ERROR
+        private var logLevel: LogLevel = LogLevel.ERROR
 
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
@@ -268,7 +269,7 @@ class DVCClient private constructor(
             return this
         }
 
-        fun withLogLevel(logLevel: Int): DVCClientBuilder {
+        fun withLogLevel(logLevel: LogLevel): DVCClientBuilder {
             this.logLevel = logLevel
             return this
         }
@@ -289,8 +290,8 @@ class DVCClient private constructor(
 
     init {
         saveUser()
-        if (logLevel > 0) {
-            Timber.plant(LogTree(logLevel))
+        if (logLevel.value > 0) {
+            Timber.plant(LogTree(logLevel.value))
         }
     }
 }
