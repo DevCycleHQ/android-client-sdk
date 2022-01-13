@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import timber.log.Timber
 import java.math.BigDecimal
 import java.util.*
 
@@ -18,8 +19,6 @@ internal class EventQueue constructor(
     private val getUser: () -> User,
     private val coroutineScope: CoroutineScope
 ) : TimerTask(){
-    private val TAG = EventQueue::class.java.simpleName
-
     private val eventQueue: MutableList<Event> = mutableListOf()
     private val eventPayloadsToFlush: MutableList<UserAndEvents> = mutableListOf()
     private val aggregateEventMap: HashMap<String, HashMap<String, Event>> = HashMap()
@@ -48,11 +47,11 @@ internal class EventQueue constructor(
             }
 
             if (eventsToFlush.size == 0) {
-                Log.i(TAG, "No events to flush.")
+                Timber.i("No events to flush.")
                 return
             }
 
-            Log.i(TAG, "DVC Flush ${eventsToFlush.size} Events")
+            Timber.i("DVC Flush " + eventsToFlush.size + " Events")
 
             val payload = UserAndEvents(user.copy(), eventsToFlush)
 
@@ -65,15 +64,15 @@ internal class EventQueue constructor(
                     try {
                         request.publishEvents(it)
                         emit(it)
-                        Log.i(TAG, "DVC Flushed ${payload.events.size} Events.")
+                        Timber.i("DVC Flushed " + payload.events.size + " Events.")
                     } catch (t: DVCRequestException) {
                         if (t.isRetryable) {
-                            Log.e(TAG, "Error with event flushing, will be retried", t)
+                            Timber.e(t, "Error with event flushing, will be retried")
                             // Don't raise the error but keep the payload in the queue, it will be
                             // retried on the next flush
                             firstError = firstError ?: t
                         } else {
-                            Log.e(TAG, "Non-retryable error with event flushing.", t)
+                            Timber.e(t, "Non-retryable error with event flushing.")
                             emit(it)
                         }
                     }
@@ -143,14 +142,14 @@ internal class EventQueue constructor(
 
     override fun run() {
         if (flushMutex.isLocked) {
-            Log.i(TAG, "Skipping event flush due to pending flush operation")
+            Timber.i("Skipping event flush due to pending flush operation")
             return
         }
         coroutineScope.launch {
             try {
                 flushEvents()
             } catch (t: Throwable) {
-                Log.e(TAG, "Error flushing events in background", t)
+                Timber.e(t, "Error flushing events in background")
             }
         }
     }

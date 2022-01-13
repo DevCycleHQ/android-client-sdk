@@ -5,6 +5,12 @@ import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import com.devcycle.sdk.android.util.LogLevel
+import com.devcycle.sdk.android.util.LogTree
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,6 +33,7 @@ class DVCClient private constructor(
     private val environmentKey: String,
     private var user: User,
     private var options: DVCOptions?,
+    logLevel: LogLevel,
     apiUrl: String,
     private val coroutineScope: CoroutineScope = MainScope(),
     private val coroutineContext: CoroutineContext = Dispatchers.Default
@@ -34,6 +41,7 @@ class DVCClient private constructor(
     private val TAG: String = DVCClient::class.java.simpleName
 
     private var config: BucketedUserConfig? = null
+
     private val defaultIntervalInMs: Long = 10000
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request(environmentKey, apiUrl)
@@ -199,7 +207,7 @@ class DVCClient private constructor(
         try {
             eventQueue.queueAggregateEvent(event)
         } catch(e: IllegalArgumentException) {
-            e.message?.let { Log.e(TAG, it) }
+            e.message?.let { Timber.e(it) }
         }
 
         return variable
@@ -326,7 +334,9 @@ class DVCClient private constructor(
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
+        private var logLevel: LogLevel = LogLevel.ERROR
         private var apiUrl: String = DVCApiClient.BASE_URL
+
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
             return this
@@ -346,6 +356,11 @@ class DVCClient private constructor(
             return this
         }
 
+        fun withLogLevel(logLevel: LogLevel): DVCClientBuilder {
+            this.logLevel = logLevel
+            return this
+        }
+
         @TestOnly
         internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
             this.apiUrl = apiUrl
@@ -356,7 +371,7 @@ class DVCClient private constructor(
             requireNotNull(context) { "Context must be set" }
             require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
             requireNotNull(user) { "User must be set" }
-            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl)
+            return DVCClient(context!!, environmentKey!!, user!!, options, logLevel, apiUrl)
         }
     }
 
@@ -368,5 +383,8 @@ class DVCClient private constructor(
 
     init {
         saveUser()
+        if (logLevel.value > 0) {
+            Timber.plant(LogTree(logLevel.value))
+        }
     }
 }

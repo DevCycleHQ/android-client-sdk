@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.devcycle.sdk.android.model.User
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
+import timber.log.Timber
 import java.util.HashMap
 
 // TODO: access disk on background thread
@@ -21,7 +22,6 @@ class DVCSharedPrefs(context: Context) {
     private val objectMapper: ObjectMapper = ObjectMapper()
 
     companion object {
-        private val TAG = DVCSharedPrefs::class.simpleName
         const val UserKey = "USER"
         const val ConfigKey = "CONFIG"
         private val prefs: MutableMap<String, TypeReference<*>> = HashMap()
@@ -38,7 +38,7 @@ class DVCSharedPrefs(context: Context) {
             val jsonString = objectMapper.writeValueAsString(objectToSave)
             preferences.edit().putString(key, jsonString).apply()
         } catch (e: JsonProcessingException) {
-            Log.e(TAG, e.message, e)
+            Timber.e(e, e.message)
         }
     }
 
@@ -46,15 +46,12 @@ class DVCSharedPrefs(context: Context) {
     fun <T> getCache(key: String): T? {
         val jsonString = preferences.getString(key, null)
         if (jsonString == null) {
-            Log.e(
-                TAG,
-                key + " could not be found in SharedPreferences file: " + R.string.cached_data
-            )
+            Timber.e(key + " could not be found in SharedPreferences file: " + R.string.cached_data)
         }
         try {
             return objectMapper.readValue(jsonString, prefs[key]) as T
         } catch (e: JsonProcessingException) {
-            Log.e(TAG, e.message, e)
+            Timber.e(e, e.message)
         }
         return null
     }
