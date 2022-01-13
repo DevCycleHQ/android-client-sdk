@@ -29,7 +29,7 @@ import kotlin.coroutines.CoroutineContext
  * ensure thread-safety
  */
 class DVCClient private constructor(
-    context: Context,
+    private val context: Context,
     private val environmentKey: String,
     private var user: User,
     private var options: DVCOptions?,
@@ -113,7 +113,7 @@ class DVCClient private constructor(
                 val updatedUser: User = if (this@DVCClient.user.userId == user.userId) {
                     this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
                 } else {
-                    User.builder().withUserParam(user).build()
+                    User.builder().withUserParam(user, context).build()
                 }
                 val now = System.currentTimeMillis()
                 try {
@@ -275,7 +275,7 @@ class DVCClient private constructor(
                         if (this@DVCClient.user.userId == user.userId) {
                             this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
                         } else {
-                            User.builder().withUserParam(user).build()
+                            User.builder().withUserParam(user, context).build()
                         }
                     } else {
                         User.builder().build()
@@ -337,6 +337,8 @@ class DVCClient private constructor(
         private var logLevel: LogLevel = LogLevel.ERROR
         private var apiUrl: String = DVCApiClient.BASE_URL
 
+        private var dvcUser: DVCUser? = null
+
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
             return this
@@ -347,7 +349,7 @@ class DVCClient private constructor(
         }
 
         fun withUser(user: DVCUser): DVCClientBuilder {
-            this.user = User.builder().withUserParam(user).build()
+            this.dvcUser = dvcUser
             return this
         }
 
@@ -370,7 +372,10 @@ class DVCClient private constructor(
         fun build(): DVCClient {
             requireNotNull(context) { "Context must be set" }
             require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
-            requireNotNull(user) { "User must be set" }
+            requireNotNull(dvcUser) { "User must be set" }
+
+            this.user = User.builder().withUserParam(dvcUser!!, context!!).build()
+
             return DVCClient(context!!, environmentKey!!, user!!, options, logLevel, apiUrl)
         }
     }
