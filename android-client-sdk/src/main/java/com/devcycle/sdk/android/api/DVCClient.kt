@@ -107,6 +107,7 @@ class DVCClient private constructor(
 
             coroutineScope.launch(coroutineContext) {
                 isExecuting.set(true)
+
                 try {
                     fetchConfig(updatedUser)
                     config?.variables?.let { callback?.onSuccess(it) }
