@@ -257,16 +257,36 @@ class DVCClientTests {
         val countDownLatch = CountDownLatch(1)
 
         val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
+        client.onInitialized(object: DVCCallback<String> {
+            override fun onSuccess(result: String) {
+                val takeRequest = mockWebServer.takeRequest()
+                takeRequest.path?.contains("nic_test")?.let { Assertions.assertTrue(it) }
+            }
+
+            override fun onError(t: Throwable) {
+                error = t
+                calledBack = true
+                countDownLatch.countDown()
+            }
+
+        })
 
         val i = AtomicInteger(0)
 
         val callback = object: DVCCallback<Map<String, Variable<Any>>> {
             override fun onSuccess(result: Map<String, Variable<Any>>) {
-                Log.i("IDENTIFY", result["activate-flag"]?.value.toString())
+                Assertions.assertEquals("Flag activated!", result["activate-flag"]?.value.toString())
+
+                if (i.get() == 0) {
+                    // If there are no more requests mockwebserver awaits the next response and we're not expecting any more
+                    val takeRequest = mockWebServer.takeRequest()
+                    takeRequest.path?.contains("new_userid5")?.let { Assertions.assertTrue(it) }
+                }
+
                 calledBack = true
                 i.getAndIncrement()
 
-                if (i.get() == 6) {
+                if (i.get() == 5) {
                     countDownLatch.countDown()
                 }
             }
@@ -298,7 +318,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
             Assertions.assertEquals(2, mockWebServer.requestCount)
             mockWebServer.shutdown()
             if (!calledBack) {
