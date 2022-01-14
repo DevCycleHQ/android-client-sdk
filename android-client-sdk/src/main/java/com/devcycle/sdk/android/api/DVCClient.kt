@@ -291,7 +291,8 @@ class DVCClient private constructor(
 
     private suspend fun fetchConfig(user: User) {
         val now = System.currentTimeMillis()
-        request.getConfigJson(environmentKey, user).collect { config = it }
+        val result = request.getConfigJson(environmentKey, user)
+        config = result
         observable.configUpdated(config)
         dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
 

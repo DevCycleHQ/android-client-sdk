@@ -47,16 +47,18 @@ internal class Request constructor(envKey: String, apiBaseUrl: String) {
     suspend fun getConfigJson(
         environmentKey: String,
         user: User
-    ): Flow<BucketedUserConfig> {
+    ): BucketedUserConfig {
         val map =
             objectMapper.convertValue(user, object : TypeReference<Map<String, String>>() {})
+
+        lateinit var config: BucketedUserConfig
 
         configMutex.withLock {
             var currentDelay = 1000L
             val delayFactor = 2
             val maxDelay = 10000L
 
-            return flow {
+            flow {
                 val response = api.getConfigJson(environmentKey, map)
                 emit(getResponseHandler(response))
             }
@@ -74,7 +76,11 @@ internal class Request constructor(envKey: String, apiBaseUrl: String) {
                         return@retryWhen true
                     }
                 }
+                .collect{
+                    config = it
+                }
         }
+        return config
     }
 
     suspend fun publishEvents(payload: UserAndEvents): DVCResponse {
