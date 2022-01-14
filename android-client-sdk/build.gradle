@@ -64,11 +64,11 @@ android {
 
 ext {
     retrofit_version = "2.9.0"
-    swagger_annotations_version = "2.1.11"
+    swagger_annotations_version = "2.1.12"
     junit_version = "4.13.2"
-    jackson_version = "2.13.0"
-    jackson_kotlin_version = "2.13.0"
-    mockito_core_version = "4.0.0"
+    jackson_version = "2.13.1"
+    jackson_kotlin_version = "2.13.1"
+    mockito_core_version = "4.2.0"
     coroutines_version = "1.6.0"
     timber_version = "5.0.1"
 }
@@ -85,16 +85,18 @@ dependencies {
     implementation("com.jakewharton.timber:timber:${timber_version}")
 
     implementation 'androidx.core:core-ktx:1.7.0'
-    implementation 'androidx.appcompat:appcompat:1.4.0'
-    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    //implementation 'com.google.android.material:material:1.5.0'
 
     testImplementation("org.mockito:mockito-core:$mockito_core_version")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
    // testImplementation("io.strikt:strikt-core:0.33.0")
     //testImplementation 'com.natpryce:hamkrest:1.8.0.1'
+    testImplementation 'io.mockk:mockk:1.12.2'
 
-    testImplementation 'org.hamcrest:hamcrest-library:2.1'
+
+    testImplementation 'org.hamcrest:hamcrest-library:2.2'
     //testImplementation 'junit:junit:4.13.2'
     testImplementation "org.junit.jupiter:junit-jupiter-params:5.8.2"
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")

@@ -3,14 +3,24 @@ package com.devcycle.sdk.android.api
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.os.LocaleList
 import android.util.Log
 import com.devcycle.sdk.android.api.DVCClient.Companion.builder
 import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.devcycle.sdk.android.model.DVCUser
 import com.devcycle.sdk.android.model.Variable
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.mockk.every
+import io.mockk.mockk
 import junit.framework.AssertionFailedError
-import kotlinx.coroutines.*
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import okhttp3.mockwebserver.MockResponse
@@ -31,10 +41,14 @@ class DVCClientTests {
     private lateinit var mockWebServer: MockWebServer
 
     private val mockContext: Context? = Mockito.mock(Context::class.java)
-
     private val sharedPreferences: SharedPreferences? = Mockito.mock(SharedPreferences::class.java)
-
     private val editor: SharedPreferences.Editor? = Mockito.mock(SharedPreferences.Editor::class.java)
+    private val resources: Resources = Mockito.mock(Resources::class.java)
+    private val configuration: Configuration = Mockito.mock(Configuration::class.java)
+    private val locales: LocaleList = Mockito.mock(LocaleList::class.java)
+    private val packageManager: PackageManager = Mockito.mock(PackageManager::class.java)
+
+    private val packageInfo = mockk<PackageInfo>()
 
     @DelicateCoroutinesApi
     private val mainThreadSurrogate = newSingleThreadContext("UI thread")
@@ -47,10 +61,19 @@ class DVCClientTests {
         `when`(mockContext.getSharedPreferences("Some value", MODE_PRIVATE)).thenReturn(
             sharedPreferences
         )
-
         `when`(sharedPreferences!!.edit()).thenReturn(editor)
-
         `when`(editor!!.putString(anyString(), anyString())).thenReturn(editor)
+        `when`(mockContext.resources).thenReturn(resources)
+        `when`(mockContext.resources.configuration).thenReturn(configuration)
+        `when`(mockContext.resources.configuration.locales).thenReturn(locales)
+        `when`(mockContext.resources.configuration.locales.get(0)).thenReturn(Locale.getDefault())
+        `when`(mockContext.packageName).thenReturn("test")
+        `when`(mockContext.packageManager).thenReturn(packageManager)
+        `when`(mockContext.packageManager.getPackageInfo("test", 0)).thenReturn(packageInfo)
+
+
+        //every { packageInfo.versionName } returns "1.0"
+        every { packageInfo.longVersionCode } returns 1
 
         Dispatchers.setMain(mainThreadSurrogate)
 
@@ -84,7 +107,7 @@ class DVCClientTests {
                 }
 
                 override fun onError(t: Throwable) {
-                    Assertions.assertEquals("DVCClient: DevCycle SDK Failed to Initialize!", t.message)
+                    Assertions.assertEquals("Only 'mobile' keys are supported by this API", t.message)
                     countDownLatch.countDown()
                 }
             })
@@ -105,12 +128,11 @@ class DVCClientTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        val config = BucketedUserConfig()
         val variables: MutableMap<String, Variable<Any>> = HashMap()
         variables["activate-flag"] =
             createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        config.variables = variables
+        val config = BucketedUserConfig(variables = variables)
 
         //mockWebServer.enqueue(MockResponse().setResponseCode(401).setBody("{\"message\": \"Only 'mobile' keys are supported by this API\"}"))
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
@@ -136,7 +158,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             mockWebServer.shutdown()
             if (!calledBack) {
                 error = AssertionFailedError("Client did not initialize")
@@ -154,12 +176,11 @@ class DVCClientTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        val config = BucketedUserConfig()
         val variables: MutableMap<String, Variable<Any>> = HashMap()
         variables["activate-flag"] =
             createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        config.variables = variables
+        val config = BucketedUserConfig(variables = variables)
 
         // init client
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
@@ -167,12 +188,11 @@ class DVCClientTests {
         // call reset
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)).throttleBody(1024, 10, TimeUnit.SECONDS).setHeadersDelay(200L, TimeUnit.MILLISECONDS))
 
-        val configTwo = BucketedUserConfig()
         val variablesTwo: MutableMap<String, Variable<Any>> = HashMap()
         variablesTwo["wobble"] =
             createNewVariable("wobble", "Second!", Variable.TypeEnum.STRING)
 
-        configTwo.variables = variablesTwo
+        val configTwo = BucketedUserConfig(variables = variablesTwo)
 
         // call identify
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(configTwo)))
@@ -198,7 +218,7 @@ class DVCClientTests {
                         override fun onSuccess(result: Map<String, Variable<Any>>) {
                             Assertions.assertEquals("Second!", result["wobble"]?.value.toString())
                             calledBack = true
-                            //countDownLatch.countDown()
+                            countDownLatch.countDown()
                         }
 
                         override fun onError(t: Throwable) {
@@ -238,7 +258,7 @@ class DVCClientTests {
 
         val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
 
-        var i = AtomicInteger(0)
+        val i = AtomicInteger(0)
 
         val callback = object: DVCCallback<Map<String, Variable<Any>>> {
             override fun onSuccess(result: Map<String, Variable<Any>>) {
@@ -258,18 +278,12 @@ class DVCClientTests {
             }
         }
 
-        val config = BucketedUserConfig()
         val variables: MutableMap<String, Variable<Any>> = HashMap()
         variables["activate-flag"] =
             createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        config.variables = variables
+        val config = BucketedUserConfig(variables = variables)
 
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
 
@@ -284,7 +298,8 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            Assertions.assertEquals(2, mockWebServer.requestCount)
             mockWebServer.shutdown()
             if (!calledBack) {
                 error = AssertionFailedError("Client did not initialize")
@@ -304,7 +319,6 @@ class DVCClientTests {
                     .withUserId("nic_test")
                     .build()
             )
-            //.withDispatcher(testScope.coroutineContext)
             .withEnvironmentKey(sdkKey)
             .withApiUrl(mockUrl)
 

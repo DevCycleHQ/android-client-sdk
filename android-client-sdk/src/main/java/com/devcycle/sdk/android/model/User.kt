@@ -14,7 +14,7 @@ import android.content.pm.PackageInfo
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
-internal data class User(
+data class User(
     @Schema(required = true, description = "Unique id to identify the user")
     @JsonProperty("user_id")
     val userId: String,
@@ -84,7 +84,7 @@ internal data class User(
         private var platformVersion = Build.VERSION.RELEASE
         private var deviceModel = Build.MODEL
         private var sdkType = "client"
-        private var sdkVersion = BuildConfig.VERSION_NAME
+        private var sdkVersion = "1.0.0"
         private var lastSeenDate = Calendar.getInstance().time.time
 
         @JsonProperty("user_id")

@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.api
 
-import android.util.Log
 import com.devcycle.sdk.android.exception.DVCRequestException
 
 import com.devcycle.sdk.android.model.*
@@ -13,10 +12,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.Response
+import timber.log.Timber
 import java.io.IOException
 
 internal class Request constructor(envKey: String, apiBaseUrl: String) {
-    private val TAG = "Request"
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
     private val objectMapper = jacksonObjectMapper()
@@ -48,18 +47,16 @@ internal class Request constructor(envKey: String, apiBaseUrl: String) {
     suspend fun getConfigJson(
         environmentKey: String,
         user: User
-    ): BucketedUserConfig {
+    ): Flow<BucketedUserConfig> {
         val map =
             objectMapper.convertValue(user, object : TypeReference<Map<String, String>>() {})
-
-        var config: BucketedUserConfig? = null
 
         configMutex.withLock {
             var currentDelay = 1000L
             val delayFactor = 2
             val maxDelay = 10000L
 
-            flow {
+            return flow {
                 val response = api.getConfigJson(environmentKey, map)
                 emit(getResponseHandler(response))
             }
@@ -70,15 +67,13 @@ internal class Request constructor(envKey: String, apiBaseUrl: String) {
                     } else {
                         delay(currentDelay)
                         currentDelay = (currentDelay * delayFactor).coerceAtMost(maxDelay)
-                        Log.w(TAG, "Request Config Failed. Retrying in ${currentDelay / 1000} seconds.", cause)
+                        Timber.w(
+                            cause,
+                            "Request Config Failed. Retrying in %s seconds.", currentDelay / 1000
+                        )
                         return@retryWhen true
                     }
                 }
-                .collect {
-                    config = it
-                }
-
-            return config!!
         }
     }
 
