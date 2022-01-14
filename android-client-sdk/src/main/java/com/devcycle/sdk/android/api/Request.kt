@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.api
 
-import android.util.Log
 import com.devcycle.sdk.android.exception.DVCRequestException
 
 import com.devcycle.sdk.android.model.*
@@ -13,10 +12,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.Response
+import timber.log.Timber
 import java.io.IOException
 
 internal class Request constructor(envKey: String, apiBaseUrl: String) {
-    private val TAG = "Request"
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
     private val objectMapper = jacksonObjectMapper()
@@ -52,7 +51,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String) {
         val map =
             objectMapper.convertValue(user, object : TypeReference<Map<String, String>>() {})
 
-        var config: BucketedUserConfig? = null
+        lateinit var config: BucketedUserConfig
 
         configMutex.withLock {
             var currentDelay = 1000L
@@ -70,16 +69,18 @@ internal class Request constructor(envKey: String, apiBaseUrl: String) {
                     } else {
                         delay(currentDelay)
                         currentDelay = (currentDelay * delayFactor).coerceAtMost(maxDelay)
-                        Log.w(TAG, "Request Config Failed. Retrying in ${currentDelay / 1000} seconds.", cause)
+                        Timber.w(
+                            cause,
+                            "Request Config Failed. Retrying in %s seconds.", currentDelay / 1000
+                        )
                         return@retryWhen true
                     }
                 }
-                .collect {
+                .collect{
                     config = it
                 }
-
-            return config!!
         }
+        return config
     }
 
     suspend fun publishEvents(payload: UserAndEvents): DVCResponse {

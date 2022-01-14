@@ -8,6 +8,6 @@ public class Build {
 
         public static final String RELEASE = "1.0.0";
 
-        public static final int SDK_INT = 1;
+        public static final int SDK_INT = 31;
     }
 }

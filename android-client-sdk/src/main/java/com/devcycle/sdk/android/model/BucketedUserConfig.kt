@@ -17,46 +17,18 @@ import java.math.BigDecimal
 /**
  * ClientSDKAPIResponse
  */
-class BucketedUserConfig {
-    /**
-     * Get project
-     * @return project
-     */
+data class BucketedUserConfig internal constructor(
     @get:Schema(required = true, description = "")
-    val project: Project? = null
-
-    /**
-     * Get environment
-     * @return environment
-     */
+    val project: Project? = null,
     @get:Schema(required = true, description = "")
-    val environment: Environment? = null
-
-    /**
-     * Mapping of &#x60;Feature.key&#x60; to &#x60;Feature&#x60; schema values.
-     * @return features
-     */
+    val environment: Environment? = null,
     @get:Schema(description = "Mapping of `Feature.key` to `Feature` schema values.")
-    val features: Map<String, Feature>? = null
-
-    /**
-     * Map of &#x60;Feature._id&#x60; to &#x60;Feature._variation&#x60; used for event logging.
-     * @return featureVariationMap
-     */
+    val features: Map<String, Feature>? = null,
     @get:Schema(description = "Map of `Feature._id` to `Feature._variation` used for event logging.")
-    val featureVariationMap: Map<String, String>? = null
-
-    /**
-     * Map of &#x60;Variable.key&#x60; to &#x60;Variable&#x60; values.
-     * @return variables
-     */
+    val featureVariationMap: Map<String, String>? = null,
     @get:Schema(description = "Map of `Variable.key` to `Variable` values.")
-    var variables: Map<String, Variable<Any>>? = null
-
-    /**
-     * Hashes &#x60;murmurhash.v3(variable.key + environment.apiKey)&#x60; of all known variable keys not contained in the &#x60;variables&#x60; object.
-     * @return knownVariableKeys
-     */
+    val variables: Map<String, Variable<Any>>? = null,
     @get:Schema(description = "Hashes `murmurhash.v3(variable.key + environment.apiKey)` of all known variable keys not contained in the `variables` object.")
     val knownVariableKeys: List<BigDecimal>? = null
+) {
 }
