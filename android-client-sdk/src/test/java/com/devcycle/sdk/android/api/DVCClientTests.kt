@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.LocaleList
-import android.util.Log
 import com.devcycle.sdk.android.api.DVCClient.Companion.builder
 import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.devcycle.sdk.android.model.DVCUser
@@ -114,7 +113,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             if (error != null) {
                 fail(error)
             }
@@ -134,10 +133,9 @@ class DVCClientTests {
 
         val config = BucketedUserConfig(variables = variables)
 
-        //mockWebServer.enqueue(MockResponse().setResponseCode(401).setBody("{\"message\": \"Only 'mobile' keys are supported by this API\"}"))
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
 
-        val client = createClient("mobile-c06ea707-791d-4978-a91d-c863616b7f51", mockWebServer.url("/").toString())
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         try {
             client.onInitialized(object : DVCCallback<String> {
@@ -238,7 +236,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             mockWebServer.shutdown()
             if (!calledBack) {
                 error = AssertionFailedError("Client did not initialize")
@@ -318,7 +316,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             Assertions.assertEquals(2, mockWebServer.requestCount)
             mockWebServer.shutdown()
             if (!calledBack) {
@@ -330,6 +328,51 @@ class DVCClientTests {
         }
     }
 
+    @Test
+    fun `variable calls back when variable value changes`() {
+        var calledBack = false
+        var error: Throwable? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        val variables: MutableMap<String, Variable<Any>> = HashMap()
+        variables["activate-flag"] =
+            createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+
+        val config = BucketedUserConfig(variables = variables)
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        try {
+            val variable = client.variable("activate-flag", "Not activated")
+            variable.onUpdate(object: DVCCallback<Variable<String>> {
+                override fun onSuccess(result: Variable<String>) {
+                    Assertions.assertEquals("Flag activated!", result.value)
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
+            mockWebServer.shutdown()
+            if (!calledBack) {
+                error = AssertionFailedError("Variable did not callback")
+            }
+            if (error != null) {
+                fail(error)
+            }
+        }
+    }
 
     private fun createClient(sdkKey: String, mockUrl: String): DVCClient {
         val builder = builder()
