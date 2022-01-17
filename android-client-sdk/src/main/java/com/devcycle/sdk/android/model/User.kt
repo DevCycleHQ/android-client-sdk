@@ -84,7 +84,7 @@ data class User(
         private var platformVersion = Build.VERSION.RELEASE
         private var deviceModel = Build.MODEL
         private var sdkType = "client"
-        private var sdkVersion = "1.0.0"
+        private var sdkVersion = BuildConfig.VERSION_NAME;
         private var lastSeenDate = Calendar.getInstance().time.time
 
         @JsonProperty("user_id")
