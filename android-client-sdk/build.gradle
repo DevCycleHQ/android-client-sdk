@@ -46,6 +46,7 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
+        //Will create field in buildconfig.java for use in code. 
         buildConfigField 'String', 'VERSION_NAME', "\"$versionName\""
 
     }
