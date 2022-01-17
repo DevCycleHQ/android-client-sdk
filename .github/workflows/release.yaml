@@ -25,12 +25,10 @@ jobs:
         uses: actions/setup-java@v2
         with:
           java-version: '11'
-          distribution: 'temurin'
-          server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-          settings-path: ${{ github.workspace }} # location for the settings.xml file
+          distribution: 'adopt'
+          architecture: x64
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
-
       - name: Create Deployment Object
         uses: bobheadxi/deployments@v0.6.2
         id: deployment
@@ -39,7 +37,8 @@ jobs:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
           env: maven-central
-
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@e6e38bacfdf1a337459f332974bb2327a31aaf4b
       - name: Build with Gradle
         uses: gradle/gradle-build-action@4137be6a8bf7d7133955359dbd952c0ca73b1021
         with:
