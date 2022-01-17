@@ -11,6 +11,7 @@
  */
 package com.devcycle.sdk.android.model
 
+import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -93,18 +94,26 @@ class Variable<T> internal constructor() : PropertyChangeListener {
     @JsonIgnore
     var defaultValue: T? = null
 
+    @JsonIgnore
+    private var callback: DVCCallback<Variable<T>>? = null
+
     @Throws(IllegalArgumentException::class)
     private fun updateVariable(variable: Variable<Any>) {
+        var executeCallBack = false
         if (variable.type != type) {
             throw DVCVariableException("Cannot update Variable with a different type", this as Variable<Any>, variable)
         }
         id = variable.id
         if (variable.value != value) {
-            // TODO: Notify SDK user listener that value has changed
+            executeCallBack = true
         }
         value = variable.value as T?
         isDefaulted = false
         evalReason = variable.evalReason
+
+        if (executeCallBack) {
+            callback?.onSuccess(this)
+        }
     }
 
     companion object {
@@ -155,5 +164,9 @@ class Variable<T> internal constructor() : PropertyChangeListener {
                 updateVariable(variable)
             }
         }
+    }
+
+    fun onUpdate(callback: DVCCallback<Variable<T>>) {
+        this.callback = callback
     }
 }
