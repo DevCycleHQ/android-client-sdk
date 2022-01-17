@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.devcycle"
-version = "1.0.0"
+version = "1.0.1"
 
 project.afterEvaluate {
     publishing {
@@ -16,7 +16,7 @@ project.afterEvaluate {
                 setGroupId "com.devcycle"
                 //setArtifactId artifactId
                 setArtifactId "android-client-sdk"
-                version "1.0.0"
+                version version
 
                 artifact bundleDebugAar
 
@@ -42,9 +42,12 @@ android {
         minSdk 21
         targetSdk 31
         versionCode 1
-        versionName "1.0"
+        versionName version
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField 'String', 'VERSION_NAME', "\"$versionName\""
+
     }
 
     buildTypes {
