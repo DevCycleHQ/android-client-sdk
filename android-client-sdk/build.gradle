@@ -8,31 +8,31 @@ plugins {
 group = "com.devcycle"
 version = "1.0.0"
 
-project.afterEvaluate {
-    publishing {
-        publications {
-            library(MavenPublication) {
-                //setGroupId groupId
-                setGroupId "com.devcycle"
-                //setArtifactId artifactId
-                setArtifactId "android-client-sdk"
-                version "1.0.0"
-
-                artifact bundleDebugAar
-
-                pom.withXml {
-                    def dependenciesNode = asNode().appendNode('dependencies')
-                    configurations.implementation.allDependencies.each {
-                        def dependencyNode = dependenciesNode.appendNode('dependency')
-                        dependencyNode.appendNode('groupId', it.group)
-                        dependencyNode.appendNode('artifactId', it.name)
-                        dependencyNode.appendNode('version', it.version)
-                    }
-                }
-            }
-        }
-    }
-}
+//project.afterEvaluate {
+//    publishing {
+//        publications {
+//            library(MavenPublication) {
+//                //setGroupId groupId
+//                setGroupId "com.devcycle"
+//                //setArtifactId artifactId
+//                setArtifactId "android-client-sdk"
+//                version "1.0.0"
+//
+//                artifact bundleDebugAar
+//
+//                pom.withXml {
+//                    def dependenciesNode = asNode().appendNode('dependencies')
+//                    configurations.implementation.allDependencies.each {
+//                        def dependencyNode = dependenciesNode.appendNode('dependency')
+//                        dependencyNode.appendNode('groupId', it.group)
+//                        dependencyNode.appendNode('artifactId', it.name)
+//                        dependencyNode.appendNode('version', it.version)
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 android {
     compileSdk 31
@@ -71,7 +71,31 @@ ext {
     mockito_core_version = "4.2.0"
     coroutines_version = "1.6.0"
     timber_version = "5.0.1"
+
+    PUBLISH_GROUP_ID = 'com.devcycle'
+    PUBLISH_VERSION = '1.0.0'
+    PUBLISH_ARTIFACT_ID = 'android-client-sdk'
+    PUBLISH_DESCRIPTION = 'DevCycle Android SDK'
+    PUBLISH_URL = 'https://github.com/DevCycleHQ/android-client-sdk'
+    PUBLISH_LICENSE_NAME = 'MIT License'
+    PUBLISH_LICENSE_URL =
+            'https://www.opensource.org/licenses/mit-license.php'
+    PUBLISH_DEVELOPER_ID = 'sdks'
+    PUBLISH_DEVELOPER_NAME = 'DevCycle SDK Group'
+    PUBLISH_DEVELOPER_EMAIL = 'support@devcycle.com'
+    PUBLISH_SCM_CONNECTION =
+            'scm:git:github.com/DevCycleHQ/android-client-sdk.git'
+    PUBLISH_SCM_DEVELOPER_CONNECTION =
+            'scm:git:ssh://github.com/DevCycleHQ/android-client-sdk.git'
+    PUBLISH_SCM_URL =
+            'https://github.com/DevCycleHQ/android-client-sdk'
+
+    signingKeyId='A0D73E9B'
+    signingPassword='USk4QSQ!h@ABi6'
+    signingSecretKeyRingFile='../../secret-keys.gpg'
 }
+
+apply from: "${rootProject.projectDir}/scripts/publish-module.gradle"
 
 dependencies {
     
