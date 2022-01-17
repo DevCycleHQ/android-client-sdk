@@ -166,6 +166,12 @@ class Variable<T> internal constructor() : PropertyChangeListener {
         }
     }
 
+    /**
+     * To be notified when Variable.value changes register a callback by calling this method. The
+     * callback will replace any previously registered callback.
+     *
+     * [callback] returns the updated Variable inside callback.onSuccess(..)
+     */
     fun onUpdate(callback: DVCCallback<Variable<T>>) {
         this.callback = callback
     }

@@ -363,7 +363,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(200000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             mockWebServer.shutdown()
             if (!calledBack) {
                 error = AssertionFailedError("Variable did not callback")
