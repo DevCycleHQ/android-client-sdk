@@ -35,17 +35,15 @@ val dvcClient: DVCClient = DVCClient.builder()
     .build()
 
 dvcClient.initialize(object : DVCCallback<String?> {
-    override fun onSuccess(result: String?) {
-        // User Configuration loaded successfully from DevCycle
+    override fun onSuccess(result: String) {
+        // user configuration loaded successfully from DevCycle
     }
 
     override fun onError(t: Throwable) {
-        // User Configuration failed to load from DevCycle, default values will be used for Variables.
+        // user configuration failed to load from DevCycle, default values will be used for Variables.
     }
 })
 ```
-
-The user object needs either a `user_id`, or `isAnonymous` set to `true` for an anonymous user.
 
 ## Using Variable Values
 
@@ -56,7 +54,7 @@ string, boolean, number, or JSONObject:
 ```kotlin
 var strVariable: Variable<String> = dvcClient.variable("str_key", "default")
 var boolVariable: Variable<Boolean> = dvcClient.variable("bool_key", false)
-var numVariable: Variable<Number> = dvcClient.variable("bool_key", 0)
+var numVariable: Variable<Number> = dvcClient.variable("num_key", 0)
 var jsonVariable: Variable<JSONObject> = dvcClient.variable("json_key", JSONObject("{ \"key\": \"value\" }"))
 ```
 
@@ -64,9 +62,9 @@ To grab the value, there is a property on the object returned to grab the value:
 
 ```kotlin
 if (boolVariable.value == true) {
-    // Run Feature Flag Code
+    // run feature flag code
 } else {
-    // Run Default Code
+    // run default code
 }
 ```
 
@@ -89,7 +87,7 @@ var features: Map<String, Feature>? = dvcClient.allFeatures()
 var variables: Map<String, Variable<Any>>? = dvcClient.allVariables()
 ```
 
-If the SDK has not finished initializing, these methods will return an empty object.
+If the SDK has not finished initializing, these methods will return an empty Map.
 
 ## Identifying User
 
@@ -110,9 +108,11 @@ To wait on Variables that will be returned from the identify call, you can pass 
 ```kotlin
 dvcClient.identifyUser(user, object: DVCCallback<Map<String, Variable<Any>>> {
     override fun onSuccess(result: Map<String, Variable<Any>>) {
+        // new user configuration loaded successfully from DevCycle
     }
 
     override fun onError(t: Throwable) {
+        // user configuration failed to load from DevCycle, existing user's data will persist.
     }
 })
 ```
@@ -133,9 +133,11 @@ To wait on the Features of the anonymous user, you can pass in a DVCCallback:
 ```kotlin
 dvcClient.resetUser(object : DVCCallback<Map<String, Variable<Any>>> {
     override fun onSuccess(result: Map<String, Variable<Any>>) {
+        // anonymous user configuration loaded successfully from DevCycle
     }
 
     override fun onError(t: Throwable) {
+        // user configuration failed to load from DevCycle, existing user's data will persist.
     }
 })
 ```
