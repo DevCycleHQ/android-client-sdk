@@ -29,7 +29,6 @@ class DVCClient private constructor(
     private val environmentKey: String,
     private var user: User,
     private var options: DVCOptions?,
-    logLevel: LogLevel,
     apiUrl: String,
     private val coroutineScope: CoroutineScope = MainScope(),
     private val coroutineContext: CoroutineContext = Dispatchers.Default
@@ -307,6 +306,7 @@ class DVCClient private constructor(
         private var user: User? = null
         private var options: DVCOptions? = null
         private var logLevel: LogLevel = LogLevel.ERROR
+        private var tree: Timber.Tree = LogTree(logLevel.value)
         private var apiUrl: String = DVCApiClient.BASE_URL
 
         private var dvcUser: DVCUser? = null
@@ -335,6 +335,11 @@ class DVCClient private constructor(
             return this
         }
 
+        fun withTree(tree: Timber.Tree): DVCClientBuilder {
+            this.tree = tree
+            return this
+        }
+
         @TestOnly
         internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
             this.apiUrl = apiUrl
@@ -346,9 +351,13 @@ class DVCClient private constructor(
             require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
             requireNotNull(dvcUser) { "User must be set" }
 
+            if (logLevel.value > 0) {
+                Timber.plant(tree)
+            }
+
             this.user = User.builder().withUserParam(dvcUser!!, context!!).build()
 
-            return DVCClient(context!!, environmentKey!!, user!!, options, logLevel, apiUrl)
+            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl)
         }
     }
 
@@ -360,8 +369,5 @@ class DVCClient private constructor(
 
     init {
         saveUser()
-        if (logLevel.value > 0) {
-            Timber.plant(LogTree(logLevel.value))
-        }
     }
 }
