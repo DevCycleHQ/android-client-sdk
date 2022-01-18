@@ -13,7 +13,7 @@ class LogTree(private val logLevel: Int) : Timber.DebugTree() {
         }
 
         if (t != null) {
-            Log.e(tag, message, t)
+            Timber.e(t, message)
             return
         }
 

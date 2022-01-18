@@ -28,24 +28,25 @@ class DVCClient private constructor(
     private val context: Context,
     private val environmentKey: String,
     private var user: User,
-    private var options: DVCOptions?,
+    options: DVCOptions?,
     apiUrl: String,
+    eventsUrl: String,
+
     private val coroutineScope: CoroutineScope = MainScope(),
     private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private var config: BucketedUserConfig? = null
 
     private val defaultIntervalInMs: Long = 10000
+    private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request(environmentKey, apiUrl)
+    private val request: Request = Request(environmentKey, apiUrl, eventsUrl)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext))
+    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
     private val initializeJob: Deferred<Any>
-
-    private val timer: Timer = Timer("DevCycle.EventQueue.Timer", true)
 
     private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
     private val configRequestMutex = Mutex()
@@ -56,7 +57,6 @@ class DVCClient private constructor(
             try {
                 fetchConfig(user)
                 isInitialized.set(true)
-                initializeEventQueue()
             } catch (t: Throwable) {
                 Timber.e(t, "DevCycle SDK Failed to Initialize!")
                 throw t
@@ -279,11 +279,6 @@ class DVCClient private constructor(
         )
     }
 
-    private fun initializeEventQueue() {
-        val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
-        timer.schedule(eventQueue, flushInMs, flushInMs)
-    }
-
     private fun saveUser() {
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
@@ -308,6 +303,7 @@ class DVCClient private constructor(
         private var logLevel: LogLevel = LogLevel.ERROR
         private var tree: Timber.Tree = LogTree(logLevel.value)
         private var apiUrl: String = DVCApiClient.BASE_URL
+        private var eventsUrl: String = DVCEventsApiClient.BASE_URL
 
         private var dvcUser: DVCUser? = null
 
@@ -343,6 +339,7 @@ class DVCClient private constructor(
         @TestOnly
         internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
             this.apiUrl = apiUrl
+            this.eventsUrl = apiUrl
             return this
         }
 
@@ -357,7 +354,7 @@ class DVCClient private constructor(
 
             this.user = User.builder().withUserParam(dvcUser!!, context!!).build()
 
-            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl)
+            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl)
         }
     }
 

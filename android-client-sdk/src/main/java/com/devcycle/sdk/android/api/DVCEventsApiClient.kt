@@ -10,18 +10,18 @@ internal class DVCEventsApiClient {
     private val okBuilder: OkHttpClient.Builder = OkHttpClient.Builder()
     private val objectMapper = jacksonObjectMapper()
     private val adapterBuilder: Retrofit.Builder = Retrofit.Builder()
-        .baseUrl(BASE_URL)
         .addConverterFactory(JacksonConverterFactory.create(objectMapper))
 
-    fun initialize(envKey: String): DVCEventsApi {
+    fun initialize(envKey: String, baseUrl: String): DVCEventsApi {
         okBuilder.addInterceptor(AuthorizationHeaderInterceptor(envKey))
         return adapterBuilder
+            .baseUrl(baseUrl)
             .client(okBuilder.build())
             .build()
             .create(DVCEventsApi::class.java)
     }
 
     companion object {
-        private const val BASE_URL = "https://events.devcycle.com/"
+        internal const val BASE_URL = "https://events.devcycle.com/"
     }
 }

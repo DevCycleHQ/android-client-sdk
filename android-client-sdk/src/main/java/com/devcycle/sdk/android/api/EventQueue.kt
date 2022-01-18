@@ -1,10 +1,10 @@
 package com.devcycle.sdk.android.api
 
-import android.util.Log
 import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.User
 import com.devcycle.sdk.android.model.UserAndEvents
+import com.devcycle.sdk.android.util.Scheduler
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
@@ -17,11 +17,14 @@ import java.util.*
 internal class EventQueue constructor(
     private val request: Request,
     private val getUser: () -> User,
-    private val coroutineScope: CoroutineScope
-) : TimerTask(){
+    private val coroutineScope: CoroutineScope,
+    flushInMs: Long
+) {
     private val eventQueue: MutableList<Event> = mutableListOf()
     private val eventPayloadsToFlush: MutableList<UserAndEvents> = mutableListOf()
     private val aggregateEventMap: HashMap<String, HashMap<String, Event>> = HashMap()
+
+    private val scheduler = Scheduler(coroutineScope, flushInMs)
 
     // mutex to control flushing events, ensuring only one operation at a time
     private val flushMutex = Mutex()
@@ -87,6 +90,9 @@ internal class EventQueue constructor(
                 throw Throwable("Failed to completely flush events queue.", firstError)
             }
         }
+        if (eventQueue.size > 0) {
+            scheduler.scheduleWithDelay { run() }
+        }
     }
 
     /**
@@ -96,6 +102,8 @@ internal class EventQueue constructor(
         runBlocking {
             queueMutex.withLock {
                 eventQueue.add(event)
+                Timber.i("Event queued successfully %s", event)
+                scheduler.scheduleWithDelay { run() }
             }
         }
     }
@@ -130,6 +138,8 @@ internal class EventQueue constructor(
                         aggEventType[event.target] = event
                     }
                 }
+
+                scheduler.scheduleWithDelay { run() }
             }
         }
     }
@@ -140,7 +150,7 @@ internal class EventQueue constructor(
         return eventList
     }
 
-    override fun run() {
+    private fun run() {
         if (flushMutex.isLocked) {
             Timber.i("Skipping event flush due to pending flush operation")
             return
