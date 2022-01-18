@@ -6,6 +6,7 @@ import com.devcycle.sdk.android.model.User
 import com.devcycle.sdk.android.model.UserAndEvents
 import com.devcycle.sdk.android.util.Scheduler
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
@@ -87,6 +88,7 @@ internal class EventQueue constructor(
             eventPayloadsToFlush.removeAll(successful)
 
             if (eventPayloadsToFlush.size > 0 && throwOnFailure) {
+                scheduler.scheduleWithDelay { run() }
                 throw Throwable("Failed to completely flush events queue.", firstError)
             }
         }

@@ -250,7 +250,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(2000000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             mockWebServer.shutdown()
             if (!calledBack) {
                 error = AssertionFailedError("Client did not initialize")
@@ -425,7 +425,6 @@ class DVCClientTests {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
-                    mockWebServer.takeRequest()
 
                     Thread.sleep(1500L)
 
@@ -497,7 +496,6 @@ class DVCClientTests {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
-                    mockWebServer.takeRequest()
 
                     client.track(DVCEvent.builder()
                         .withType("testEvent")
@@ -549,7 +547,7 @@ class DVCClientTests {
                     .build()
             )
             .withEnvironmentKey(sdkKey)
-            .withTree(tree)
+            .withLogger(tree)
             .withApiUrl(mockUrl)
             .withOptions(DVCOptions.builder()
                 .flushEventsIntervalMs(flushInMs)
