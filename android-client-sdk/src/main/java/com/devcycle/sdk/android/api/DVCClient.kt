@@ -331,8 +331,8 @@ class DVCClient private constructor(
             return this
         }
 
-        fun withTree(tree: Timber.Tree): DVCClientBuilder {
-            this.tree = tree
+        fun withLogger(logger: Timber.Tree): DVCClientBuilder {
+            this.tree = logger
             return this
         }
 

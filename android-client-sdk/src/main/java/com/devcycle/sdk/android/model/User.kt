@@ -29,7 +29,7 @@ data class User(
     @Schema(description = "App Version of the running application")
     val appVersion: String?,
     @Schema(description = "App Build number of the running application")
-    val appBuild: String?,
+    val appBuild: Long?,
     @Schema(description = "User's custom data to target the user with, data will be logged to DevCycle for use in dashboard.")
     val customData: Any?,
     @Schema(description = "User's custom data to target the user with, data will not be logged to DevCycle only used for feature bucketing.")
@@ -75,7 +75,7 @@ data class User(
         private var language: String? = null
         private var country: String? = null
         private var appVersion: String? = null
-        private var appBuild: String? = null
+        private var appBuild: Long? = null
         private var customData: Any? = null
         private var privateCustomData: Any? = null
 
@@ -128,7 +128,7 @@ data class User(
             return this
         }
 
-        private fun withAppBuild(appBuild: String?): Builder {
+        private fun withAppBuild(appBuild: Long?): Builder {
             this.appBuild = appBuild
             return this
         }
@@ -189,9 +189,9 @@ data class User(
 
             this.appVersion = packageInfo.versionName
             this.appBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                packageInfo.longVersionCode.toString()
+                packageInfo.longVersionCode
             } else {
-                packageInfo.versionCode.toString()
+                 packageInfo.versionCode.toLong();
             }
             this.language = locale.language
 
