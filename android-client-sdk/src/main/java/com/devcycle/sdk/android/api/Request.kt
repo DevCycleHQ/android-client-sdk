@@ -15,9 +15,9 @@ import retrofit2.Response
 import timber.log.Timber
 import java.io.IOException
 
-internal class Request constructor(envKey: String, apiBaseUrl: String) {
+internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
-    private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey)
+    private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey, eventsBaseUrl)
     private val objectMapper = jacksonObjectMapper()
     private val configMutex = Mutex()
 
