@@ -101,10 +101,13 @@ class DVCClient private constructor(
 
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(updatedUser, callback))
-        } else {
-            flushEvents()
+            return
+        }
 
-            coroutineScope.launch(coroutineContext) {
+        flushEvents()
+
+        coroutineScope.launch {
+            withContext(coroutineContext) {
                 isExecuting.set(true)
 
                 try {
@@ -131,10 +134,13 @@ class DVCClient private constructor(
         val newUser: User = User.builder().build()
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(newUser, callback))
-        } else {
-            flushEvents()
+            return
+        }
 
-            coroutineScope.launch(coroutineContext) {
+        flushEvents()
+
+        coroutineScope.launch {
+            withContext(coroutineContext) {
                 isExecuting.set(true)
                 try {
                     fetchConfig(newUser)
@@ -212,12 +218,15 @@ class DVCClient private constructor(
      * [callback] optional callback to be notified on success or failure
      */
     fun flushEvents(callback: DVCCallback<String>? = null) {
-        coroutineScope.launch(coroutineContext) {
-            try {
-                eventQueue.flushEvents(throwOnFailure = true)
-                callback?.onSuccess("Successfully flushed events")
-            } catch (t: Throwable) {
-                callback?.onError(t)
+        coroutineScope.launch {
+            withContext(coroutineContext) {
+                val result = eventQueue.flushEvents()
+
+                if (result.success) {
+                    callback?.onSuccess("Successfully flushed events")
+                } else {
+                    result.exception?.let { callback?.onError(it) }
+                }
             }
         }
     }

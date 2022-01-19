@@ -489,7 +489,7 @@ class DVCClientTests {
             }
         }
 
-        val flushInMs = 1L
+        val flushInMs = 100L
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs)
 
         try {
@@ -507,7 +507,7 @@ class DVCClientTests {
                         .withMetaData(mapOf("test" to "value"))
                         .build())
 
-                    Thread.sleep(100L)
+                    Thread.sleep(250L)
 
                     val logs = tree.logs
 
