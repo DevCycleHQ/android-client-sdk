@@ -34,7 +34,7 @@ internal class EventQueue constructor(
     private val queueMutex = Mutex()
 
     suspend fun flushEvents(): DVCFlushResult {
-        val result = DVCFlushResult()
+        lateinit var result: DVCFlushResult
         flushMutex.withLock {
             try {
                 val user = getUser()
@@ -88,17 +88,14 @@ internal class EventQueue constructor(
 
                 eventPayloadsToFlush.removeAll(successful)
 
-                if (eventPayloadsToFlush.size > 0) {
-                    result.success = false
-                    result.exception =
-                        Throwable("Failed to completely flush events queue", firstError)
+                result = if (eventPayloadsToFlush.size > 0) {
+                    DVCFlushResult(false, Throwable("Failed to completely flush events queue", firstError))
                 } else {
-                    result.success = true
+                    DVCFlushResult(true)
                 }
             } catch(t: Throwable) {
                 Timber.e(t, "Error flushing events")
-                result.success = false
-                result.exception = t
+                result = DVCFlushResult(false, t)
             }
         }
 

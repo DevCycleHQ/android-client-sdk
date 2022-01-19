@@ -1,5 +1,6 @@
 package com.devcycle.sdk.android.model
 
-class DVCFlushResult(var success: Boolean = false, var exception: Throwable? = null) {
-
-}
+data class DVCFlushResult(
+    val success: Boolean = false,
+    val exception: Throwable? = null
+)
