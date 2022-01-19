@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
                     .withUserId("nic_test")
                     .build()
             )
-            .withEnvironmentKey("mobile-c06ea707-791d-4978-a91d-c863616b7f51")
+            .withEnvironmentKey("add-mobile-key")
             .withLogLevel(LogLevel.DEBUG)
             .build()
 
