@@ -350,7 +350,7 @@ class DVCClient private constructor(
         }
 
         @TestOnly
-        internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
+        @JvmSynthetic internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
             this.apiUrl = apiUrl
             this.eventsUrl = apiUrl
             return this
@@ -372,6 +372,7 @@ class DVCClient private constructor(
     }
 
     companion object {
+        @JvmStatic
         fun builder(): DVCClientBuilder {
             return DVCClientBuilder()
         }

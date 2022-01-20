@@ -1,3 +1,4 @@
+@file:JvmSynthetic
 package com.devcycle.sdk.android.model
 
 import android.content.Context
@@ -14,7 +15,7 @@ import android.content.pm.PackageInfo
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
-data class User(
+internal data class User private constructor(
     @Schema(required = true, description = "Unique id to identify the user")
     @JsonProperty("user_id")
     val userId: String,
@@ -52,7 +53,7 @@ data class User(
     val lastSeenDate: Long?
 ) {
     @Throws(IllegalArgumentException::class)
-    internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): User {
+    @JvmSynthetic internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): User {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
@@ -68,7 +69,7 @@ data class User(
     }
 
     @JsonPOJOBuilder
-    class Builder internal constructor() {
+    internal class Builder internal constructor() {
         private var userId: String? = null
         private var email: String? = null
         private var name: String? = null
@@ -168,7 +169,7 @@ data class User(
             return this
         }
 
-        internal fun withUserParam(user: DVCUser, context: Context): Builder {
+        @JvmSynthetic internal fun withUserParam(user: DVCUser, context: Context): Builder {
             this.userId = user.userId
             this.email = user.email
             this.name = user.name
@@ -198,7 +199,7 @@ data class User(
             return this
         }
 
-        fun build(): User {
+        @JvmSynthetic internal fun build(): User {
             val isAnonymous = userId == null
             return User(
                 if (isAnonymous) UUID.randomUUID().toString() else userId!!,
@@ -226,8 +227,8 @@ data class User(
         }
     }
 
-    companion object {
-        fun builder(): Builder {
+    internal companion object {
+        @JvmSynthetic internal fun builder(): Builder {
             return Builder()
         }
     }
