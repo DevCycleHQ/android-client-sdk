@@ -139,6 +139,7 @@ class DVCClient private constructor(
         val newUser: User = User.builder().build()
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(newUser, callback))
+            Timber.d("Queued resetUser request for new anonymous user")
             return
         }
 
@@ -148,7 +149,6 @@ class DVCClient private constructor(
             withContext(coroutineContext) {
                 isExecuting.set(true)
                 try {
-                    ensureActive()
                     fetchConfig(newUser)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
