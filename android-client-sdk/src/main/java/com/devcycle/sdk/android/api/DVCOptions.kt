@@ -34,6 +34,7 @@ class DVCOptions(
     }
 
     companion object {
+        @JvmStatic
         fun builder(): DVCOptionsBuilder {
             return DVCOptionsBuilder()
         }

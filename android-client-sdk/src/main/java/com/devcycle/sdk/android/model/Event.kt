@@ -6,7 +6,7 @@ import java.math.BigDecimal
 import java.util.*
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-internal data class Event internal constructor(
+internal data class Event private constructor(
     val type: String,
     val customType: String?,
     @JsonProperty("user_id")

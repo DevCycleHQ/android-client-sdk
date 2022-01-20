@@ -1,7 +1,6 @@
 package com.devcycle.example
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.devcycle.sdk.android.api.DVCCallback
