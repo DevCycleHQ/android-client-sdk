@@ -2,14 +2,13 @@ package com.devcycle.sdk.android.util
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import com.devcycle.sdk.android.R
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.devcycle.sdk.android.model.User
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import timber.log.Timber
 import java.util.HashMap
 
@@ -19,7 +18,7 @@ class DVCSharedPrefs(context: Context) {
         context.getString(R.string.cached_data),
         Context.MODE_PRIVATE
     )
-    private val objectMapper: ObjectMapper = ObjectMapper()
+    private val objectMapper = jacksonObjectMapper()
 
     companion object {
         const val UserKey = "USER"
@@ -43,10 +42,11 @@ class DVCSharedPrefs(context: Context) {
     }
 
     @Synchronized
+    @Suppress("UNCHECKED_CAST")
     fun <T> getCache(key: String): T? {
         val jsonString = preferences.getString(key, null)
         if (jsonString == null) {
-            Timber.e(key + " could not be found in SharedPreferences file: " + R.string.cached_data)
+            Timber.e("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
         }
         try {
             return objectMapper.readValue(jsonString, prefs[key]) as T

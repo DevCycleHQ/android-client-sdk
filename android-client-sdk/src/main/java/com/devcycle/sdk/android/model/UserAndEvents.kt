@@ -7,4 +7,4 @@ internal data class UserAndEvents(
     val user: User,
     @JsonProperty("events")
     val events: List<Event>
-) {}
+)

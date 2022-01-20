@@ -28,12 +28,15 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import org.junit.Ignore
 import org.junit.jupiter.api.*
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
+import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -45,6 +48,10 @@ class DVCClientTests {
     private lateinit var mockWebServer: MockWebServer
 
     private val tree = TestTree()
+    private var configRequestCount = 0
+    private var calledBack = false
+    private var error: Throwable? = null
+    private var countDownLatch = CountDownLatch(1)
 
     private val mockContext: Context? = Mockito.mock(Context::class.java)
     private val sharedPreferences: SharedPreferences? = Mockito.mock(SharedPreferences::class.java)
@@ -77,13 +84,17 @@ class DVCClientTests {
         `when`(mockContext.packageManager).thenReturn(packageManager)
         `when`(mockContext.packageManager.getPackageInfo("test", 0)).thenReturn(packageInfo)
 
-        //every { packageInfo.versionName } returns "1.0"
         every { packageInfo.longVersionCode } returns 1
 
         Dispatchers.setMain(mainThreadSurrogate)
 
         mockWebServer = MockWebServer()
         mockWebServer.start()
+
+        configRequestCount = 0
+        calledBack = false
+        error = null
+        countDownLatch = CountDownLatch(1)
     }
 
     @DelicateCoroutinesApi
@@ -92,27 +103,24 @@ class DVCClientTests {
     fun tearDown() {
         Dispatchers.resetMain() // reset the main dispatcher to the original Main dispatcher
         mainThreadSurrogate.close()
-
         mockWebServer.shutdown()
     }
 
     @Test
     fun `onInitialized will throw an error if SDK key is not valid`() {
-        var error: Throwable? = null
-
-        val countDownLatch = CountDownLatch(1)
-
         val client = createClient("invalid-client-sdk", "https://sdk-api.devcycle.com/")
 
         try {
             client.onInitialized(object : DVCCallback<String> {
                 override fun onSuccess(result: String) {
                     error = AssertionFailedError("Client initialized with invalid SDK key!")
+                    calledBack = true
                     countDownLatch.countDown()
                 }
 
                 override fun onError(t: Throwable) {
                     Assertions.assertEquals("Only 'mobile' keys are supported by this API", t.message)
+                    calledBack = true
                     countDownLatch.countDown()
                 }
             })
@@ -120,24 +128,13 @@ class DVCClientTests {
             countDownLatch.countDown()
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
-            if (error != null) {
-                fail(error)
-            }
+            handleFinally(calledBack, error)
         }
     }
 
     @Test
     fun `onInitialized will return successfully if SDK key is valid`() {
-        var calledBack = false
-        var error: Throwable? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        val variables: MutableMap<String, Variable<Any>> = HashMap()
-        variables["activate-flag"] =
-            createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-
-        val config = BucketedUserConfig(variables = variables)
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
 
@@ -163,34 +160,14 @@ class DVCClientTests {
             countDownLatch.countDown()
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
-            mockWebServer.shutdown()
-            if (!calledBack) {
-                error = AssertionFailedError("Client did not initialize")
-            }
-            if (error != null) {
-                fail(error)
-            }
+            handleFinally(calledBack, error)
         }
     }
 
     @Test
     fun `ensure config requests cannot happen in parallel`() {
-        var calledBack = false
-        var error: Throwable? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        val variables: MutableMap<String, Variable<Any>> = HashMap()
-        variables["activate-flag"] =
-            createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-
-        val config = BucketedUserConfig(variables = variables)
-
-        val variablesTwo: MutableMap<String, Variable<Any>> = HashMap()
-        variablesTwo["wobble"] =
-            createNewVariable("wobble", "Second!", Variable.TypeEnum.STRING)
-
-        val configTwo = BucketedUserConfig(variables = variablesTwo)
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        val configTwo = generateConfig("wobble", "Second!", Variable.TypeEnum.STRING)
 
         mockWebServer.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
@@ -251,36 +228,27 @@ class DVCClientTests {
             countDownLatch.countDown()
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
-            mockWebServer.shutdown()
-            if (!calledBack) {
-                error = AssertionFailedError("Client did not initialize")
-            }
-            if (error != null) {
-                fail(error)
-            }
+            handleFinally(calledBack, error)
         }
     }
 
     @Test
     fun `ensure config requests are queued and executed later`() {
-        var calledBack = false
-        var error: Throwable? = null
-
-        val countDownLatch = CountDownLatch(1)
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        generateDispatcher(config = config)
 
         val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
         client.onInitialized(object: DVCCallback<String> {
             override fun onSuccess(result: String) {
-                val takeRequest = mockWebServer.takeRequest()
+                val takeRequest = requests.remove()
                 takeRequest.path?.contains("nic_test")?.let { Assertions.assertTrue(it) }
             }
 
             override fun onError(t: Throwable) {
-                error = t
                 calledBack = true
+                error = t
                 countDownLatch.countDown()
             }
-
         })
 
         val i = AtomicInteger(0)
@@ -291,7 +259,7 @@ class DVCClientTests {
 
                 if (i.get() == 0) {
                     // If there are no more requests mockwebserver awaits the next response and we're not expecting any more
-                    val takeRequest = mockWebServer.takeRequest()
+                    val takeRequest = requests.remove()
                     takeRequest.path?.contains("new_userid5")?.let { Assertions.assertTrue(it) }
                 }
 
@@ -310,26 +278,6 @@ class DVCClientTests {
             }
         }
 
-        val variables: MutableMap<String, Variable<Any>> = HashMap()
-        variables["activate-flag"] =
-            createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-
-        val config = BucketedUserConfig(variables = variables)
-
-        var configRequestCount = 0;
-        mockWebServer.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest): MockResponse {
-
-                if (request.path == "/v1/events") {
-                    return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
-                } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
-                    configRequestCount++
-                    return MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config))
-                }
-                return MockResponse().setResponseCode(404)
-            }
-        }
-
         try {
             client.identifyUser(DVCUser.builder().withUserId("new_userid").build(), callback)
             client.identifyUser(DVCUser.builder().withUserId("new_userid1").build(), callback)
@@ -337,35 +285,18 @@ class DVCClientTests {
             client.identifyUser(DVCUser.builder().withUserId("new_userid3").build(), callback)
             client.identifyUser(DVCUser.builder().withUserId("new_userid4").build(), callback)
             client.identifyUser(DVCUser.builder().withUserId("new_userid5").build(), callback)
-
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
             Assertions.assertEquals(2, configRequestCount)
-
-            mockWebServer.shutdown()
-            if (!calledBack) {
-                error = AssertionFailedError("Client did not initialize")
-            }
-            if (error != null) {
-                fail(error)
-            }
         }
     }
 
     @Test
     fun `variable calls back when variable value changes`() {
-        var calledBack = false
-        var error: Throwable? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        val variables: MutableMap<String, Variable<Any>> = HashMap()
-        variables["activate-flag"] =
-            createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-
-        val config = BucketedUserConfig(variables = variables)
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
 
@@ -390,13 +321,7 @@ class DVCClientTests {
             countDownLatch.countDown()
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
-            mockWebServer.shutdown()
-            if (!calledBack) {
-                error = AssertionFailedError("Variable did not callback")
-            }
-            if (error != null) {
-                fail(error)
-            }
+            handleFinally(calledBack, error)
         }
     }
 
@@ -407,11 +332,7 @@ class DVCClientTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        val variables: MutableMap<String, Variable<Any>> = HashMap()
-        variables["activate-flag"] =
-            createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-
-        val config = BucketedUserConfig(variables = variables)
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
 
@@ -454,40 +375,14 @@ class DVCClientTests {
             countDownLatch.countDown()
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
-            mockWebServer.shutdown()
-            if (!calledBack) {
-                error = AssertionFailedError("Client did not initialize")
-            }
-            if (error != null) {
-                fail(error)
-            }
+            handleFinally(calledBack, error)
         }
     }
 
     @Test
     fun `events are flushed with delay to batch up events`() {
-        var calledBack = false
-        var error: Throwable? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        val variables: MutableMap<String, Variable<Any>> = HashMap()
-        variables["activate-flag"] =
-            createNewVariable("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-
-        val config = BucketedUserConfig(variables = variables)
-
-        mockWebServer.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest): MockResponse {
-
-                if (request.path == "/v1/events") {
-                    return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
-                } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
-                    return MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config))
-                }
-                return MockResponse().setResponseCode(404)
-            }
-        }
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        generateDispatcher(config = config)
 
         val flushInMs = 100L
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs)
@@ -527,18 +422,24 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(300000, TimeUnit.MILLISECONDS)
-            mockWebServer.shutdown()
-            if (!calledBack) {
-                error = AssertionFailedError("Client did not initialize")
-            }
-            if (error != null) {
-                fail(error)
-            }
+            countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
         }
     }
 
-    private fun createClient(sdkKey: String, mockUrl: String, flushInMs: Long = 100000L): DVCClient {
+    private fun handleFinally(
+        calledBack: Boolean,
+        error: Throwable?,
+    ) {
+        if (!calledBack) {
+            fail(AssertionFailedError("Client did not initialize"))
+        }
+        if (error != null) {
+            fail(error)
+        }
+    }
+
+    private fun createClient(sdkKey: String, mockUrl: String, flushInMs: Long = 10000L): DVCClient {
         val builder = builder()
             .withContext(mockContext!!)
             .withUser(
@@ -556,6 +457,13 @@ class DVCClientTests {
         return builder.build()
     }
 
+    private fun generateConfig(key: String, value: String, type: Variable.TypeEnum): BucketedUserConfig {
+        val variables: MutableMap<String, Variable<Any>> = HashMap()
+        variables[key] = createNewVariable(key, value, type)
+
+        return BucketedUserConfig(variables = variables)
+    }
+
     private fun <T> createNewVariable(key: String, value: T, type: Variable.TypeEnum): Variable<Any> {
         val variable: Variable<Any> = Variable()
         variable.id = UUID.randomUUID().toString()
@@ -563,5 +471,30 @@ class DVCClientTests {
         variable.value = value
         variable.key = key
         return variable
+    }
+
+    val requests = ConcurrentLinkedQueue<RecordedRequest>()
+
+    private fun generateDispatcher(routes: List<Pair<String, MockResponse>>? = null, config: BucketedUserConfig? = null) {
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (routes == null) {
+                    requests.add(request)
+                    if (request.path == "/v1/events") {
+                        return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
+                    } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
+                        configRequestCount++
+                        return MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config))
+                    }
+                } else {
+                    for (route: Pair<String, MockResponse> in routes) {
+                        if (request.path == route.first) {
+                            return route.second
+                        }
+                    }
+                }
+                return MockResponse().setResponseCode(404)
+            }
+        }
     }
 }
