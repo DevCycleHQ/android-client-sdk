@@ -34,7 +34,7 @@ internal class EventQueue constructor(
     private val queueMutex = Mutex()
 
     suspend fun flushEvents(): DVCFlushResult {
-        lateinit var result: DVCFlushResult
+        var result = DVCFlushResult(false)
         flushMutex.withLock {
             try {
                 val user = getUser()

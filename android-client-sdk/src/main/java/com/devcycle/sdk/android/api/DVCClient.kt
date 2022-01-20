@@ -33,7 +33,7 @@ class DVCClient private constructor(
     eventsUrl: String,
 
     private val coroutineScope: CoroutineScope = MainScope(),
-    private val coroutineContext: CoroutineContext = Dispatchers.Default
+    coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private var config: BucketedUserConfig? = null
 
@@ -60,7 +60,11 @@ class DVCClient private constructor(
             } catch (t: Throwable) {
                 Timber.e(t, "DevCycle SDK Failed to Initialize!")
                 throw t
-            } finally {
+            }
+        }
+
+        initializeJob.invokeOnCompletion {
+            coroutineScope.launch(coroutineContext) {
                 handleQueuedConfigRequests()
                 isExecuting.set(false)
             }
@@ -101,6 +105,7 @@ class DVCClient private constructor(
 
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(updatedUser, callback))
+            Timber.d("Queued identifyUser request for user_id %s", updatedUser.userId)
             return
         }
 
@@ -143,6 +148,7 @@ class DVCClient private constructor(
             withContext(coroutineContext) {
                 isExecuting.set(true)
                 try {
+                    ensureActive()
                     fetchConfig(newUser)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
@@ -231,46 +237,44 @@ class DVCClient private constructor(
         }
     }
 
-    private fun handleQueuedConfigRequests() {
-        coroutineScope.launch(coroutineContext) {
-            configRequestMutex.withLock {
-                if (configRequestQueue.isEmpty()) {
-                    return@withLock
+    private suspend fun handleQueuedConfigRequests() {
+        configRequestMutex.withLock {
+            if (configRequestQueue.isEmpty()) {
+                return@withLock
+            }
+
+            var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
+            val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> =
+                mutableListOf()
+
+            if (latestUserAndCallback.callback != null) {
+                callbacks.add(latestUserAndCallback.callback!!)
+            }
+            val itr = configRequestQueue.iterator()
+
+            while (itr.hasNext()) {
+                val userAndCallback = itr.next()
+                if (userAndCallback.now > latestUserAndCallback.now) {
+                    latestUserAndCallback = userAndCallback
                 }
-
-                var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
-                val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> =
-                    mutableListOf()
-
-                if (latestUserAndCallback.callback != null) {
-                    callbacks.add(latestUserAndCallback.callback!!)
+                if (userAndCallback.callback != null) {
+                    callbacks.add(userAndCallback.callback)
                 }
-                val itr = configRequestQueue.iterator()
+                itr.remove()
+            }
 
-                while (itr.hasNext()) {
-                    val userAndCallback = itr.next()
-                    if (userAndCallback.now > latestUserAndCallback.now) {
-                        latestUserAndCallback = userAndCallback
-                    }
-                    if (userAndCallback.callback != null) {
-                        callbacks.add(userAndCallback.callback)
-                    }
-                    itr.remove()
-                }
+            val localUser = latestUserAndCallback.user
 
-                val localUser = latestUserAndCallback.user
-
-                try {
-                    fetchConfig(localUser)
-                    config?.variables?.let { v ->
-                        callbacks.forEach {
-                            it.onSuccess(v)
-                        }
-                    }
-                } catch (t: Throwable) {
+            try {
+                fetchConfig(localUser)
+                config?.variables?.let { v ->
                     callbacks.forEach {
-                        it.onError(t)
+                        it.onSuccess(v)
                     }
+                }
+            } catch (t: Throwable) {
+                callbacks.forEach {
+                    it.onError(t)
                 }
             }
         }

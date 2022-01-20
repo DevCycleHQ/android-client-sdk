@@ -98,6 +98,7 @@ class Variable<T> internal constructor() : PropertyChangeListener {
     private var callback: DVCCallback<Variable<T>>? = null
 
     @Throws(IllegalArgumentException::class)
+    @Suppress("UNCHECKED_CAST")
     private fun updateVariable(variable: Variable<Any>) {
         var executeCallBack = false
         if (variable.type != type) {
@@ -117,8 +118,9 @@ class Variable<T> internal constructor() : PropertyChangeListener {
     }
 
     companion object {
+        @Suppress("UNCHECKED_CAST")
         @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, variable: Variable<Any>?): Variable<T> {
-            val returnVariable = Variable<T>();
+            val returnVariable = Variable<T>()
             if (variable != null) {
                 returnVariable.id = variable.id
                 returnVariable.key = variable.key

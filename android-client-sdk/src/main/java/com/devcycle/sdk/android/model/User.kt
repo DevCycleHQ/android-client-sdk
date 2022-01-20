@@ -84,7 +84,7 @@ data class User(
         private var platformVersion = Build.VERSION.RELEASE
         private var deviceModel = Build.MODEL
         private var sdkType = "client"
-        private var sdkVersion = BuildConfig.VERSION_NAME;
+        private var sdkVersion = BuildConfig.VERSION_NAME
         private var lastSeenDate = Calendar.getInstance().time.time
 
         @JsonProperty("user_id")
@@ -191,7 +191,7 @@ data class User(
             this.appBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 packageInfo.longVersionCode
             } else {
-                 packageInfo.versionCode.toLong();
+                 packageInfo.versionCode.toLong()
             }
             this.language = locale.language
 
