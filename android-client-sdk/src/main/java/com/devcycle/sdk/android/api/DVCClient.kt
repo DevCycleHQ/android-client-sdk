@@ -31,9 +31,8 @@ class DVCClient private constructor(
     options: DVCOptions?,
     apiUrl: String,
     eventsUrl: String,
-
     private val coroutineScope: CoroutineScope = MainScope(),
-    coroutineContext: CoroutineContext = Dispatchers.Default
+    private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private var config: BucketedUserConfig? = null
 
