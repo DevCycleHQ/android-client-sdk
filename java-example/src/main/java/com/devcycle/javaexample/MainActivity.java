@@ -1,23 +1,20 @@
 package com.devcycle.javaexample;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.os.Bundle;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.devcycle.sdk.android.api.DVCCallback;
 import com.devcycle.sdk.android.api.DVCClient;
 import com.devcycle.sdk.android.model.DVCEvent;
 import com.devcycle.sdk.android.model.DVCUser;
-import com.devcycle.sdk.android.model.Feature;
 import com.devcycle.sdk.android.model.Variable;
 import com.devcycle.sdk.android.util.LogLevel;
 
 import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
@@ -39,7 +36,8 @@ public class MainActivity extends AppCompatActivity {
                 .withLogLevel(LogLevel.DEBUG)
                 .build();
 
-        variable = client.variable("activate-flag", "not activated");
+        // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
+        variable = client.variable("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
         Toast.makeText(MainActivity.this, Objects.requireNonNull(variable.getValue()), Toast.LENGTH_SHORT).show();
 
         client.onInitialized(new DVCCallback<String>() {
@@ -67,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
                         .build();
                 client.track(event);
 
+                // This toast onInitialized will show the value has changed
                 Toast.makeText(MainActivity.this, variable.getValue(), Toast.LENGTH_SHORT).show();
             }
 
