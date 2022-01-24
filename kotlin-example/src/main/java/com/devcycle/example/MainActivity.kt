@@ -12,8 +12,6 @@ import com.devcycle.sdk.android.util.LogLevel
 
 class MainActivity : AppCompatActivity() {
 
-    val TAG = "MainActivity"
-
     var variable: Variable<String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,16 +50,11 @@ class MainActivity : AppCompatActivity() {
                     .withMetaData(mapOf("test" to "value"))
                     .build())
 
-                //this@MainActivity.runOnUiThread {
-                    Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
-                //}
+                Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
             }
 
             override fun onError(t: Throwable) {
-                //this@MainActivity.runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Error: " + t.message, Toast.LENGTH_SHORT)
-                        .show()
-                //}
+                Toast.makeText(this@MainActivity, "Client did not initialize: " + t.message, Toast.LENGTH_SHORT).show()
             }
         })
     }
