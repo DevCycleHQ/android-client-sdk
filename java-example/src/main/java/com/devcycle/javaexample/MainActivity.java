@@ -10,10 +10,14 @@ import com.devcycle.sdk.android.api.DVCCallback;
 import com.devcycle.sdk.android.api.DVCClient;
 import com.devcycle.sdk.android.model.DVCEvent;
 import com.devcycle.sdk.android.model.DVCUser;
+import com.devcycle.sdk.android.model.Feature;
 import com.devcycle.sdk.android.model.Variable;
 import com.devcycle.sdk.android.util.LogLevel;
 
+import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
@@ -55,12 +59,13 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-                HashMap<String, Object> metadata = new HashMap<>();
-                metadata.put("test", "value");
-                client.track(DVCEvent.builder()
-                        .withType("testEvent")
-                        .withMetaData(metadata)
-                        .build());
+                DVCEvent event = DVCEvent.builder()
+                        .withType("custom_event_type")
+                        .withTarget("custom_event_target")
+                        .withValue(BigDecimal.valueOf(10.00))
+                        .withMetaData(Collections.singletonMap("test", "value"))
+                        .build();
+                client.track(event);
 
                 Toast.makeText(MainActivity.this, variable.getValue(), Toast.LENGTH_SHORT).show();
             }

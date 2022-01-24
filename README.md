@@ -13,7 +13,7 @@ This version of the DevCycle Android Client SDK supports a minimum Android API V
 The SDK can be installed into your Android project by adding the following to *build.gradle*:
 
 ```yaml
-implementation("com.devcycle:android-client-sdk:1.0.1")
+implementation("com.devcycle:android-client-sdk:1.0.2")
 ```
 
 ## Usage
@@ -22,6 +22,8 @@ implementation("com.devcycle:android-client-sdk:1.0.1")
 
 Using the builder pattern we can initialize the DevCycle SDK by providing the `applicationContext`, 
 DVCUser, and DevCycle mobile environment key:
+
+#### *Kotlin example:*
 
 ```kotlin
 val dvcClient: DVCClient = DVCClient.builder()
@@ -45,6 +47,32 @@ dvcClient.initialize(object : DVCCallback<String?> {
 })
 ```
 
+#### *Java example:*
+
+```java
+DVCClient client = DVCClient.builder()
+    .withContext(getApplicationContext())
+    .withUser(
+        DVCUser.builder()
+            .withUserId("test_user")
+            .build()
+        )
+    .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
+    .build();
+
+client.onInitialized(new DVCCallback<String>() {
+    @Override
+    public void onSuccess(String result) {
+        // user configuration loaded successfully from DevCycle
+    }
+
+    @Override
+    public void onError(@NonNull Throwable t) {
+        // user configuration failed to load from DevCycle, default values will be used for Variables.
+    }
+});
+```
+
 ## Using Variable Values
 
 To get values from your Features, the `variable()` method is used to fetch variable values using 
@@ -60,6 +88,8 @@ var jsonVariable: Variable<JSONObject> = dvcClient.variable("json_key", JSONObje
 
 To grab the value, there is a property on the object returned to grab the value:
 
+#### *Kotlin example:*
+
 ```kotlin
 if (boolVariable.value == true) {
     // run feature flag code
@@ -68,8 +98,18 @@ if (boolVariable.value == true) {
 }
 ```
 
+#### *Java example:*
+
+```java
+if (boolVariable.getValue() == true) {
+    // run feature flag code
+} else {
+    // run default code
+}
+```
+
 The `Variable` object also contains the following params: 
-    - `key`: the key indentifier for the Variable
+    - `key`: the key identifier for the Variable
     - `type`: the type of the Variable, one of: `String` / `Boolean` / `Number` / `JSON`
     - `value`: the Variable's value
     - `defaultValue`: the Variable's default value
@@ -82,9 +122,20 @@ If the value is not ready, it will return the default value passed in the creati
 
 To grab all the Features or Variables returned in the config:
 
+#### *Kotlin example:*
+
 ```kotlin
 var features: Map<String, Feature>? = dvcClient.allFeatures()
+
 var variables: Map<String, Variable<Any>>? = dvcClient.allVariables()
+```
+
+#### *Java example:*
+
+```java
+Map<String, Feature> features = dvcClient.allFeatures();
+
+Map<String, Variable<Object>> variables = dvcClient.allVariables();
 ```
 
 If the SDK has not finished initializing, these methods will return an empty Map.
@@ -93,6 +144,8 @@ If the SDK has not finished initializing, these methods will return an empty Map
 
 To identify a different user, or the same user passed into the initialize method with more attributes, 
 build a DVCUser object and pass it into `identifyUser`:
+
+#### *Kotlin example:*
 
 ```kotlin
 var user = DVCUser.builder()
@@ -103,7 +156,20 @@ var user = DVCUser.builder()
 dvcClient.identifyUser(user)
 ```
 
+#### *Java example:*
+
+```kotlin
+DVCUser user = DVCUser.builder()
+                    .withUserId("test_user")
+                    .withEmail("test_user@devcycle.com")
+                    .withCustomData(Collections.singletonMap("custom_key", "value"))
+                    .build();
+client.identifyUser(user);
+```
+
 To wait on Variables that will be returned from the identify call, you can pass in a DVCCallback:
+
+#### *Kotlin example:*
 
 ```kotlin
 dvcClient.identifyUser(user, object: DVCCallback<Map<String, Variable<Any>>> {
@@ -117,6 +183,21 @@ dvcClient.identifyUser(user, object: DVCCallback<Map<String, Variable<Any>>> {
 })
 ```
 
+#### *Java example:*
+
+```java
+client.identifyUser(user, new DVCCallback<Map<String, Variable<Object>>>() {
+    @Override
+    public void onSuccess(Map<String, Variable<Object>> result) {
+        // new user configuration loaded successfully from DevCycle
+    }
+
+    @Override
+    public void onError(@NonNull Throwable t) {
+        // user configuration failed to load from DevCycle, existing user's data will persist.
+    }
+```
+
 If `onError` is called the user's configuration will not be updated and previous user's data will persist.
 
 ## Reset User
@@ -127,6 +208,8 @@ or will create one with an anonymous `user_id`.
 ```kotlin
 dvcClient.resetUser()
 ```
+
+#### *Kotlin example:*
 
 To wait on the Features of the anonymous user, you can pass in a DVCCallback:
 
@@ -142,11 +225,30 @@ dvcClient.resetUser(object : DVCCallback<Map<String, Variable<Any>>> {
 })
 ```
 
+#### *Java example:*
+
+```java
+client.resetUser(new DVCCallback<Map<String, Variable<Object>>>() {
+    @Override
+    public void onSuccess(Map<String, Variable<Object>> result) {
+        // anonymous user configuration loaded successfully from DevCycle
+    }
+
+    @Override
+    public void onError(@NonNull Throwable t) {
+        // user configuration failed to load from DevCycle, existing user's data will persist.
+    }
+});
+```
+
+
 If `onError` is called the user's configuration will not be updated and previous user's data will persist.
 
 ## Tracking Events
 
 To track events, pass in an object with at least a `type` key:
+
+#### *Kotlin example:*
 
 ```kotlin
 var event = DVCEvent.builder()
@@ -156,6 +258,18 @@ var event = DVCEvent.builder()
                 .withMetaData(mapOf("custom_key" to "value"))
                 .build()
 dvcClient.track(event)
+```
+
+#### *Java example:*
+
+```java
+DVCEvent event = DVCEvent.builder()
+        .withType("custom_event_type")
+        .withTarget("custom_event_target")
+        .withValue(BigDecimal.valueOf(10.00))
+        .withMetaData(Collections.singletonMap("test", "value"))
+        .build();
+client.track(event);
 ```
 
 The SDK will flush events every 10s or `flushEventsMS` specified in the options. To manually flush events, call:
