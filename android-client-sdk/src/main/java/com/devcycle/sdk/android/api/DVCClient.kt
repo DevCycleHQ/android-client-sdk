@@ -94,6 +94,7 @@ class DVCClient private constructor(
      * [callback] is optional and provided by the SDK user and will callback with the Map of
      * Variables in the latest config when fetched from the API
      */
+    @JvmOverloads
     @Synchronized
     fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         val updatedUser: User = if (this@DVCClient.user.userId == user.userId) {
@@ -133,6 +134,7 @@ class DVCClient private constructor(
      * [callback] is optional and provided by the SDK user and will callback with the Map of
      * Variables in the latest config when fetched from the API
      */
+    @JvmOverloads
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         val newUser: User = User.builder().build()
@@ -222,6 +224,7 @@ class DVCClient private constructor(
      *
      * [callback] optional callback to be notified on success or failure
      */
+    @JvmOverloads
     fun flushEvents(callback: DVCCallback<String>? = null) {
         coroutineScope.launch {
             withContext(coroutineContext) {
