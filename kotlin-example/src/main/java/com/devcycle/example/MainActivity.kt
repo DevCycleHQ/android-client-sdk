@@ -21,10 +21,10 @@ class MainActivity : AppCompatActivity() {
             .withContext(applicationContext)
             .withUser(
                 DVCUser.builder()
-                    .withUserId("nic_test")
+                    .withUserId("test_user")
                     .build()
             )
-            .withEnvironmentKey("add-mobile-key")
+            .withEnvironmentKey("<ADD-MOBILE-KEY-HERE>")
             .withLogLevel(LogLevel.DEBUG)
             .build()
 
