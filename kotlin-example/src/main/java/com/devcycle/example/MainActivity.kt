@@ -28,7 +28,8 @@ class MainActivity : AppCompatActivity() {
             .withLogLevel(LogLevel.DEBUG)
             .build()
 
-        variable = client.variable("activate-flag", "not activated")
+        // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
+        variable = client.variable("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
         Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
 
         client.onInitialized(object : DVCCallback<String> {
@@ -50,6 +51,7 @@ class MainActivity : AppCompatActivity() {
                     .withMetaData(mapOf("test" to "value"))
                     .build())
 
+                // This toast onInitialized will show the value has changed
                 Toast.makeText(this@MainActivity, variable?.value, Toast.LENGTH_SHORT).show()
             }
 
