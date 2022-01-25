@@ -133,7 +133,6 @@ variable.onUpdate(object: DVCCallback<Variable<String>> {
     override fun onError(t: Throwable) {
         // optionally handle the error, the previous value will still be used
     }
-
 })
 ```
 
