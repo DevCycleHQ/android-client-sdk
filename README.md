@@ -118,6 +118,41 @@ The `Variable` object also contains the following params:
 
 If the value is not ready, it will return the default value passed in the creation of the variable.
 
+## Variable updates
+
+A callback can be registered to be notified when the value changes on a variable.
+
+#### *Kotlin example:*
+
+```kotlin
+variable.onUpdate(object: DVCCallback<Variable<String>> {
+    override fun onSuccess(result: Variable<String>) {
+        // use the new value
+    }
+
+    override fun onError(t: Throwable) {
+        // optionally handle the error, the previous value will still be used
+    }
+
+})
+```
+
+#### *Java example:*
+
+```java
+variable.onUpdate(new DVCCallback<Variable<String>>() {
+    @Override
+    public void onSuccess(Variable<String> result) {
+        // use the new value
+    }
+
+    @Override
+    public void onError(@NonNull Throwable t) {
+        // optionally handle the error, the previous value will still be used
+    }
+});
+```
+
 ## Grabbing All Features / Variables
 
 To grab all the Features or Variables returned in the config:
@@ -276,4 +311,36 @@ The SDK will flush events every 10s or `flushEventsMS` specified in the options.
 
 ```kotlin
 dvcClient.flushEvents()
+```
+
+A callback can be passed to this method to be notified when the method has completed:
+
+#### *Kotlin example:*
+
+```kotlin
+client.flushEvents(object: DVCCallback<String> {
+    override fun onSuccess(result: String) {
+        // The queue was successfully flushed
+    }
+
+    override fun onError(t: Throwable) {
+        // The queue could not be flushed and a non-recoverable error was thrown
+    }
+})
+```
+
+#### *Java example:*
+
+```java
+client.flushEvents(new DVCCallback<String>() {
+    @Override
+    public void onSuccess(String result) {
+        // The queue was successfully flushed
+    }
+
+    @Override
+    public void onError(@NonNull Throwable t) {
+        // The queue could not be flushed and a non-recoverable error was thrown
+    }
+});
 ```
