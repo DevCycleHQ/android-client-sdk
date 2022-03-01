@@ -141,11 +141,17 @@ class Variable<T> internal constructor() : PropertyChangeListener {
         private fun <T: Any> getType(value: T): TypeEnum? {
             val typeClass = value::class.java
 
-            val typeEnum = when {
+            var typeEnum = when {
+                // Kotlin types
                 typeClass.isAssignableFrom(String::class.java) -> TypeEnum.STRING
                 typeClass.isAssignableFrom(Number::class.java) -> TypeEnum.NUMBER
                 typeClass.isAssignableFrom(Boolean::class.java) -> TypeEnum.BOOLEAN
                 typeClass.isAssignableFrom(JSONObject::class.java) -> TypeEnum.JSON
+                // Java types
+                typeClass.isAssignableFrom(java.lang.String::class.java) -> TypeEnum.STRING
+                typeClass.isAssignableFrom(java.lang.Number::class.java) -> TypeEnum.NUMBER
+                typeClass.isAssignableFrom(java.lang.Boolean::class.java) -> TypeEnum.BOOLEAN
+                typeClass.isAssignableFrom(org.json.JSONObject::class.java) -> TypeEnum.JSON
                 else -> null
             }
 
