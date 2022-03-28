@@ -35,15 +35,6 @@ val dvcClient: DVCClient = DVCClient.builder()
     )
     .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
     .build()
-
-dvcClient.initialize(object : DVCCallback<String?> {
-    override fun onSuccess(result: String) {
-        // user configuration loaded successfully from DevCycle
-    }
-
-    override fun onError(t: Throwable) {
-        // user configuration failed to load from DevCycle, default values will be used for Variables.
-    }
 })
 ```
 
@@ -59,7 +50,15 @@ DVCClient client = DVCClient.builder()
         )
     .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
     .build();
+```
 
+### Notifying when DevCycle features are available
+
+You can attach a callback on the client to determine when your features have been loaded:
+
+#### Java
+
+```
 client.onInitialized(new DVCCallback<String>() {
     @Override
     public void onSuccess(String result) {
@@ -71,6 +70,20 @@ client.onInitialized(new DVCCallback<String>() {
         // user configuration failed to load from DevCycle, default values will be used for Variables.
     }
 });
+```
+
+#### Kotlin
+
+```
+client.onInitialized(object : DVCCallback<String> {
+    override fun onSuccess(result: String) {
+        // successfully initialized
+    }
+
+    override fun onError(t: Throwable) {
+        // there was an error 
+    }
+})
 ```
 
 ## Using Variable Values
