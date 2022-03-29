@@ -20,36 +20,54 @@ implementation("com.devcycle:android-client-sdk:1.0.3")
 
 ### Initializing the SDK
 
+We recommend initializing the SDK once in `onCreate` of your `Application` class or `MainActivity` to receive features for as soon as possible, and to pass around the client instance around in your app.
+
 Using the builder pattern we can initialize the DevCycle SDK by providing the `applicationContext`, 
 DVCUser, and DevCycle mobile environment key:
 
 #### *Kotlin example:*
 
 ```kotlin
-val dvcClient: DVCClient = DVCClient.builder()
-    .withContext(applicationContext)
-    .withUser(
-        DVCUser.builder()
-            .withUserId("test_user")
-            .build()
-    )
-    .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
-    .build()
-})
+override fun onCreate(savedInstanceState: Bundle?) {
+
+    ...
+
+    val dvcClient: DVCClient = DVCClient.builder()
+        .withContext(applicationContext)
+        .withUser(
+            DVCUser.builder()
+                .withUserId("test_user")
+                .build()
+        )
+        .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
+        .build()
+    })
+    
+    ...
+
+}
 ```
 
 #### *Java example:*
 
 ```java
-DVCClient client = DVCClient.builder()
-    .withContext(getApplicationContext())
-    .withUser(
-        DVCUser.builder()
-            .withUserId("test_user")
-            .build()
-        )
-    .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
-    .build();
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+
+    ...
+
+    DVCClient dvcClient = DVCClient.builder()
+        .withContext(getApplicationContext())
+        .withUser(
+            DVCUser.builder()
+                .withUserId("test_user")
+                .build()
+            )
+        .withEnvironmentKey("<DEVCYCLE_MOBILE_ENVIRONMENT_KEY>")
+        .build();
+    
+    ...
+}
 ```
 
 ### Notifying when DevCycle features are available
