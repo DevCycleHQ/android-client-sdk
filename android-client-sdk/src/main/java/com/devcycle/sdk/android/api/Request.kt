@@ -50,6 +50,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
     ): BucketedUserConfig {
         val map =
             objectMapper.convertValue(user, object : TypeReference<Map<String, String>>() {})
+                .filter { !it.value.isNullOrEmpty() }
 
         lateinit var config: BucketedUserConfig
 
