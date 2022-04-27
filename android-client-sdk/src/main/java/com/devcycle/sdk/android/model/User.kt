@@ -84,7 +84,7 @@ internal data class User private constructor(
         private var platform = "Android"
         private var platformVersion = Build.VERSION.RELEASE
         private var deviceModel = Build.MODEL
-        private var sdkType = "client"
+        private var sdkType = "mobile"
         private var sdkVersion = BuildConfig.VERSION_NAME
         private var lastSeenDate = Calendar.getInstance().time.time
 
