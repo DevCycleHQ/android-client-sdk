@@ -11,6 +11,7 @@
  */
 package com.devcycle.sdk.android.model
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 
@@ -18,6 +19,7 @@ import java.math.BigDecimal
  * ClientSDKAPIResponse
  */
 data class BucketedUserConfig internal constructor(
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @get:Schema(required = true, description = "")
     val project: Project? = null,
     @get:Schema(required = true, description = "")
