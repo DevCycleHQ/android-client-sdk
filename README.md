@@ -16,6 +16,8 @@ The SDK can be installed into your Android project by adding the following to *b
 implementation("com.devcycle:android-client-sdk:1.0.4")
 ```
 
+Versions earlier than 1.0.4 are deprecated and contain either third party CVEs or issues that would prevent the DevCycle client from initializing correctly if the retrieved Config has had new properties added.
+
 ## Usage
 
 ### Initializing the SDK
