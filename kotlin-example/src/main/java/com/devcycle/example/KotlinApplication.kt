@@ -21,6 +21,7 @@ class KotlinApplication: Application() {
             .withUser(
                 DVCUser.builder()
                     .withUserId("test_user")
+                    .withCustomData(mapOf("custom_value" to "test"))
                     .build()
             )
             .withEnvironmentKey("<YOUR_MOBILE_SDK_KEY>")

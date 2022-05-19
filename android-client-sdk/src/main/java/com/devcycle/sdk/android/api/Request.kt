@@ -48,9 +48,15 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
         environmentKey: String,
         user: User
     ): BucketedUserConfig {
-        val map =
-            objectMapper.convertValue(user, object : TypeReference<Map<String, String>>() {})
-                .filter { !it.value.isNullOrEmpty() }
+        val map = (
+                objectMapper.convertValue(user, object : TypeReference<Map<String, Object>>() {})
+        ) as MutableMap<String, String>
+        if (map.contains("customData")) {
+            map["customData"] = objectMapper.writeValueAsString(map["customData"])
+        }
+        if (map.contains("privateCustomData")) {
+            map["privateCustomData"] = objectMapper.writeValueAsString(map["privateCustomData"])
+        }
 
         lateinit var config: BucketedUserConfig
 

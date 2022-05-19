@@ -32,9 +32,9 @@ internal data class User private constructor(
     @Schema(description = "App Build number of the running application")
     val appBuild: Long?,
     @Schema(description = "User's custom data to target the user with, data will be logged to DevCycle for use in dashboard.")
-    val customData: Any?,
+    val customData: Map<String, Any>?,
     @Schema(description = "User's custom data to target the user with, data will not be logged to DevCycle only used for feature bucketing.")
-    val privateCustomData: Any?,
+    val privateCustomData: Map<String, Any>?,
     @Schema(description = "Date the user was created, Unix epoch timestamp format")
     val createdDate: Long,
     @Schema(description = "Platform the Client SDK is running on")
@@ -77,8 +77,8 @@ internal data class User private constructor(
         private var country: String? = null
         private var appVersion: String? = null
         private var appBuild: Long? = null
-        private var customData: Any? = null
-        private var privateCustomData: Any? = null
+        private var customData: Map<String, Any>? = null
+        private var privateCustomData: Map<String, Any>? = null
 
         private var createdDate = Calendar.getInstance().time.time
         private var platform = "Android"
@@ -109,12 +109,12 @@ internal data class User private constructor(
             return this
         }
 
-        fun withCustomData(customData: Any?): Builder {
+        fun withCustomData(customData: Map<String, Any>?): Builder {
             this.customData = customData
             return this
         }
 
-        fun withPrivateCustomData(privateCustomData: Any?): Builder {
+        fun withPrivateCustomData(privateCustomData: Map<String, Any>?): Builder {
             this.privateCustomData = privateCustomData
             return this
         }
