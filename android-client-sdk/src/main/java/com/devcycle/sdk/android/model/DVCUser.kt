@@ -7,16 +7,16 @@ class DVCUser private constructor(
     var email: String? = null,
     var name: String? = null,
     var country: String? = null,
-    var customData: Any? = null,
-    var privateCustomData: Any? = null
+    var customData: Map<String, Any>? = null,
+    var privateCustomData: Map<String, Any>? = null
 ) {
     class Builder internal constructor() {
         private var userId: String? = null
         private var email: String? = null
         private var name: String? = null
         private var country: String? = null
-        private var customData: Any? = null
-        private var privateCustomData: Any? = null
+        private var customData: Map<String, Any>? = null
+        private var privateCustomData: Map<String, Any>? = null
 
         @JsonProperty("user_id")
         fun withUserId(userId: String?): Builder {
@@ -39,12 +39,12 @@ class DVCUser private constructor(
             return this
         }
 
-        fun withCustomData(customData: Any?): Builder {
+        fun withCustomData(customData: Map<String, Any>?): Builder {
             this.customData = customData
             return this
         }
 
-        fun withPrivateCustomData(privateCustomData: Any?): Builder {
+        fun withPrivateCustomData(privateCustomData: Map<String, Any>?): Builder {
             this.privateCustomData = privateCustomData
             return this
         }
