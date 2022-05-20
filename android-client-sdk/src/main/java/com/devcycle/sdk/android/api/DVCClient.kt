@@ -1,6 +1,7 @@
 package com.devcycle.sdk.android.api
 
 import android.content.Context
+import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
@@ -12,7 +13,6 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.TestOnly
 import timber.log.Timber
 import java.math.BigDecimal
-import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
@@ -97,6 +97,8 @@ class DVCClient private constructor(
     @JvmOverloads
     @Synchronized
     fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+        flushEvents()
+
         val updatedUser: User = if (this@DVCClient.user.userId == user.userId) {
             this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
         } else {
@@ -109,12 +111,9 @@ class DVCClient private constructor(
             return
         }
 
-        flushEvents()
-
+        isExecuting.set(true)
         coroutineScope.launch {
             withContext(coroutineContext) {
-                isExecuting.set(true)
-
                 try {
                     fetchConfig(updatedUser)
                     config?.variables?.let { callback?.onSuccess(it) }
