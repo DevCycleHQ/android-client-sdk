@@ -143,15 +143,15 @@ class Variable<T> internal constructor() : PropertyChangeListener {
 
             var typeEnum = when {
                 // Kotlin types
-                typeClass.isAssignableFrom(String::class.java) -> TypeEnum.STRING
-                typeClass.isAssignableFrom(Number::class.java) -> TypeEnum.NUMBER
-                typeClass.isAssignableFrom(Boolean::class.java) -> TypeEnum.BOOLEAN
-                typeClass.isAssignableFrom(JSONObject::class.java) -> TypeEnum.JSON
+                String::class.java.isAssignableFrom(typeClass) -> TypeEnum.STRING
+                Number::class.java.isAssignableFrom(typeClass) -> TypeEnum.NUMBER
+                Boolean::class.java.isAssignableFrom(typeClass) -> TypeEnum.BOOLEAN
+                JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
                 // Java types
-                typeClass.isAssignableFrom(java.lang.String::class.java) -> TypeEnum.STRING
-                typeClass.isAssignableFrom(java.lang.Number::class.java) -> TypeEnum.NUMBER
-                typeClass.isAssignableFrom(java.lang.Boolean::class.java) -> TypeEnum.BOOLEAN
-                typeClass.isAssignableFrom(org.json.JSONObject::class.java) -> TypeEnum.JSON
+                java.lang.String::class.java.isAssignableFrom(typeClass) -> TypeEnum.STRING
+                java.lang.Number::class.java.isAssignableFrom(typeClass) -> TypeEnum.NUMBER
+                java.lang.Boolean::class.java.isAssignableFrom(typeClass) -> TypeEnum.BOOLEAN
+                org.json.JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
                 else -> null
             }
 
