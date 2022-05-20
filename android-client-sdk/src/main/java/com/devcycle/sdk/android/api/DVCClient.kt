@@ -1,7 +1,6 @@
 package com.devcycle.sdk.android.api
 
 import android.content.Context
-import android.util.Log
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
