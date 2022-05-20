@@ -108,7 +108,13 @@ class Variable<T> internal constructor() : PropertyChangeListener {
         if (variable.value != value) {
             executeCallBack = true
         }
-        value = variable.value as T?
+
+        value = if (variable.value != null && type == TypeEnum.JSON) {
+            JSONObject(variable.value as MutableMap<Any?, Any?>) as T
+        } else {
+            variable.value as T?
+        }
+
         isDefaulted = false
         evalReason = variable.evalReason
 
