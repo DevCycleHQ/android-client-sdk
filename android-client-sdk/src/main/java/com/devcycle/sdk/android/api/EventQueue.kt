@@ -22,7 +22,7 @@ internal class EventQueue constructor(
 ) {
     private val eventQueue: MutableList<Event> = mutableListOf()
     private val eventPayloadsToFlush: MutableList<UserAndEvents> = mutableListOf()
-    private val aggregateEventMap: HashMap<String, HashMap<String, Event>> = HashMap()
+    internal val aggregateEventMap: HashMap<String, HashMap<String, Event>> = HashMap()
 
     private val scheduler = Scheduler(coroutineScope, flushInMs)
 
@@ -134,20 +134,19 @@ internal class EventQueue constructor(
                     throw IllegalArgumentException("Type must be set")
                 }
 
-                val aggEventType = aggregateEventMap[event.type]
-                when {
-                    aggEventType == null -> {
-                        val map = aggregateEventMap.getOrPut(event.type, { HashMap<String, Event>() })
-                        map[event.target] = event
-                    }
-                    aggEventType.containsKey(event.target) -> {
-                        aggEventType[event.target] = event.copy(
-                            value = aggEventType[event.target]?.value?.plus(BigDecimal.ONE)
-                        )
-                    }
-                    else -> {
-                        aggEventType[event.target] = event
-                    }
+                event.value = BigDecimal.ONE
+
+                var aggEventType = aggregateEventMap[event.type]
+
+                if (aggEventType == null) {
+                    aggEventType = aggregateEventMap.getOrPut(event.type) { HashMap<String, Event>() }
+                    aggEventType[event.target] = event
+                } else if (aggEventType.containsKey(event.target)) {
+                    aggEventType[event.target] = event.copy(
+                        value = aggEventType[event.target]?.value?.plus(BigDecimal.ONE)
+                    )
+                } else {
+                    aggEventType[event.target] = event
                 }
 
                 scheduler.scheduleWithDelay { run() }

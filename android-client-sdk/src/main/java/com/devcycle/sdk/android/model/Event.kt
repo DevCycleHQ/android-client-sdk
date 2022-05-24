@@ -14,7 +14,7 @@ internal data class Event private constructor(
     val featureVars: Map<String, String>,
     val target: String?,
     val clientDate: Long,
-    val value: BigDecimal? = null,
+    var value: BigDecimal? = null,
     val metaData: Map<String, Any>? = null
 ){
     @get:JsonProperty("date")
