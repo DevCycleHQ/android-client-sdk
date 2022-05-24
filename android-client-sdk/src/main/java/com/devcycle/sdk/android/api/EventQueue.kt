@@ -134,8 +134,6 @@ internal class EventQueue constructor(
                     throw IllegalArgumentException("Type must be set")
                 }
 
-                event.value = BigDecimal.ONE
-
                 var aggEventType = aggregateEventMap[event.type]
 
                 if (aggEventType == null) {
