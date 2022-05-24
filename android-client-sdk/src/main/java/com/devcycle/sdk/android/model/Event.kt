@@ -14,7 +14,7 @@ internal data class Event private constructor(
     val featureVars: Map<String, String>,
     val target: String?,
     val clientDate: Long,
-    var value: BigDecimal? = null,
+    val value: BigDecimal? = null,
     val metaData: Map<String, Any>? = null
 ){
     @get:JsonProperty("date")
@@ -53,7 +53,8 @@ internal data class Event private constructor(
 
             return InternalEvent(
                 type,
-                key
+                key,
+                value = BigDecimal.ONE
             )
         }
 
