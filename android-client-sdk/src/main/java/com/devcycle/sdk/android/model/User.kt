@@ -9,9 +9,9 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
-import java.lang.IllegalArgumentException
 import java.util.*
 import android.content.pm.PackageInfo
+import kotlin.IllegalArgumentException
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonDeserialize(builder = User.Builder::class)
@@ -71,6 +71,7 @@ internal data class User private constructor(
     @JsonPOJOBuilder
     internal class Builder internal constructor() {
         private var userId: String? = null
+        private var isAnonymous: Boolean? = null
         private var email: String? = null
         private var name: String? = null
         private var language: String? = null
@@ -91,6 +92,11 @@ internal data class User private constructor(
         @JsonProperty("user_id")
         fun withUserId(userId: String?): Builder {
             this.userId = userId
+            return this
+        }
+
+        fun withIsAnonymous(isAnonymous: Boolean): Builder {
+            this.isAnonymous = isAnonymous
             return this
         }
 
@@ -171,6 +177,7 @@ internal data class User private constructor(
 
         @JvmSynthetic internal fun withUserParam(user: DVCUser, context: Context): Builder {
             this.userId = user.userId
+            this.isAnonymous = user.isAnonymous ?: false
             this.email = user.email
             this.name = user.name
             this.country = user.country
@@ -200,26 +207,34 @@ internal data class User private constructor(
         }
 
         @JvmSynthetic internal fun build(): User {
-            val isAnonymous = userId == null
-            return User(
-                if (isAnonymous) UUID.randomUUID().toString() else userId!!,
-                email,
-                name,
-                language,
-                country,
-                appVersion,
-                appBuild,
-                customData,
-                privateCustomData,
-                createdDate,
-                platform,
-                platformVersion,
-                deviceModel,
-                sdkType,
-                sdkVersion,
-                isAnonymous,
-                lastSeenDate
-            )
+            if (isAnonymous == true) {
+                this.userId = UUID.randomUUID().toString()
+            }
+
+            if (userId == null && (isAnonymous != true)) {
+                throw IllegalArgumentException("Missing userId and isAnonymous is not true")
+            } else {
+
+                return User(
+                    userId!!,
+                    email,
+                    name,
+                    language,
+                    country,
+                    appVersion,
+                    appBuild,
+                    customData,
+                    privateCustomData,
+                    createdDate,
+                    platform,
+                    platformVersion,
+                    deviceModel,
+                    sdkType,
+                    sdkVersion,
+                    isAnonymous!!,
+                    lastSeenDate
+                )
+            }
         }
 
         override fun toString(): String {
