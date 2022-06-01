@@ -135,7 +135,7 @@ class DVCClient private constructor(
     @JvmOverloads
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        val newUser: User = User.builder().build()
+        val newUser: User = User.builder().withIsAnonymous(true).build()
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(newUser, callback))
             Timber.d("Queued resetUser request for new anonymous user")
