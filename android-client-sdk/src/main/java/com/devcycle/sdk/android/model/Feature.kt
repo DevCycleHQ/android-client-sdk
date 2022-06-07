@@ -80,6 +80,21 @@ class Feature {
      */
     @get:Schema(description = "Evaluation reasoning")
     var evalReason: String? = null
+
+    /**
+     * Variation name
+     * @return variationName
+     */
+    @get:Schema(description = "Variation name")
+    var variationName: String? = null
+
+    /**
+     * Variation key
+     * @return variationKey
+     */
+    @get:Schema(description = "Variation key")
+    var variationKey: String? = null
+
     fun id(id: String?): Feature {
         this.id = id
         return this
@@ -102,6 +117,16 @@ class Feature {
 
     fun evalReason(evalReason: String?): Feature {
         this.evalReason = evalReason
+        return this
+    }
+
+    fun variationName(variationName: String?): Feature {
+        this.variationName = variationName
+        return this
+    }
+
+    fun variationKey(variationKey: String?): Feature {
+        this.variationKey = variationKey
         return this
     }
 }
