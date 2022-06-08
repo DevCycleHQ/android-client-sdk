@@ -15,6 +15,7 @@ import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
@@ -22,6 +23,8 @@ import org.json.JSONObject
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 
 /**
  * Variable

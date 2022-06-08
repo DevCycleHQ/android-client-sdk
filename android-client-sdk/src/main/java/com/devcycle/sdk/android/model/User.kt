@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.*
 import android.content.pm.PackageInfo
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import kotlin.IllegalArgumentException
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -70,6 +71,8 @@ internal data class User private constructor(
 
     @JsonPOJOBuilder
     internal class Builder internal constructor() {
+        @JsonIgnoreProperties(ignoreUnknown = true)
+
         private var userId: String? = null
         private var isAnonymous: Boolean? = null
         private var email: String? = null

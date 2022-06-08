@@ -1,5 +1,6 @@
 package com.devcycle.sdk.android.model
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.util.*
 
@@ -13,6 +14,8 @@ class DVCUser private constructor(
     var privateCustomData: Map<String, Any>? = null
 ) {
     class Builder internal constructor() {
+        @JsonIgnoreProperties(ignoreUnknown = true)
+
         private var userId: String? = null
         private var isAnonymous: Boolean? = null
         private var email: String? = null
