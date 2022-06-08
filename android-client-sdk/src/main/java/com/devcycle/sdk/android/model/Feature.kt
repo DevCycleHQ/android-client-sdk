@@ -11,9 +11,12 @@
  */
 package com.devcycle.sdk.android.model
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 
 /**
  * Feature
@@ -67,7 +70,7 @@ class Feature {
     var type: TypeEnum? = null
 
     /**
-     * Bucketed feature variation
+     * Bucketed feature variation ID
      * @return _variation
      */
     @get:Schema(required = true, description = "Bucketed feature variation")
