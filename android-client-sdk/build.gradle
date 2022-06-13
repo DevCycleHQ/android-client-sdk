@@ -59,18 +59,18 @@ ext {
     PUBLISH_SCM_DEVELOPER_CONNECTION = 'scm:git:ssh://github.com/DevCycleHQ/android-client-sdk.git'
     PUBLISH_SCM_URL = 'https://github.com/DevCycleHQ/android-client-sdk'
 
-    androidx_version = "1.7.0"
+    androidx_version = '1.8.0'
     retrofit_version = "2.9.0"
-    swagger_annotations_version = "2.1.12"
-    jackson_version = "2.13.1"
-    jackson_kotlin_version = "2.13.1"
-    coroutines_version = "1.6.0"
-    kotlin_reflect_version = "1.6.10"
+    swagger_annotations_version = '2.2.0'
+    jackson_version = "2.13.3"
+    jackson_kotlin_version = "2.13.3"
+    coroutines_version = '1.6.2'
+    kotlin_reflect_version = '1.7.0'
     timber_version = "5.0.1"
 
     junit_version = "5.8.2"
-    mockito_core_version = "4.2.0"
-    mockk_version = "1.12.2"
+    mockito_core_version = '4.6.1'
+    mockk_version = '1.12.4'
     hamcrest_version = "2.2"
     okhttp_version = "4.9.3"
 
@@ -82,10 +82,15 @@ ext {
 apply from: "${rootProject.projectDir}/scripts/publish-module.gradle"
 
 dependencies {
-    
-    implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
-    implementation("com.squareup.retrofit2:converter-jackson:$retrofit_version")
-    implementation "io.swagger.core.v3:swagger-annotations:$swagger_annotations_version"
+    implementation("com.squareup.okhttp3:okhttp:$okhttp_version")
+
+    implementation("com.squareup.retrofit2:retrofit:$retrofit_version") {
+        exclude group: 'com.squareup.okhttp3', module: 'okhttp'
+    }
+    implementation("com.squareup.retrofit2:converter-jackson:$retrofit_version") {
+        exclude group: 'com.squareup.okhttp3', module: 'okhttp'
+    }
+    implementation("io.swagger.core.v3:swagger-annotations:$swagger_annotations_version")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_kotlin_version}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version")
