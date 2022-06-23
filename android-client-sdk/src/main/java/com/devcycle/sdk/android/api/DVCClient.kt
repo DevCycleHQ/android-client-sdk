@@ -41,6 +41,7 @@ class DVCClient private constructor(
     private val request: Request = Request(environmentKey, apiUrl, eventsUrl)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
+    private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
 
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
@@ -298,7 +299,7 @@ class DVCClient private constructor(
 
     private suspend fun fetchConfig(user: User) {
         val now = System.currentTimeMillis()
-        val result = request.getConfigJson(environmentKey, user)
+        val result = request.getConfigJson(environmentKey, user, enableEdgeDB)
         config = result
         observable.configUpdated(config)
         dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
@@ -306,6 +307,21 @@ class DVCClient private constructor(
         this@DVCClient.user = user
         saveUser()
         addUserConfigResultToEventQueue(now, this@DVCClient.user, config!!)
+
+        if (checkIfEdgeDBEnabled(config!!, enableEdgeDB)) {
+            if (!user.isAnonymous) {
+                request.saveEntity(user)
+            }
+        }
+    }
+
+    private fun checkIfEdgeDBEnabled(config: BucketedUserConfig, enableEdgeDB: Boolean): Boolean {
+        if (config.project?.settings?.edgeDB?.enabled == true) {
+            return !!enableEdgeDB
+        } else {
+            Timber.d("EdgeDB is not enabled for this project. Only using local user data.")
+            return false
+        }
     }
 
     class DVCClientBuilder {

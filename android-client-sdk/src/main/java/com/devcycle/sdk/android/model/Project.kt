@@ -38,6 +38,17 @@ class Project {
         description = "Unique key by Project, can be used in the SDK / API to reference by 'key' rather than _id."
     )
     var key: String? = null
+
+    /**
+     * Project Settings.
+     * @return settings
+     */
+    @get:Schema(
+        required = false,
+        description = "Settings by Project."
+    )
+    var settings: ProjectSettings? = null
+
     fun id(id: String?): Project {
         this.id = id
         return this
@@ -45,6 +56,11 @@ class Project {
 
     fun key(key: String?): Project {
         this.key = key
+        return this
+    }
+
+    fun settings(settings: ProjectSettings?): Project {
+        this.settings = settings
         return this
     }
 }
