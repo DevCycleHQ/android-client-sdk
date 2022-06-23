@@ -18,6 +18,7 @@ import java.io.IOException
 internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey, eventsBaseUrl)
+    private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(envKey, apiBaseUrl)
     private val objectMapper = jacksonObjectMapper()
     private val configMutex = Mutex()
 
@@ -46,7 +47,8 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
 
     suspend fun getConfigJson(
         environmentKey: String,
-        user: User
+        user: User,
+        enableEdgeDB: Boolean
     ): BucketedUserConfig {
         val map = (
                 objectMapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
@@ -56,6 +58,9 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
         }
         if (map.contains("privateCustomData")) {
             map["privateCustomData"] = objectMapper.writeValueAsString(map["privateCustomData"])
+        }
+        if (enableEdgeDB) {
+            map["enableEdgeDB"] = "true"
         }
 
         lateinit var config: BucketedUserConfig
@@ -92,6 +97,12 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
 
     suspend fun publishEvents(payload: UserAndEvents): DVCResponse {
         val response = eventApi.trackEvents(payload)
+
+        return getResponseHandler(response)
+    }
+
+    suspend fun saveEntity(user: User): DVCResponse {
+        val response = edgeDBApi.saveEntity(user.userId, user)
 
         return getResponseHandler(response)
     }
