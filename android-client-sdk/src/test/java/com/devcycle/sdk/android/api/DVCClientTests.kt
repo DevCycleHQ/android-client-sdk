@@ -422,6 +422,47 @@ class DVCClientTests {
         }
     }
 
+    @Test
+    fun `onInitialized will return successfully if enableEdgeDB param is set to true`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), enableEdgeDB = true)
+
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests.add(request)
+                if (request.path == "/v1/events") {
+                    return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
+                } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
+                    Assertions.assertEquals(true, request.path.toString().endsWith("enableEdgeDB=true"))
+                    return MockResponse().setResponseCode(200)
+                        .setBody(jacksonObjectMapper().writeValueAsString(config))
+                }
+                return MockResponse().setResponseCode(404)
+            }
+        }
+
+        try {
+            client.onInitialized(object : DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+    }
+
     private fun handleFinally(
         calledBack: Boolean,
         error: Throwable?,
@@ -434,7 +475,7 @@ class DVCClientTests {
         }
     }
 
-    private fun createClient(sdkKey: String, mockUrl: String, flushInMs: Long = 10000L): DVCClient {
+    private fun createClient(sdkKey: String, mockUrl: String, flushInMs: Long = 10000L, enableEdgeDB: Boolean = false): DVCClient {
         val builder = builder()
             .withContext(mockContext!!)
             .withUser(
@@ -445,9 +486,12 @@ class DVCClientTests {
             .withEnvironmentKey(sdkKey)
             .withLogger(tree)
             .withApiUrl(mockUrl)
-            .withOptions(DVCOptions.builder()
-                .flushEventsIntervalMs(flushInMs)
-                .build())
+            .withOptions(
+                DVCOptions.builder()
+                    .flushEventsIntervalMs(flushInMs)
+                    .enableEdgeDB(enableEdgeDB)
+                    .build()
+            )
 
         return builder.build()
     }
@@ -479,6 +523,7 @@ class DVCClientTests {
                         return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
                     } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
                         configRequestCount++
+                        Assertions.assertEquals(false, request.path.toString().contains("enableEdgeDB"))
                         return MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config))
                     }
                 } else {
