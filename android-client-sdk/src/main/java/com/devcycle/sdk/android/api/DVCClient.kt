@@ -1,6 +1,7 @@
 package com.devcycle.sdk.android.api
 
 import android.content.Context
+import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
@@ -310,14 +311,18 @@ class DVCClient private constructor(
 
         if (checkIfEdgeDBEnabled(config!!, enableEdgeDB)) {
             if (!user.isAnonymous) {
-                request.saveEntity(user)
+                try {
+                    request.saveEntity(user)
+                } catch (exception: DVCRequestException) {
+                    Timber.e("Error saving user entity for $user. Error: $exception")
+                }
             }
         }
     }
 
     private fun checkIfEdgeDBEnabled(config: BucketedUserConfig, enableEdgeDB: Boolean): Boolean {
-        if (config.project?.settings?.edgeDB?.enabled == true) {
-            return !!enableEdgeDB
+        return if (config.project?.settings?.edgeDB?.enabled == true) {
+            enableEdgeDB
         } else {
             Timber.d("EdgeDB is not enabled for this project. Only using local user data.")
             return false
