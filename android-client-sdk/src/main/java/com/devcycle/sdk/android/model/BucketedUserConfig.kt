@@ -15,11 +15,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+
 /**
  * ClientSDKAPIResponse
  */
 data class BucketedUserConfig internal constructor(
-    @JsonIgnoreProperties(ignoreUnknown = true)
     @get:Schema(required = true, description = "")
     val project: Project? = null,
     @get:Schema(required = true, description = "")
