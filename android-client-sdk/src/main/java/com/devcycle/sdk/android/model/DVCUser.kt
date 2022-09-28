@@ -2,7 +2,6 @@ package com.devcycle.sdk.android.model
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import java.util.*
 
 class DVCUser private constructor(
     var userId: String? = null,
