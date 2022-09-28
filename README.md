@@ -13,7 +13,7 @@ This version of the DevCycle Android Client SDK supports a minimum Android API V
 The SDK can be installed into your Android project by adding the following to *build.gradle*:
 
 ```yaml
-implementation("com.devcycle:android-client-sdk:1.0.7")
+implementation("com.devcycle:android-client-sdk:1.0.8")
 ```
 
 Versions earlier than 1.0.6 are deprecated and contain either third party CVEs or issues that would prevent the DevCycle client from initializing correctly if the retrieved Config has had new properties added.
