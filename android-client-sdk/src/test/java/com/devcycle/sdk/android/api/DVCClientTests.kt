@@ -30,12 +30,13 @@ import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
+import java.lang.reflect.Field
+import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.HashMap
 import kotlin.streams.toList
 
 class DVCClientTests {
@@ -287,6 +288,39 @@ class DVCClientTests {
             handleFinally(calledBack, error)
             Assertions.assertEquals(2, configRequestCount)
         }
+    }
+
+    @Test
+    fun `refetchConfig uses most recent user data`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        generateDispatcher(config = config)
+        val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
+
+        val refetchConfigCallback = object: DVCCallback<Map<String, Variable<Any>>> {
+            override fun onSuccess(result: Map<String, Variable<Any>>) {
+                val takeRequest = requests.remove()
+                takeRequest.path?.contains("last_userId")?.let { Assertions.assertTrue(it) }
+            }
+
+            override fun onError(t: Throwable) {
+                error = t
+            }
+        }
+        client.identifyUser(DVCUser.builder().withUserId("new_userid").build())
+        client.identifyUser(DVCUser.builder().withUserId("new_userid2").build())
+        client.identifyUser(DVCUser.builder().withUserId("last_userId").build())
+
+        // make private refetchConfig callable
+        val refetchConfigMethod: Method = DVCClient::class.java.getDeclaredMethod("refetchConfig", DVCCallback::class.java)
+        refetchConfigMethod.isAccessible = true
+
+        // call refetchConfig -> the callback will assert that the config request triggered by this refetch config had the last seen user_id
+        refetchConfigMethod.invoke(client, refetchConfigCallback)
+
+        countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+        // only the init and refetchConfig requests should have been sent bc the identifyUser requests should have been skipped in the queue
+        Assertions.assertEquals(2, configRequestCount)
+
     }
 
     @Test

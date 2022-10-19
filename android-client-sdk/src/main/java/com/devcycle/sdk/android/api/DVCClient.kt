@@ -51,6 +51,8 @@ class DVCClient private constructor(
     private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
     private val configRequestMutex = Mutex()
 
+    private var latestIdentifiedUser: User = user
+
     init {
         initializeJob = coroutineScope.async(coroutineContext) {
             isExecuting.set(true)
@@ -105,6 +107,7 @@ class DVCClient private constructor(
         } else {
             User.builder().withUserParam(user, context).build()
         }
+        latestIdentifiedUser = updatedUser
 
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(updatedUser, callback))
@@ -138,6 +141,8 @@ class DVCClient private constructor(
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         val newUser: User = User.builder().withIsAnonymous(true).build()
+        latestIdentifiedUser = newUser
+
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(newUser, callback))
             Timber.d("Queued resetUser request for new anonymous user")
@@ -318,6 +323,30 @@ class DVCClient private constructor(
                 }
             }
         }
+    }
+
+    private fun refetchConfig(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+        if (isExecuting.get()) {
+            configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
+            Timber.d("Queued refetchConfig request")
+            return
+        }
+
+        isExecuting.set(true)
+        coroutineScope.launch {
+            withContext(coroutineContext) {
+                try {
+                    fetchConfig(latestIdentifiedUser)
+                    config?.variables?.let { callback?.onSuccess(it) }
+                } catch (t: Throwable) {
+                    callback?.onError(t)
+                } finally {
+                    handleQueuedConfigRequests()
+                    isExecuting.set(false)
+                }
+            }
+        }
+
     }
 
     private fun checkIfEdgeDBEnabled(config: BucketedUserConfig, enableEdgeDB: Boolean): Boolean {
