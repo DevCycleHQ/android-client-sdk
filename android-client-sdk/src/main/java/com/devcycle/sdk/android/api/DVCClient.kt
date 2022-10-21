@@ -3,6 +3,8 @@ package com.devcycle.sdk.android.api
 import android.content.Context
 import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
+import com.devcycle.sdk.android.eventsource.EventSource
+import com.devcycle.sdk.android.eventsource.EventHandle
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
@@ -13,6 +15,7 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.TestOnly
 import timber.log.Timber
 import java.math.BigDecimal
+import java.net.URI
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
@@ -35,7 +38,7 @@ class DVCClient private constructor(
     private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private var config: BucketedUserConfig? = null
-
+    private lateinit var eventSource: EventSource
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
@@ -43,7 +46,6 @@ class DVCClient private constructor(
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
     private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
-
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
     private val initializeJob: Deferred<Any>
@@ -59,6 +61,9 @@ class DVCClient private constructor(
             try {
                 fetchConfig(user)
                 isInitialized.set(true)
+                println("URL ${config?.sse?.url}")
+                eventSource = EventSource.Builder(EventHandle(), URI(config?.sse?.url)).build()
+                eventSource.start()
             } catch (t: Throwable) {
                 Timber.e(t, "DevCycle SDK Failed to Initialize!")
                 throw t
