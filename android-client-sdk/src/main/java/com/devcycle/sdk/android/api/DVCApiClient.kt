@@ -2,6 +2,7 @@ package com.devcycle.sdk.android.api
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import okhttp3.OkHttpClient
+import com.devcycle.sdk.android.eventsource.EventSource
 import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
 
