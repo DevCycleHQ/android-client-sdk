@@ -1,6 +1,10 @@
 package com.devcycle.sdk.android.api
 
+import android.app.Application
 import android.content.Context
+import com.devcycle.sdk.android.eventsource.DVCLifecycleCallbacks
+import com.devcycle.sdk.android.exception.DVCRequestException
+import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.eventsource.EventSource
 import com.devcycle.sdk.android.eventsource.Handler
 import com.devcycle.sdk.android.eventsource.MessageEvent
@@ -81,7 +85,10 @@ class DVCClient private constructor(
                                 }
                             }
                         }), URI(config?.sse?.url)).build()
-                            eventSource.start()
+                        eventSource.start()
+                        val application : Application = context.applicationContext as Application
+                        val dvCLifecycleCallbacks = DVCLifecycleCallbacks(eventSource)
+                        application.registerActivityLifecycleCallbacks(dvCLifecycleCallbacks)
                     }
                 }
             } catch (t: Throwable) {
