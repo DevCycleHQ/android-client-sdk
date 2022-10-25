@@ -4,7 +4,7 @@ import android.content.Context
 import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.eventsource.EventSource
-import com.devcycle.sdk.android.eventsource.EventHandle
+import com.devcycle.sdk.android.eventsource.Handler
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
@@ -60,7 +60,7 @@ class DVCClient private constructor(
                 fetchConfig(user)
                 isInitialized.set(true)
                 println("URL ${config?.sse?.url}")
-                eventSource = EventSource.Builder(EventHandle(), URI(config?.sse?.url)).build()
+                eventSource = EventSource.Builder(Handler(), URI(config?.sse?.url)).build()
                 eventSource.start()
             } catch (t: Throwable) {
                 Timber.e(t, "DevCycle SDK Failed to Initialize!")

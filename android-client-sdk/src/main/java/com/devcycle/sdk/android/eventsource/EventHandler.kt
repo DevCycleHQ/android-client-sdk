@@ -3,7 +3,7 @@ package com.devcycle.sdk.android.eventsource
 import timber.log.Timber
 import com.devcycle.sdk.android.eventsource.EventHandler
 
-class EventHandle: EventHandler {
+class Handler: EventHandler {
     fun init() {}
 
     /**
