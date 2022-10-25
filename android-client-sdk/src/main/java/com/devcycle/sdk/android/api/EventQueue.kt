@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.math.BigDecimal
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal class EventQueue constructor(
     private val request: Request,
@@ -25,14 +26,17 @@ internal class EventQueue constructor(
     internal val aggregateEventMap: HashMap<String, HashMap<String, Event>> = HashMap()
 
     private val scheduler = Scheduler(coroutineScope, flushInMs)
-
+    private lateinit var scheduleJob: Job
     // mutex to control flushing events, ensuring only one operation at a time
     private val flushMutex = Mutex()
     // mutex to gate modifications to the aggregateEventMap
     private val aggregateMutex = Mutex()
     // mutex to gate modifications to the eventQueue
     private val queueMutex = Mutex()
-
+    // ensures flushEvents does not get called after the sdk is closed
+    val isClosed = AtomicBoolean(false)
+    val flushAgain = AtomicBoolean(true)
+    private var closeCallback: DVCCallback<String>? = null
     suspend fun flushEvents(): DVCFlushResult {
         var result = DVCFlushResult(false)
         flushMutex.withLock {
@@ -97,11 +101,29 @@ internal class EventQueue constructor(
                 Timber.e(t, "Error flushing events")
                 result = DVCFlushResult(false, t)
             }
+
+            if (isClosed.get()){
+                // The DVCClient has been closed and the queue is empty, callback with success
+                if (eventQueue.size == 0 ) {
+                    closeCallback?.onSuccess("Event queue is clear")
+                    // The DVCClient has been closed and something went wrong flushing
+                } else if (result.exception != null) {
+                    closeCallback?.onError(result.exception as Throwable)
+                    // The DVCClient has been closed, but more events were added to the queue
+                    // while the queue was flushing (but before it was closed)
+                } else if (flushAgain.get()) {
+                    flushAgain.set(false)
+                    flushEvents()
+                } else {
+                    closeCallback?.onError(Throwable("Error trying to flush events after closing DVC."))
+                }
+            }
         }
 
-        if (eventQueue.size > 0 || !result.success) {
-            scheduler.scheduleWithDelay { run() }
+        if ((eventQueue.size > 0 || !result.success) && !isClosed.get()) {
+            scheduleJob = scheduler.scheduleWithDelay { run() }
         }
+
 
         return result
     }
@@ -110,11 +132,15 @@ internal class EventQueue constructor(
      * Queue Event for producing
      */
     fun queueEvent(event: Event) {
+        if (isClosed.get()) {
+            Timber.w("Attempting to queue event after closing DVC.")
+            return
+        }
         runBlocking {
             queueMutex.withLock {
                 eventQueue.add(event)
                 Timber.i("Event queued successfully %s", event)
-                scheduler.scheduleWithDelay { run() }
+                scheduleJob = scheduler.scheduleWithDelay { run() }
             }
         }
     }
@@ -125,6 +151,10 @@ internal class EventQueue constructor(
      */
     @Throws(IllegalArgumentException::class)
     fun queueAggregateEvent(event: Event) {
+        if (isClosed.get()) {
+            Timber.w("Attempting to queue aggregate event after closing DVC.")
+            return
+        }
         runBlocking {
             aggregateMutex.withLock {
                 if (event.target == null || event.target == "") {
@@ -147,7 +177,7 @@ internal class EventQueue constructor(
                     aggEventType[event.target] = event
                 }
 
-                scheduler.scheduleWithDelay { run() }
+                scheduleJob = scheduler.scheduleWithDelay { run() }
             }
         }
     }
@@ -167,4 +197,12 @@ internal class EventQueue constructor(
             flushEvents()
         }
     }
+
+    suspend fun close(callback: DVCCallback<String>?) {
+        isClosed.set(true)
+        closeCallback = callback
+        flushEvents()
+        scheduleJob.cancelAndJoin()
+    }
+
 }
