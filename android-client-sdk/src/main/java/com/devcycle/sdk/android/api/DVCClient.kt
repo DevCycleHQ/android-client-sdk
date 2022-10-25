@@ -192,6 +192,16 @@ class DVCClient private constructor(
         }
     }
 
+    fun close(callback: DVCCallback<String>? = null) {
+        coroutineScope.launch {
+            withContext(Dispatchers.IO) {
+                eventSource.close()
+            }
+            withContext(coroutineContext) {
+                eventQueue.close(callback)
+            }
+        }
+    }
     /**
      * Returns the Map of Features in the config
      */
@@ -246,6 +256,10 @@ class DVCClient private constructor(
      * [event] instance of an event object to submit
      */
     fun track(event: DVCEvent) {
+        if (eventQueue.isClosed.get()) {
+            Timber.d("DVC sdk has been closed, skipping call to track")
+            return
+        }
         eventQueue.queueEvent(Event.fromDVCEvent(event, user, config?.featureVariationMap))
     }
 
