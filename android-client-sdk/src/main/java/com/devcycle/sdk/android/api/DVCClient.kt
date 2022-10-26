@@ -2,12 +2,7 @@ package com.devcycle.sdk.android.api
 
 import android.app.Application
 import android.content.Context
-import com.devcycle.sdk.android.eventsource.DVCLifecycleCallbacks
-import com.devcycle.sdk.android.exception.DVCRequestException
-import com.devcycle.sdk.android.listener.BucketedUserConfigListener
-import com.devcycle.sdk.android.eventsource.EventSource
-import com.devcycle.sdk.android.eventsource.Handler
-import com.devcycle.sdk.android.eventsource.MessageEvent
+import com.devcycle.sdk.android.eventsource.*
 import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
@@ -18,7 +13,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.TestOnly
-import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
 import java.math.BigDecimal
@@ -45,7 +39,7 @@ class DVCClient private constructor(
     private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private var config: BucketedUserConfig? = null
-    private lateinit var eventSource: EventSource
+    private var eventSource: EventSource? = null
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
@@ -68,29 +62,16 @@ class DVCClient private constructor(
             try {
                 fetchConfig(user)
                 isInitialized.set(true)
-                if (config?.sse?.url != null) {
-                    withContext(Dispatchers.IO){
-                        eventSource = EventSource.Builder(Handler(fun (messageEvent: MessageEvent?) {
-                            if (messageEvent != null) {
-                                val data = JSONObject(messageEvent.data)
-                                var type = ""
-                                var lastModified: Long? = null
-                                try {
-                                    type = data.get("type") as String
-                                    lastModified = data.get("lastModified") as Long
-                                } catch (e: JSONException) {}
+                withContext(Dispatchers.IO){
+                    initEventSource()
+                    val application : Application = context.applicationContext as Application
 
-                                if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
-                                    refetchConfig(true, lastModified)
-                                }
-                            }
-                        }), URI(config?.sse?.url)).build()
-                        eventSource.start()
-                        val application : Application = context.applicationContext as Application
-                        val dvCLifecycleCallbacks = DVCLifecycleCallbacks(eventSource)
-                        application.registerActivityLifecycleCallbacks(dvCLifecycleCallbacks)
-                    }
+                    val lifecycleCallbacks = DVCLifecycleCallbacks(onPauseApplication, onResumeApplication,
+                        config?.sse?.inactivityDelay?.toLong()
+                    )
+                    application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
                 }
+
             } catch (t: Throwable) {
                 Timber.e(t, "DevCycle SDK Failed to Initialize!")
                 throw t
@@ -103,6 +84,44 @@ class DVCClient private constructor(
                 isExecuting.set(false)
             }
         }
+    }
+
+    private val onPauseApplication = fun () {
+        Timber.d("Closing streaming event source connection")
+        eventSource?.close()
+    }
+
+    private val onResumeApplication = fun () {
+        if (eventSource?.state != ReadyState.OPEN) {
+            eventSource?.close()
+            Timber.d("Restarting streaming event source connection")
+            initEventSource()
+            refetchConfig(false, null)
+        }
+    }
+
+    private fun initEventSource () {
+        if (config?.sse?.url == null) { return }
+        eventSource = EventSource.Builder(Handler(fun(messageEvent: MessageEvent?) {
+            if (messageEvent == null) { return }
+
+            val data = JSONObject(messageEvent.data)
+            if (!data.has("data")) { return }
+
+            val innerData = JSONObject(data.get("data") as String)
+            val lastModified = if (innerData.has("lastModified")) {
+                (innerData.get("lastModified") as Long)
+            } else null
+
+            val type = if (innerData.has("type")) {
+                (innerData.get("type") as String).toLong()
+            } else ""
+
+            if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
+                refetchConfig(true, lastModified)
+            }
+        }), URI(config?.sse?.url)).build()
+        eventSource?.start()
     }
 
     fun onInitialized(callback: DVCCallback<String>) {
@@ -202,7 +221,7 @@ class DVCClient private constructor(
     fun close(callback: DVCCallback<String>? = null) {
         coroutineScope.launch {
             withContext(Dispatchers.IO) {
-                eventSource.close()
+                eventSource?.close()
             }
             withContext(coroutineContext) {
                 eventQueue.close(callback)
