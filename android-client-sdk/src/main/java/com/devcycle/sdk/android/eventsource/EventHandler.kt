@@ -11,7 +11,6 @@ class Handler: EventHandler {
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onOpen() {
-        println("OPEN")
         Timber.d("OPEN")
     }
 
@@ -30,7 +29,6 @@ class Handler: EventHandler {
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onClosed() {
-        println("CLOSED")
         Timber.d("CLOSED")
     }
 
@@ -42,7 +40,6 @@ class Handler: EventHandler {
      */
     @Throws(Exception::class)
     override fun onMessage(event: String?, messageEvent: MessageEvent?) {
-        println("BIG OLE MESSAGE $event")
         Timber.d("MESSAGE")
     }
 
@@ -65,7 +62,6 @@ class Handler: EventHandler {
      * @param t  a `Throwable` object
      */
     override fun onError(t: Throwable?) {
-        println("BIG OLE ERROR $t")
         Timber.e(t)
     }
 }

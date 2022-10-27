@@ -33,6 +33,6 @@ data class BucketedUserConfig internal constructor(
     val variables: Map<String, Variable<Any>>? = null,
     @get:Schema(description = "Hashes `murmurhash.v3(variable.key + environment.apiKey)` of all known variable keys not contained in the `variables` object.")
     val knownVariableKeys: List<BigDecimal>? = null,
-    @get:Schema(description = "Hashes `murmurhash.v3(variable.key + environment.apiKey)` of all known variable keys not contained in the `variables` object.")
+    @get:Schema(description = "Contains the SSE connection URL")
     val sse: SSE? = null
 )

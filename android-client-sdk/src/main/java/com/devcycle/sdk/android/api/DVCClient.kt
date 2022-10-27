@@ -59,7 +59,6 @@ class DVCClient private constructor(
             try {
                 fetchConfig(user)
                 isInitialized.set(true)
-                println("URL ${config?.sse?.url}")
                 eventSource = EventSource.Builder(Handler(), URI(config?.sse?.url)).build()
                 eventSource.start()
             } catch (t: Throwable) {
