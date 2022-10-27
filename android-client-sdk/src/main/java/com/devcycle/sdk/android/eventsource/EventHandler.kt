@@ -1,9 +1,10 @@
 package com.devcycle.sdk.android.eventsource
 
 import timber.log.Timber
-import com.devcycle.sdk.android.eventsource.EventHandler
 
-class Handler: EventHandler {
+class Handler(
+    private var onMessageHandler: () -> Any
+): EventHandler {
     fun init() {}
 
     /**
@@ -11,7 +12,7 @@ class Handler: EventHandler {
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onOpen() {
-        Timber.d("OPEN")
+        Timber.d("Opened SSE connection. Now listening for config updates.")
     }
 
     /**
@@ -29,7 +30,7 @@ class Handler: EventHandler {
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onClosed() {
-        Timber.d("CLOSED")
+        Timber.d("Closed SSE connection.")
     }
 
     /**
@@ -40,12 +41,12 @@ class Handler: EventHandler {
      */
     @Throws(Exception::class)
     override fun onMessage(event: String?, messageEvent: MessageEvent?) {
-        Timber.d("MESSAGE")
+        // Insert logic to trigger config refetch here
+        this.onMessageHandler()
     }
 
     @Throws(Exception::class)
     override fun onComment(comment: String?) {
-        Timber.d("MESSAGE")
     }
 
     /**

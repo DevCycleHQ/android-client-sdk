@@ -61,8 +61,10 @@ class DVCClient private constructor(
             try {
                 fetchConfig(user)
                 isInitialized.set(true)
-                eventSource = EventSource.Builder(Handler(), URI(config?.sse?.url)).build()
-                eventSource.start()
+                withContext(Dispatchers.IO){
+                    eventSource = EventSource.Builder(Handler(fun () {}), URI(config?.sse?.url)).build()
+                    eventSource.start()
+                }
             } catch (t: Throwable) {
                 Timber.e(t, "DevCycle SDK Failed to Initialize!")
                 throw t
