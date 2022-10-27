@@ -170,7 +170,6 @@ public class EventSource implements Closeable {
    * immediately; the connection happens on a worker thread.
    */
   public void start() {
-    System.out.println("START AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     if (!readyState.compareAndSet(RAW, CONNECTING)) {
       Timber.i("Start method called on this already-started EventSource object. Doing nothing");
       return;
