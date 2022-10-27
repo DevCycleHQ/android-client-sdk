@@ -5,6 +5,7 @@ import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.eventsource.EventSource
 import com.devcycle.sdk.android.eventsource.Handler
+import com.devcycle.sdk.android.eventsource.MessageEvent
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
@@ -13,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.TestOnly
+import org.json.JSONObject
 import timber.log.Timber
 import java.math.BigDecimal
 import java.net.URI
@@ -62,7 +64,19 @@ class DVCClient private constructor(
                 fetchConfig(user)
                 isInitialized.set(true)
                 withContext(Dispatchers.IO){
-                    eventSource = EventSource.Builder(Handler(fun () {}), URI(config?.sse?.url)).build()
+                    eventSource = EventSource.Builder(Handler(fun (event: String?, messageEvent: MessageEvent?) {
+                        val data = JSONObject(messageEvent?.data)
+                        var type = ""
+                        try {
+                            type = data.get("type") as String
+                        } catch (e: Exception) {}
+
+                        println("!! in message callback: type: $type query: ${messageEvent?.origin?.query}") // TODO remove
+
+                        if (type == "refetchConfig" && messageEvent?.origin?.query?.contains("sse=1") == true) { // TODO not sure if 'origin' is where the query param would show up?
+                            refetchConfig()
+                        }
+                    }), URI(config?.sse?.url)).build()
                     eventSource.start()
                 }
             } catch (t: Throwable) {

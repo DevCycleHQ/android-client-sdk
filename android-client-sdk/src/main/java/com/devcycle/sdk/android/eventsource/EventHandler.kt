@@ -3,7 +3,7 @@ package com.devcycle.sdk.android.eventsource
 import timber.log.Timber
 
 class Handler(
-    private var onMessageHandler: () -> Any
+    private var onMessageHandler: (event: String?, messageEvent: MessageEvent?) -> Any
 ): EventHandler {
     fun init() {}
 
@@ -41,8 +41,7 @@ class Handler(
      */
     @Throws(Exception::class)
     override fun onMessage(event: String?, messageEvent: MessageEvent?) {
-        // Insert logic to trigger config refetch here
-        this.onMessageHandler()
+        this.onMessageHandler(event, messageEvent)
     }
 
     @Throws(Exception::class)
