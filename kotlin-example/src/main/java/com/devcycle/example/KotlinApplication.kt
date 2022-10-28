@@ -61,5 +61,7 @@ class KotlinApplication: Application() {
                 Toast.makeText(applicationContext, "Client did not initialize: " + t.message, Toast.LENGTH_SHORT).show()
             }
         })
+
+        DevCycleManager.setClient(client)
     }
 }
