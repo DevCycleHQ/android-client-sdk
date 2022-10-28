@@ -48,7 +48,9 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
     suspend fun getConfigJson(
         environmentKey: String,
         user: User,
-        enableEdgeDB: Boolean
+        enableEdgeDB: Boolean,
+        sse: Boolean? = false,
+        lastModified: Long? = null
     ): BucketedUserConfig {
         val map = (
                 objectMapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
@@ -61,6 +63,12 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
         }
         if (enableEdgeDB) {
             map["enableEdgeDB"] = "true"
+        }
+        if(sse == true) {
+            map["sse"] = "true"
+        }
+        if(lastModified != null) {
+            map["lastModified"] = "$lastModified"
         }
 
         lateinit var config: BucketedUserConfig

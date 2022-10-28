@@ -63,20 +63,23 @@ class DVCClient private constructor(
             try {
                 fetchConfig(user)
                 isInitialized.set(true)
+                eventSource = EventSource.Builder(Handler(fun (event: String?, messageEvent: MessageEvent?) {
+                    val data = JSONObject(messageEvent?.data)
+                    var type = ""
+                    var lastModified: Long = 0
+                    try {
+                        type = data.get("type") as String
+                        lastModified = data.get("lastModified") as Long
+                    } catch (e: Exception) {}
+
+                    println("!! in message callback: type: $type query: ${messageEvent?.origin?.query}") // TODO remove
+                    println("!! in message callback: type: $type query: ${messageEvent?.origin?.query}") // TODO remove
+
+                    if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
+                        refetchConfig(true, lastModified)
+                    }
+                }), URI(config?.sse?.url)).build()
                 withContext(Dispatchers.IO){
-                    eventSource = EventSource.Builder(Handler(fun (event: String?, messageEvent: MessageEvent?) {
-                        val data = JSONObject(messageEvent?.data)
-                        var type = ""
-                        try {
-                            type = data.get("type") as String
-                        } catch (e: Exception) {}
-
-                        println("!! in message callback: type: $type query: ${messageEvent?.origin?.query}") // TODO remove
-
-                        if (type == "refetchConfig" && messageEvent?.origin?.query?.contains("sse=1") == true) { // TODO not sure if 'origin' is where the query param would show up?
-                            refetchConfig()
-                        }
-                    }), URI(config?.sse?.url)).build()
                     eventSource.start()
                 }
             } catch (t: Throwable) {
@@ -323,9 +326,9 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    private suspend fun fetchConfig(user: User) {
+    private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long?) {
         val now = System.currentTimeMillis()
-        val result = request.getConfigJson(environmentKey, user, enableEdgeDB)
+        val result = request.getConfigJson(environmentKey, user, enableEdgeDB, sse, lastModified)
         config = result
         observable.configUpdated(config)
         dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
@@ -345,7 +348,7 @@ class DVCClient private constructor(
         }
     }
 
-    private fun refetchConfig(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+    private fun refetchConfig(sse: Boolean = false, lastModified: Long, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
             Timber.d("Queued refetchConfig request")
@@ -356,7 +359,7 @@ class DVCClient private constructor(
         coroutineScope.launch {
             withContext(coroutineContext) {
                 try {
-                    fetchConfig(latestIdentifiedUser)
+                    fetchConfig(latestIdentifiedUser, sse, lastModified)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
                     callback?.onError(t)
