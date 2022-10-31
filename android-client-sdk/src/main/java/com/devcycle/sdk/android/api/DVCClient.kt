@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.TestOnly
 import org.json.JSONObject
 import timber.log.Timber
+import java.lang.ref.WeakReference
 import java.math.BigDecimal
 import java.net.URI
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -55,6 +56,8 @@ class DVCClient private constructor(
     private val configRequestMutex = Mutex()
 
     private var latestIdentifiedUser: User = user
+
+    private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
 
     init {
         initializeJob = coroutineScope.async(coroutineContext) {
@@ -255,10 +258,8 @@ class DVCClient private constructor(
     @Synchronized
     fun <T: Any> variable(key: String, defaultValue: T): Variable<T> {
         Variable.validateType(defaultValue)
-        val variableByKey: Variable<Any>? = config?.variables?.get(key)
-        val variable = Variable.initializeFromVariable(key, defaultValue, variableByKey)
 
-        observable.addPropertyChangeListener(variable)
+        val variable = this.getCachedVariable(key, defaultValue)
 
         val tmpConfig = config
         val event: Event = Event.fromInternalEvent(
@@ -271,6 +272,29 @@ class DVCClient private constructor(
             eventQueue.queueAggregateEvent(event)
         } catch(e: IllegalArgumentException) {
             e.message?.let { Timber.e(it) }
+        }
+
+        return variable
+    }
+
+    private fun <T: Any> getCachedVariable(key: String, defaultValue: T): Variable<T> {
+        val variableByKey: Variable<Any>? = config?.variables?.get(key)
+        val variable: Variable<T>
+
+        if (!variableInstanceMap.containsKey(key)) {
+            variableInstanceMap[key] = mutableMapOf()
+        }
+
+        val variableFromMap = variableInstanceMap[key]?.get(defaultValue)?.get()
+
+        // if entry does not exist or WeakReference is null
+        if (variableFromMap == null) {
+            variable = Variable.initializeFromVariable(key, defaultValue, variableByKey)
+            observable.addPropertyChangeListener(variable)
+            variableInstanceMap[key]?.set(defaultValue, WeakReference(variable))
+        } else {
+            @Suppress("UNCHECKED_CAST")
+            variable = variableFromMap as Variable<T>
         }
 
         return variable

@@ -381,6 +381,26 @@ class DVCClientTests {
     }
 
     @Test
+    fun `variable calls return the same instance for the same key and default value`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val variable = client.variable("activate-flag", "Not activated")
+        val variable2 = client.variable("activate-flag", "Not activated")
+        val variable3 = client.variable("activate-flag", "Activated")
+
+        assert(variable === variable2)
+        assert(variable !== variable3)
+
+        client.variable("activate-flag", "Test Weak Reference")
+        val variable4 = client.variable("activate-flag", "Test Weak Reference")
+        assert(variable !== variable4)
+    }
+
+    @Test
     fun `events are flushed with delay`() {
         var calledBack = false
         var error: Throwable? = null
