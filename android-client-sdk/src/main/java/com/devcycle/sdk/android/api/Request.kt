@@ -68,7 +68,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
             map["sse"] = "true"
         }
         if(lastModified != null) {
-            map["lastModified"] = "$lastModified"
+            map["sseLastModified"] = "$lastModified"
         }
 
         lateinit var config: BucketedUserConfig
