@@ -1,11 +1,11 @@
 package com.devcycle.sdk.android.api
 
 import android.content.Context
-import com.devcycle.sdk.android.exception.DVCRequestException
-import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.eventsource.EventSource
 import com.devcycle.sdk.android.eventsource.Handler
 import com.devcycle.sdk.android.eventsource.MessageEvent
+import com.devcycle.sdk.android.exception.DVCRequestException
+import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.TestOnly
+import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
 import java.math.BigDecimal
@@ -63,24 +64,25 @@ class DVCClient private constructor(
             try {
                 fetchConfig(user)
                 isInitialized.set(true)
-                eventSource = EventSource.Builder(Handler(fun (event: String?, messageEvent: MessageEvent?) {
-                    val data = JSONObject(messageEvent?.data)
-                    var type = ""
-                    var lastModified: Long = 0
-                    try {
-                        type = data.get("type") as String
-                        lastModified = data.get("lastModified") as Long
-                    } catch (e: Exception) {}
+                if (config?.sse?.url != null) {
+                    withContext(Dispatchers.IO){
+                        eventSource = EventSource.Builder(Handler(fun (messageEvent: MessageEvent?) {
+                            if (messageEvent != null) {
+                                val data = JSONObject(messageEvent.data)
+                                var type = ""
+                                var lastModified: Long? = null
+                                try {
+                                    type = data.get("type") as String
+                                    lastModified = data.get("lastModified") as Long
+                                } catch (e: JSONException) {}
 
-                    println("!! in message callback: type: $type query: ${messageEvent?.origin?.query}") // TODO remove
-                    println("!! in message callback: type: $type query: ${messageEvent?.origin?.query}") // TODO remove
-
-                    if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
-                        refetchConfig(true, lastModified)
+                                if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
+                                    refetchConfig(true, lastModified)
+                                }
+                            }
+                        }), URI(config?.sse?.url)).build()
+                            eventSource.start()
                     }
-                }), URI(config?.sse?.url)).build()
-                withContext(Dispatchers.IO){
-                    eventSource.start()
                 }
             } catch (t: Throwable) {
                 Timber.e(t, "DevCycle SDK Failed to Initialize!")
@@ -326,7 +328,7 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long? = 0) {
+    private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long? = null) {
         val now = System.currentTimeMillis()
         val result = request.getConfigJson(environmentKey, user, enableEdgeDB, sse, lastModified)
         config = result
@@ -348,7 +350,7 @@ class DVCClient private constructor(
         }
     }
 
-    private fun refetchConfig(sse: Boolean = false, lastModified: Long, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+    private fun refetchConfig(sse: Boolean = false, lastModified: Long? = null, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
             Timber.d("Queued refetchConfig request")

@@ -3,7 +3,7 @@ package com.devcycle.sdk.android.eventsource
 import timber.log.Timber
 
 class Handler(
-    private var onMessageHandler: (event: String?, messageEvent: MessageEvent?) -> Any
+    private var onMessageHandler: (messageEvent: MessageEvent?) -> Any
 ): EventHandler {
     fun init() {}
 
@@ -41,7 +41,7 @@ class Handler(
      */
     @Throws(Exception::class)
     override fun onMessage(event: String?, messageEvent: MessageEvent?) {
-        this.onMessageHandler(event, messageEvent)
+        this.onMessageHandler(messageEvent)
     }
 
     @Throws(Exception::class)
