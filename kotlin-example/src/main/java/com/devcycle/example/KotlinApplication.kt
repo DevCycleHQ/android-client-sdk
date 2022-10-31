@@ -10,6 +10,7 @@ import com.devcycle.sdk.android.model.DVCEvent
 import com.devcycle.sdk.android.model.DVCUser
 import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.LogLevel
+import timber.log.Timber
 
 class KotlinApplication: Application() {
     var variable: Variable<String>? = null
@@ -26,6 +27,7 @@ class KotlinApplication: Application() {
             )
             .withEnvironmentKey("<YOUR_MOBILE_SDK_KEY>")
             .withLogLevel(LogLevel.DEBUG)
+            .withLogger(Timber.DebugTree())
             .build()
 
         // Use your own demo variable here to see the value change from the defaultValue when the client is initialized

@@ -326,7 +326,7 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long?) {
+    private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long? = 0) {
         val now = System.currentTimeMillis()
         val result = request.getConfigJson(environmentKey, user, enableEdgeDB, sse, lastModified)
         config = result
