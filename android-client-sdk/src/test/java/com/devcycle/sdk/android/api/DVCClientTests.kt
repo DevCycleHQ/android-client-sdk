@@ -438,7 +438,7 @@ class DVCClientTests {
 
                     val logs = tree.logs
 
-                    val searchString = "DVC Flushed 3 Events."
+                    val searchString = "DVC Flushed 2 Events."
 
                     Assertions.assertEquals(1, logs.stream().filter { l -> l.message == searchString }.toList().size)
 

@@ -352,24 +352,11 @@ class DVCClient private constructor(
         }
     }
 
-    private fun addUserConfigResultToEventQueue(now: Long, user: User, result: BucketedUserConfig) {
-        eventQueue.queueEvent(
-            Event.fromInternalEvent(
-                Event.userConfigEvent(
-                    BigDecimal(System.currentTimeMillis() - now)
-                ),
-                user,
-                result.featureVariationMap
-            )
-        )
-    }
-
     private fun saveUser() {
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
     private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long? = null) {
-        val now = System.currentTimeMillis()
         val result = request.getConfigJson(environmentKey, user, enableEdgeDB, sse, lastModified)
         config = result
         observable.configUpdated(config)
@@ -377,7 +364,6 @@ class DVCClient private constructor(
 
         this@DVCClient.user = user
         saveUser()
-        addUserConfigResultToEventQueue(now, this@DVCClient.user, config!!)
 
         if (checkIfEdgeDBEnabled(config!!, enableEdgeDB)) {
             if (!user.isAnonymous) {
