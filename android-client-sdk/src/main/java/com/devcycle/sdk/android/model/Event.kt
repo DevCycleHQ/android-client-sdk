@@ -37,15 +37,7 @@ internal data class Event private constructor(
         internal object EventTypes {
             const val variableEvaluated: String = "variableEvaluated"
             const val variableDefaulted: String = "variableDefaulted"
-            const val userConfig: String = "userConfig"
             const val customEvent: String = "customEvent"
-        }
-
-        @JvmSynthetic internal fun userConfigEvent(value: BigDecimal): InternalEvent {
-            return InternalEvent(
-                type = EventTypes.userConfig,
-                value = value
-            )
         }
 
         @JvmSynthetic internal fun variableEvent(defaulted: Boolean?, key: String?): InternalEvent {
