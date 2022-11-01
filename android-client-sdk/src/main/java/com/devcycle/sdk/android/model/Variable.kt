@@ -189,7 +189,26 @@ class Variable<T> internal constructor() : PropertyChangeListener {
      *
      * [callback] returns the updated Variable inside callback.onSuccess(..)
      */
+    @Deprecated("Use the plain callback signature instead.")
     fun onUpdate(callback: DVCCallback<Variable<T>>) {
         this.callback = callback
+    }
+
+    /**
+     * To be notified when Variable.value changes register a callback by calling this method. The
+     * callback will replace any previously registered callback.
+     *
+     * [callback] called with the updated variable
+     */
+    fun onUpdate(callback: (Variable<T>) -> Unit) {
+        this.callback = object: DVCCallback<Variable<T>> {
+            override fun onSuccess(result: Variable<T>) {
+                callback(result)
+            }
+
+            override fun onError(t: Throwable) {
+                // no-op
+            }
+        }
     }
 }

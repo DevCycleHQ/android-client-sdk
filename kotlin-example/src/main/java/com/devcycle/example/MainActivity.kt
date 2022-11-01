@@ -28,15 +28,9 @@ class MainActivity : AppCompatActivity() {
             val variable = client.variable("realtime-demo", "default")
             setTextValue(variable.value)
 
-            variable.onUpdate(object: DVCCallback<Variable<String>> {
-                override fun onSuccess(result: Variable<String>) {
-                    setTextValue(variable.value)
-                }
-
-                override fun onError(t: Throwable) {
-                    // no-op
-                }
-            })
+            variable.onUpdate {
+                setTextValue(it.value)
+            }
         }
     }
 }
