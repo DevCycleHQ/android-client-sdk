@@ -651,13 +651,13 @@ class DVCClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun <T> createNewVariable(key: String, value: T, type: Variable.TypeEnum): Variable<Any> {
-        val variable: Variable<Any> = Variable()
-        variable.id = UUID.randomUUID().toString()
-        variable.type = type
-        variable.value = value
-        variable.key = key
-        return variable
+    private fun <T> createNewVariable(key: String, value: T, type: Variable.TypeEnum): Variable<T> {
+        return Variable(
+            id = UUID.randomUUID().toString(),
+            key = key,
+            value = value,
+            type = type
+        )
     }
 
     val requests = ConcurrentLinkedQueue<RecordedRequest>()

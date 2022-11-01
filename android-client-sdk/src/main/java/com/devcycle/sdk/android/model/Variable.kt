@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
 import org.json.JSONObject
+import timber.log.Timber
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
@@ -29,16 +30,14 @@ import java.lang.IllegalArgumentException
 /**
  * Variable
  */
-class Variable<T> internal constructor() : PropertyChangeListener {
-
+class Variable<T> internal constructor(
     /**
      * unique database id
      * @return _id
      */
     @get:Schema(required = true, description = "unique database id")
     @JsonProperty("_id")
-    var id: String? = null
-
+    var id: String? = null,
     /**
      * Unique key by Project, can be used in the SDK / API to reference by &#x27;key&#x27; rather than _id.
      * @return key
@@ -47,36 +46,13 @@ class Variable<T> internal constructor() : PropertyChangeListener {
         required = true,
         description = "Unique key by Project, can be used in the SDK / API to reference by 'key' rather than _id."
     )
-    var key: String? = null
-
-    /**
-     * Variable type
-     */
-    enum class TypeEnum(@get:JsonValue val value: String) {
-        STRING("String"), BOOLEAN("Boolean"), NUMBER("Number"), JSON("JSON");
-
-        override fun toString(): String {
-            return value
-        }
-
-        companion object {
-            fun fromValue(text: String): TypeEnum? {
-                for (b in values()) {
-                    if (b.value == text) {
-                        return b
-                    }
-                }
-                return null
-            }
-        }
-    }
-
+    val key: String,
     /**
      * Variable type
      * @return type
      */
     @get:Schema(required = true, description = "Variable type")
-    var type: TypeEnum? = null
+    val type: TypeEnum,
 
     /**
      * Variable value can be a string, number, boolean, or JSON
@@ -86,10 +62,18 @@ class Variable<T> internal constructor() : PropertyChangeListener {
         required = true,
         description = "Variable value can be a string, number, boolean, or JSON"
     )
-    var value: T? = null
+    var value: T,
 
     @JsonIgnore
     var isDefaulted: Boolean? = null
+) : PropertyChangeListener {
+
+    /**
+     * Variable type
+     */
+    enum class TypeEnum(@get:JsonValue val value: String) {
+        STRING("String"), BOOLEAN("Boolean"), NUMBER("Number"), JSON("JSON");
+    }
 
     @JsonIgnore
     var evalReason: String? = null
@@ -112,10 +96,10 @@ class Variable<T> internal constructor() : PropertyChangeListener {
             executeCallBack = true
         }
 
-        value = if (variable.value != null && type == TypeEnum.JSON) {
+        value = if (type == TypeEnum.JSON) {
             JSONObject(variable.value as MutableMap<Any?, Any?>) as T
         } else {
-            variable.value as T?
+            variable.value as T
         }
 
         isDefaulted = false
@@ -127,24 +111,31 @@ class Variable<T> internal constructor() : PropertyChangeListener {
     }
 
     companion object {
-        @Suppress("UNCHECKED_CAST")
         @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, variable: Variable<Any>?): Variable<T> {
-            val returnVariable = Variable<T>()
-            if (variable != null) {
-                returnVariable.id = variable.id
-                returnVariable.key = variable.key
-                returnVariable.value = variable.value as T?
-                returnVariable.type = variable.type
+            if (variable != null && variable.type === getType(defaultValue)) {
+                @Suppress("UNCHECKED_CAST")
+                val returnVariable = Variable(
+                    id = variable.id,
+                    key = variable.key,
+                    value = variable.value as T,
+                    type = variable.type
+                )
                 returnVariable.evalReason = variable.evalReason
                 returnVariable.isDefaulted = variable.isDefaulted
+                return returnVariable
             } else {
-                returnVariable.key = key
-                returnVariable.value = defaultValue
+                val returnVariable = Variable(
+                    key = key,
+                    value = defaultValue,
+                    type = getAndValidateType(defaultValue)
+                )
                 returnVariable.defaultValue = defaultValue
                 returnVariable.isDefaulted = true
-                returnVariable.type = getType(defaultValue)
+                if (variable != null) {
+                    Timber.e("Mismatched variable type for variable: $key, using default")
+                }
+                return returnVariable
             }
-            return returnVariable
         }
 
         private fun <T: Any> getType(value: T): TypeEnum? {
@@ -167,9 +158,12 @@ class Variable<T> internal constructor() : PropertyChangeListener {
             return typeEnum
         }
 
-        @JvmSynthetic internal fun <T: Any> validateType(defaultValue: T) {
-            getType(defaultValue)
-                ?: throw IllegalArgumentException("${defaultValue::class.java} is not a valid type. Must be String / Number / Boolean or JSONObject")
+        @JvmSynthetic internal fun <T: Any> getAndValidateType(defaultValue: T): TypeEnum {
+            val type = getType(defaultValue)
+            if (type != null) {
+                return type
+            }
+            throw IllegalArgumentException("${defaultValue::class.java} is not a valid type. Must be String / Number / Boolean or JSONObject")
         }
     }
 
@@ -178,7 +172,11 @@ class Variable<T> internal constructor() : PropertyChangeListener {
             val config = evt.newValue as BucketedUserConfig
             val variable: Variable<Any>? = config.variables?.get(key)
             if (variable != null) {
-                updateVariable(variable)
+                try {
+                    updateVariable(variable)
+                } catch (e: DVCVariableException) {
+                    Timber.e("Mismatched variable type for variable: ${variable.key}, using default")
+                }
             }
         }
     }
