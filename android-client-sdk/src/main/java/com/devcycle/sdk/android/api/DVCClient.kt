@@ -257,8 +257,7 @@ class DVCClient private constructor(
      */
     @Synchronized
     fun <T: Any> variable(key: String, defaultValue: T): Variable<T> {
-        Variable.validateType(defaultValue)
-
+        Variable.getAndValidateType(defaultValue)
         val variable = this.getCachedVariable(key, defaultValue)
 
         val tmpConfig = config

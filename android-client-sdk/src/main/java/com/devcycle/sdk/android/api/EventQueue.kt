@@ -56,7 +56,7 @@ internal class EventQueue constructor(
                 }
 
                 if (eventsToFlush.size == 0) {
-                    Timber.i("No events to flush.")
+                    Timber.d("No events to flush.")
                     return@withLock
                 }
 
