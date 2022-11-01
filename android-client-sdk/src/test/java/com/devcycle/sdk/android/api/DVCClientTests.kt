@@ -358,6 +358,29 @@ class DVCClientTests {
     }
 
     @Test
+    fun `variable calls back when variable value changes using plain function`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        try {
+            val variable = client.variable("activate-flag", "Not activated")
+            variable.onUpdate {
+                Assertions.assertEquals("Flag activated!", it.value)
+                calledBack = true
+                countDownLatch.countDown()
+            }
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+    }
+
+    @Test
     fun `events are flushed with delay`() {
         var calledBack = false
         var error: Throwable? = null
