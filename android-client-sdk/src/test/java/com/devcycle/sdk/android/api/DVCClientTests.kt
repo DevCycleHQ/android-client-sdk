@@ -1,5 +1,7 @@
 package com.devcycle.sdk.android.api
 
+import android.os.Handler
+import android.app.Application
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
@@ -14,7 +16,6 @@ import com.devcycle.sdk.android.model.*
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
 import io.mockk.mockk
-import org.json.JSONObject
 import junit.framework.AssertionFailedError
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -27,20 +28,20 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.json.JSONArray
-import org.junit.Assert
+import org.json.JSONObject
 import org.junit.jupiter.api.*
+import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
-import java.lang.reflect.Field
+import org.mockito.stubbing.Answer
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.streams.toList
+
 
 class DVCClientTests {
 
@@ -52,6 +53,7 @@ class DVCClientTests {
     private var error: Throwable? = null
     private var countDownLatch = CountDownLatch(1)
 
+    private val mockApplication: Application? = Mockito.mock(Application::class.java)
     private val mockContext: Context? = Mockito.mock(Context::class.java)
     private val sharedPreferences: SharedPreferences? = Mockito.mock(SharedPreferences::class.java)
     private val editor: SharedPreferences.Editor? = Mockito.mock(SharedPreferences.Editor::class.java)
@@ -59,6 +61,7 @@ class DVCClientTests {
     private val configuration: Configuration = Mockito.mock(Configuration::class.java)
     private val locales: LocaleList = Mockito.mock(LocaleList::class.java)
     private val packageManager: PackageManager = Mockito.mock(PackageManager::class.java)
+    private val mockHandler: Handler = Mockito.mock(Handler::class.java)
 
     private val packageInfo = mockk<PackageInfo>()
 
@@ -82,7 +85,34 @@ class DVCClientTests {
         `when`(mockContext.packageName).thenReturn("test")
         `when`(mockContext.packageManager).thenReturn(packageManager)
         `when`(mockContext.packageManager.getPackageInfo("test", 0)).thenReturn(packageInfo)
+        `when`(mockContext.applicationContext).thenReturn(mockApplication)
 
+        var removeCallbacksCalled: Boolean
+
+        val mockPostDelayed = Answer<Void?> { invocation ->
+            removeCallbacksCalled = false
+            val runnable = Runnable {
+                if (!removeCallbacksCalled) (invocation.arguments[0] as Runnable).run()
+                countDownLatch.countDown()
+            }
+            mainThread.schedule(runnable, invocation.arguments[1] as Long, TimeUnit.MILLISECONDS);
+            null
+        }
+        `when`(mockHandler.post(ArgumentMatchers.any(Runnable::class.java))).thenAnswer {
+            (it.arguments[0] as? Runnable)?.run()
+            true
+        }
+        `when`(mockHandler.postDelayed(
+            ArgumentMatchers.any(Runnable::class.java),
+            Mockito.anyLong()
+        )).thenAnswer(mockPostDelayed)
+
+        val mockRemoveCallbacks = Answer<Void?> { _ ->
+            removeCallbacksCalled = true
+            null
+        }
+
+        `when`(mockHandler.removeCallbacks(ArgumentMatchers.any(Runnable::class.java))).thenAnswer(mockRemoveCallbacks)
         every { packageInfo.longVersionCode } returns 1
 
         Dispatchers.setMain(mainThreadSurrogate)
@@ -287,7 +317,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(4000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
             Assertions.assertEquals(2, configRequestCount)
         }
@@ -314,11 +344,11 @@ class DVCClientTests {
         client.identifyUser(DVCUser.builder().withUserId("last_userId").build())
 
         // make private refetchConfig callable
-        val refetchConfigMethod: Method = DVCClient::class.java.getDeclaredMethod("refetchConfig", DVCCallback::class.java)
+        val refetchConfigMethod: Method = DVCClient::class.java.getDeclaredMethod("refetchConfig", Boolean::class.java, 1L::class.javaObjectType, DVCCallback::class.java)
         refetchConfigMethod.isAccessible = true
 
         // call refetchConfig -> the callback will assert that the config request triggered by this refetch config had the last seen user_id
-        refetchConfigMethod.invoke(client, refetchConfigCallback)
+        refetchConfigMethod.invoke(client, true, 1000L, refetchConfigCallback)
 
         countDownLatch.await(2000, TimeUnit.MILLISECONDS)
         // only the init and refetchConfig requests should have been sent bc the identifyUser requests should have been skipped in the queue
@@ -625,6 +655,7 @@ class DVCClientTests {
     private fun createClient(sdkKey: String, mockUrl: String, flushInMs: Long = 10000L, enableEdgeDB: Boolean = false): DVCClient {
         val builder = builder()
             .withContext(mockContext!!)
+            .withHandler(mockHandler)
             .withUser(
                 DVCUser.builder()
                     .withUserId("nic_test")
@@ -686,3 +717,5 @@ class DVCClientTests {
         }
     }
 }
+
+private val mainThread: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()

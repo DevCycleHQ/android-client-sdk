@@ -36,7 +36,7 @@ class EventQueueTests {
     @Test
     fun `events are aggregated correctly`() {
         val request = Request("some-key", "http://fake.com", "http://fake.com")
-        val user = User.builder().withUserId("test").build()
+        val user = User.builder().withUserId("test").withIsAnonymous(false).build()
         val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
 
         val event1 = Event.fromInternalEvent(

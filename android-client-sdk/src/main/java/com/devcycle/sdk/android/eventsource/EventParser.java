@@ -256,7 +256,6 @@ final class EventParser {
       handler.onComment(comment);
     } catch (Exception e) {
       Timber.w("Message handler threw an exception: " + e.toString());
-      Timber.d("Stack trace: {}", new LazyStackTrace(e));
       handler.onError(e);
     }
   }
@@ -290,11 +289,11 @@ final class EventParser {
   
   private void dispatchMessage(MessageEvent message) {
     try {
-      Timber.d("Dispatching message: {}", message);
+      Timber.d("Dispatching message: %s", message);
       handler.onMessage(message.getEventName(), message);
     } catch (Exception e) {
       Timber.w("Message handler threw an exception: " + e.toString());
-      Timber.d("Stack trace: {}", new LazyStackTrace(e));
+      Timber.e("Stack trace: %s", new LazyStackTrace(e));
       handler.onError(e);
     }
   }
