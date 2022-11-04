@@ -2,6 +2,7 @@ package com.devcycle.sdk.android.api
 
 import android.app.Application
 import android.content.Context
+import android.os.Handler
 import com.devcycle.sdk.android.eventsource.*
 import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
@@ -36,6 +37,7 @@ class DVCClient private constructor(
     options: DVCOptions?,
     apiUrl: String,
     eventsUrl: String,
+    private val customLifecycleHandler: Handler? = null,
     private val coroutineScope: CoroutineScope = MainScope(),
     private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
@@ -70,7 +72,7 @@ class DVCClient private constructor(
                     val application : Application = context.applicationContext as Application
 
                     val lifecycleCallbacks = DVCLifecycleCallbacks(onPauseApplication, onResumeApplication,
-                        config?.sse?.inactivityDelay?.toLong()
+                        config?.sse?.inactivityDelay?.toLong(), customLifecycleHandler
                     )
                     application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
                 }
@@ -434,6 +436,7 @@ class DVCClient private constructor(
 
     class DVCClientBuilder {
         private var context: Context? = null
+        private var customLifecycleHandler: Handler? = null
         private var environmentKey: String? = null
         private var user: User? = null
         private var options: DVCOptions? = null
@@ -446,6 +449,11 @@ class DVCClient private constructor(
 
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
+            return this
+        }
+
+        fun withHandler(handler: Handler): DVCClientBuilder {
+            this.customLifecycleHandler = handler
             return this
         }
         fun withEnvironmentKey(environmentKey: String): DVCClientBuilder {
@@ -491,7 +499,7 @@ class DVCClient private constructor(
 
             this.user = User.builder().withUserParam(dvcUser!!, context!!).build()
 
-            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl)
+            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
         }
     }
 

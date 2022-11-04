@@ -1,0 +1,24 @@
+name: Android CI
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Run build with Gradle Wrapper
+        run: ./gradlew build
+      # Execute unit tests
+      - name: Unit Test
+        run: ./gradlew testDebugUnitTest
+      - name: Android Test Report
+        uses: asadmansr/android-test-report-action@v1.2.0
+        if: ${{ always() }} # IMPORTANT: run Android Test Report regardless

@@ -70,6 +70,7 @@ ext {
 
     junit_version = "5.8.2"
     mockito_core_version = '4.6.1'
+    mockito_inline_version = '2.13.0'
     mockk_version = '1.12.4'
     hamcrest_version = "2.2"
     okhttp_version = "4.9.3"
@@ -105,6 +106,7 @@ dependencies {
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:$junit_version")
 
     testImplementation("org.mockito:mockito-core:$mockito_core_version")
+    testImplementation("org.mockito:mockito-inline:$mockito_inline_version")
     testImplementation("io.mockk:mockk:$mockk_version")
     testImplementation("org.hamcrest:hamcrest-library:$hamcrest_version")
 
