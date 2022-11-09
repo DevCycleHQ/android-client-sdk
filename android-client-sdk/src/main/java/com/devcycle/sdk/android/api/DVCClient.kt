@@ -452,10 +452,11 @@ class DVCClient private constructor(
             return this
         }
 
-        fun withHandler(handler: Handler): DVCClientBuilder {
+        internal fun withHandler(handler: Handler): DVCClientBuilder {
             this.customLifecycleHandler = handler
             return this
         }
+
         fun withEnvironmentKey(environmentKey: String): DVCClientBuilder {
             this.environmentKey = environmentKey
             return this

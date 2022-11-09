@@ -293,7 +293,7 @@ final class EventParser {
       handler.onMessage(message.getEventName(), message);
     } catch (Exception e) {
       Timber.w("Message handler threw an exception: " + e.toString());
-      Timber.e("Stack trace: %s", new LazyStackTrace(e));
+      Timber.d("Stack trace: %s", new LazyStackTrace(e));
       handler.onError(e);
     }
   }
