@@ -95,6 +95,7 @@ internal data class User private constructor(
         @JsonProperty("user_id")
         fun withUserId(userId: String?): Builder {
             this.userId = userId
+            this.isAnonymous = false
             return this
         }
 

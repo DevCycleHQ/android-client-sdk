@@ -76,7 +76,7 @@ final class AsyncEventHandler implements EventHandler {
   
   private void handleUnexpectedError(Throwable error) {
     Timber.w("Caught unexpected error from EventHandler: " + error.toString());
-    Timber.e("Stack trace: %s", new LazyStackTrace(error));
+    Timber.d("Stack trace: %s", new LazyStackTrace(error));
     onErrorInternal(error);
   }
   
@@ -85,7 +85,7 @@ final class AsyncEventHandler implements EventHandler {
       eventSourceHandler.onError(error);
     } catch (Throwable errorFromErrorHandler) {
       Timber.w("Caught unexpected error from EventHandler.onError(): " + errorFromErrorHandler.toString());
-      Timber.e("Stack trace: %s", new LazyStackTrace(error));
+      Timber.d("Stack trace: %s", new LazyStackTrace(error));
     }
   }
 
