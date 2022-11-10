@@ -27,7 +27,6 @@ class MainActivity : AppCompatActivity() {
         if (client != null) {
             val variable = client.variable("realtime-demo", "default")
             setTextValue(variable.value)
-
             variable.onUpdate {
                 setTextValue(it.value)
             }
