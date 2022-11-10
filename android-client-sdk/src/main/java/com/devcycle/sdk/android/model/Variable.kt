@@ -19,6 +19,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
+import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
 import org.json.JSONObject
 import timber.log.Timber
 import java.beans.PropertyChangeEvent
@@ -84,6 +88,9 @@ class Variable<T> internal constructor(
     @JsonIgnore
     private var callback: DVCCallback<Variable<T>>? = null
 
+    @JsonIgnore
+    private val coroutineScope: CoroutineScope = MainScope()
+
     @Throws(IllegalArgumentException::class)
     @Suppress("UNCHECKED_CAST")
     private fun updateVariable(variable: Variable<Any>) {
@@ -106,7 +113,28 @@ class Variable<T> internal constructor(
         evalReason = variable.evalReason
 
         if (executeCallBack) {
-            callback?.onSuccess(this)
+            val self = this
+            coroutineScope.launch {
+                callback?.onSuccess(self)
+            }
+        }
+    }
+
+    @Throws(IllegalArgumentException::class)
+    @Suppress("UNCHECKED_CAST")
+    private fun defaultVariable() {
+        var executeCallBack = false
+        if (value != defaultValue) {
+            executeCallBack = true
+            value = defaultValue!!
+            isDefaulted = true
+        }
+
+        if (executeCallBack) {
+            val self = this
+            coroutineScope.launch {
+                callback?.onSuccess(self)
+            }
         }
     }
 
@@ -176,6 +204,12 @@ class Variable<T> internal constructor(
                     updateVariable(variable)
                 } catch (e: DVCVariableException) {
                     Timber.e("Mismatched variable type for variable: ${variable.key}, using default")
+                }
+            } else {
+                try {
+                    defaultVariable()
+                } catch (e: DVCVariableException) {
+                    Timber.e("Unable to restore variable to default")
                 }
             }
         }
