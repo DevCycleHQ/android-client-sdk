@@ -197,6 +197,7 @@ class DVCClient private constructor(
     @JvmOverloads
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+        clearAnonUserId()
         val newUser: User = User.builder().withIsAnonymous(true).build()
         latestIdentifiedUser = newUser
 
