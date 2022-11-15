@@ -176,6 +176,7 @@ class DVCClient private constructor(
             withContext(coroutineContext) {
                 try {
                     fetchConfig(updatedUser)
+                    if (!updatedUser.isAnonymous) clearAnonUserId()
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
                     callback?.onError(t)
@@ -379,6 +380,10 @@ class DVCClient private constructor(
 
     private fun saveUser() {
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
+    }
+
+    private fun clearAnonUserId() {
+        dvcSharedPrefs.remove(DVCSharedPrefs.AnonUserIdKey)
     }
 
     private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long? = null) {

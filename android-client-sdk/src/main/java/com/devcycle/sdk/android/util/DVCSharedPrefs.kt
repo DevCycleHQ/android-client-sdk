@@ -4,13 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.devcycle.sdk.android.R
 import com.devcycle.sdk.android.model.BucketedUserConfig
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.devcycle.sdk.android.model.User
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import timber.log.Timber
-import java.util.HashMap
 
 // TODO: access disk on background thread
 class DVCSharedPrefs(context: Context) {
@@ -23,6 +22,7 @@ class DVCSharedPrefs(context: Context) {
     companion object {
         const val UserKey = "USER"
         const val ConfigKey = "CONFIG"
+        const val AnonUserIdKey = "ANONYMOUS_USER_ID"
         private val prefs: MutableMap<String, TypeReference<*>> = HashMap()
 
         init {
@@ -36,6 +36,17 @@ class DVCSharedPrefs(context: Context) {
         try {
             val jsonString = objectMapper.writeValueAsString(objectToSave)
             preferences.edit().putString(key, jsonString).apply()
+        } catch (e: JsonProcessingException) {
+            Timber.e(e, e.message)
+        }
+    }
+
+    @Synchronized
+    fun remove(key: String?) {
+        try {
+            val editor: SharedPreferences.Editor = preferences.edit()
+            editor.remove(key)
+            editor.commit()
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
         }
