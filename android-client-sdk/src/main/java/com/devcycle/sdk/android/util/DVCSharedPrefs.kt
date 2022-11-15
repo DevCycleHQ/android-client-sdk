@@ -58,6 +58,7 @@ class DVCSharedPrefs(context: Context) {
         val jsonString = preferences.getString(key, null)
         if (jsonString == null) {
             Timber.e("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
+            return null
         }
         try {
             return objectMapper.readValue(jsonString, prefs[key]) as T
