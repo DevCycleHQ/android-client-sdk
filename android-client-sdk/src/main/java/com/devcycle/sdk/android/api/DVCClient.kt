@@ -161,7 +161,7 @@ class DVCClient private constructor(
         val updatedUser: User = if (this@DVCClient.user.userId == user.userId) {
             this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
         } else {
-            User.builder().withUserParam(user, context).build()
+            User.fromUserParam(user, context)
         }
         latestIdentifiedUser = updatedUser
 
@@ -199,7 +199,7 @@ class DVCClient private constructor(
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         val anonUserId = getAnonUserId()
         clearAnonUserId()
-        val newUser: User = User.builder().withIsAnonymous(true).build()
+        val newUser: User = User.buildAnonymous()
         latestIdentifiedUser = newUser
 
         if (isExecuting.get()) {
@@ -514,7 +514,7 @@ class DVCClient private constructor(
                 Timber.plant(tree)
             }
 
-            this.user = User.builder().withUserParam(dvcUser!!, context!!).build()
+            this.user = User.fromUserParam(dvcUser!!, context!!)
 
             return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
         }
