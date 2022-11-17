@@ -219,7 +219,7 @@ class DVCClient private constructor(
                     fetchConfig(newUser)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
-                    if (anonUserId !== null) setAnonUserId(anonUserId)
+                    if (anonUserId !== null) dvcSharedPrefs!!.saveString(anonUserId, DVCSharedPrefs.AnonUserIdKey)
                     callback?.onError(t)
                 } finally {
                     handleQueuedConfigRequests()
