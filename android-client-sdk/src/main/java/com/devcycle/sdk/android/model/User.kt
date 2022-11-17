@@ -84,7 +84,11 @@ internal data class User constructor(
             }
 
             val isAnonymous = user.isAnonymous ?: false
-            val userId = if (isAnonymous) if(anonUserId == null) UUID.randomUUID().toString() else anonUserId else user.userId
+            val userId = if (isAnonymous) {
+                anonUserId ?: UUID.randomUUID().toString()
+            } else {
+                user.userId
+            }
             val email = user.email
             val name = user.name
             val country = user.country

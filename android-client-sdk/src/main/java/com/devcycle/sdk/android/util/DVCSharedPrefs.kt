@@ -71,7 +71,7 @@ class DVCSharedPrefs(context: Context) {
     fun getString(key: String): String? {
         val stringValue = preferences.getString(key,null)
         if (stringValue == null) {
-            Timber.e("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
+            Timber.i("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
             return null
         }
         return stringValue
