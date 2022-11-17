@@ -76,7 +76,7 @@ internal data class User constructor(
             return User(userId, isAnonymous)
         }
 
-        @JvmSynthetic internal fun fromUserParam(user: DVCUser, context: Context): User {
+        @JvmSynthetic internal fun fromUserParam(user: DVCUser, context: Context, anonUserId: String?): User {
             val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 context.resources.configuration.locales[0]
             } else {
@@ -84,7 +84,7 @@ internal data class User constructor(
             }
 
             val isAnonymous = user.isAnonymous ?: false
-            val userId = if (isAnonymous) UUID.randomUUID().toString() else user.userId
+            val userId = if (isAnonymous) if(anonUserId == null) UUID.randomUUID().toString() else anonUserId else user.userId
             val email = user.email
             val name = user.name
             val country = user.country
