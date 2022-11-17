@@ -177,7 +177,7 @@ class DVCClient private constructor(
             withContext(coroutineContext) {
                 try {
                     fetchConfig(updatedUser)
-                    if (!updatedUser.isAnonymous) clearAnonUserId()
+                    if (!updatedUser.isAnonymous) dvcSharedPrefs.remove(DVCSharedPrefs.AnonUserIdKey)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
                     callback?.onError(t)
@@ -198,9 +198,6 @@ class DVCClient private constructor(
     @JvmOverloads
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        val anonUserId = dvcSharedPrefs!!.getString(DVCSharedPrefs.AnonUserIdKey)
-
-        clearAnonUserId()
         val newUser: User = User.buildAnonymous()
         latestIdentifiedUser = newUser
 
@@ -217,9 +214,9 @@ class DVCClient private constructor(
                 isExecuting.set(true)
                 try {
                     fetchConfig(newUser)
+                    dvcSharedPrefs.saveString(newUser.userId, DVCSharedPrefs.AnonUserIdKey)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
-                    if (anonUserId !== null) dvcSharedPrefs!!.saveString(anonUserId, DVCSharedPrefs.AnonUserIdKey)
                     callback?.onError(t)
                 } finally {
                     handleQueuedConfigRequests()
@@ -385,10 +382,6 @@ class DVCClient private constructor(
 
     private fun saveUser() {
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
-    }
-
-    private fun clearAnonUserId() {
-        dvcSharedPrefs.remove(DVCSharedPrefs.AnonUserIdKey)
     }
 
     private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long? = null) {
