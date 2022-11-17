@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.api
 
-import android.os.Handler
 import android.app.Application
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
@@ -9,10 +8,12 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.os.Handler
 import android.os.LocaleList
 import com.devcycle.sdk.android.api.DVCClient.Companion.builder
 import com.devcycle.sdk.android.helpers.TestTree
 import com.devcycle.sdk.android.model.*
+import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
 import io.mockk.mockk
@@ -34,7 +35,7 @@ import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
-import org.mockito.Mockito.`when`
+import org.mockito.Mockito.*
 import org.mockito.stubbing.Answer
 import java.lang.reflect.Method
 import java.util.*
@@ -431,6 +432,62 @@ class DVCClientTests {
     }
 
     @Test
+    fun `client uses stored anonymous id if it exists`() {
+        `when`(sharedPreferences?.getString(eq("ANONYMOUS_USER_ID"), eq(null))).thenReturn("some-anon-id")
+
+        val user = DVCClient::class.java.getDeclaredField("user")
+        user.setAccessible(true)
+
+        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
+        var anonUser: PopulatedUser = user.get(client) as PopulatedUser
+
+        Assertions.assertEquals("some-anon-id", anonUser.userId)
+    }
+
+    @Test
+    fun `client writes anonymous id to store if it doesn't exist`() {
+        val user = DVCClient::class.java.getDeclaredField("user")
+        user.setAccessible(true)
+
+        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
+        var anonUser: PopulatedUser = user.get(client) as PopulatedUser
+
+        verify(editor, times(1))?.putString(eq("ANONYMOUS_USER_ID"), eq(anonUser.userId))
+    }
+
+    @Test
+    fun `identifying a user clears the stored anonymous id`() {
+        `when`(sharedPreferences?.getString(anyString(), eq(null))).thenReturn("some-anon-id")
+
+        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
+        val newUser = DVCUser.builder().withUserId("123").withIsAnonymous(false).build()
+        val callback = object: DVCCallback<Map<String, Variable<Any>>> {
+            override fun onSuccess(result: Map<String, Variable<Any>>) {
+                verify(editor, times(1))?.remove(eq("ANONYMOUS_USER_ID"))
+            }
+            override fun onError(t: Throwable) {}
+        }
+        client.identifyUser(newUser, callback)
+    }
+
+    @Test
+    fun `resetting the user updates the stored anonymous id`() {
+        `when`(sharedPreferences?.getString(anyString(), eq(null))).thenReturn("some-anon-id")
+        val user = DVCClient::class.java.getDeclaredField("latestIdentifiedUser")
+        user.setAccessible(true)
+
+        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
+        val callback = object: DVCCallback<Map<String, Variable<Any>>> {
+            override fun onSuccess(result: Map<String, Variable<Any>>) {
+                var anonUser: PopulatedUser = user.get(client) as PopulatedUser
+                verify(editor, times(1))?.putString(eq("ANONYMOUS_USER_ID"), eq(anonUser.userId))
+            }
+            override fun onError(t: Throwable) {}
+        }
+        client.resetUser(callback)
+    }
+
+    @Test
     fun `events are flushed with delay`() {
         var calledBack = false
         var error: Throwable? = null
@@ -652,15 +709,17 @@ class DVCClientTests {
         }
     }
 
-    private fun createClient(sdkKey: String, mockUrl: String, flushInMs: Long = 10000L, enableEdgeDB: Boolean = false): DVCClient {
+    private fun createClient(
+        sdkKey: String = "pretend-its-a-real-sdk-key",
+        mockUrl: String = mockWebServer.url("/").toString(),
+        flushInMs: Long = 10000L,
+        enableEdgeDB: Boolean = false,
+        user: DVCUser? = null
+    ): DVCClient {
         val builder = builder()
             .withContext(mockContext!!)
             .withHandler(mockHandler)
-            .withUser(
-                DVCUser.builder()
-                    .withUserId("nic_test")
-                    .build()
-            )
+            .withUser(user ?: DVCUser.builder().withUserId("nic_test").build())
             .withEnvironmentKey(sdkKey)
             .withLogger(tree)
             .withApiUrl(mockUrl)
