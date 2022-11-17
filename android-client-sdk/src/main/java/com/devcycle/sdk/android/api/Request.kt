@@ -47,7 +47,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
 
     suspend fun getConfigJson(
         environmentKey: String,
-        user: User,
+        user: PopulatedUser,
         enableEdgeDB: Boolean,
         sse: Boolean? = false,
         lastModified: Long? = null
@@ -109,7 +109,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
         return getResponseHandler(response)
     }
 
-    suspend fun saveEntity(user: User): DVCResponse {
+    suspend fun saveEntity(user: PopulatedUser): DVCResponse {
         val response = edgeDBApi.saveEntity(user.userId, user)
 
         return getResponseHandler(response)

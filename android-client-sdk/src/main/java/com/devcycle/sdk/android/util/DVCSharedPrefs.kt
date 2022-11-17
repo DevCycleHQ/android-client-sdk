@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.devcycle.sdk.android.R
 import com.devcycle.sdk.android.model.BucketedUserConfig
-import com.devcycle.sdk.android.model.User
+import com.devcycle.sdk.android.model.PopulatedUser
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.core.type.TypeReference
@@ -26,7 +26,7 @@ class DVCSharedPrefs(context: Context) {
         private val prefs: MutableMap<String, TypeReference<*>> = HashMap()
 
         init {
-            prefs[UserKey] = object : TypeReference<User?>() {}
+            prefs[UserKey] = object : TypeReference<PopulatedUser?>() {}
             prefs[ConfigKey] = object : TypeReference<BucketedUserConfig?>() {}
         }
     }
