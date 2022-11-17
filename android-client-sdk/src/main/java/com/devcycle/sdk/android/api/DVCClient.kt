@@ -161,7 +161,8 @@ class DVCClient private constructor(
         val updatedUser: User = if (this@DVCClient.user.userId == user.userId) {
             this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
         } else {
-            User.fromUserParam(user, context)
+            val anonId: String? = dvcSharedPrefs.getString(DVCSharedPrefs.AnonUserIdKey);
+            User.fromUserParam(user, context, anonId)
         }
         latestIdentifiedUser = updatedUser
 
@@ -197,7 +198,8 @@ class DVCClient private constructor(
     @JvmOverloads
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        val anonUserId = getAnonUserId()
+        val anonUserId = dvcSharedPrefs!!.getString(DVCSharedPrefs.AnonUserIdKey)
+
         clearAnonUserId()
         val newUser: User = User.buildAnonymous()
         latestIdentifiedUser = newUser
@@ -217,7 +219,7 @@ class DVCClient private constructor(
                     fetchConfig(newUser)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
-                    if (anonUserId !== null) setAnonUserId(anonUserId)
+                    if (anonUserId !== null) dvcSharedPrefs!!.saveString(anonUserId, DVCSharedPrefs.AnonUserIdKey)
                     callback?.onError(t)
                 } finally {
                     handleQueuedConfigRequests()
@@ -385,14 +387,6 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    private fun getAnonUserId(): String? {
-        return dvcSharedPrefs.getCache(DVCSharedPrefs.AnonUserIdKey)
-    }
-
-    private fun setAnonUserId(anonId: String) {
-        dvcSharedPrefs.save(anonId, DVCSharedPrefs.AnonUserIdKey)
-    }
-
     private fun clearAnonUserId() {
         dvcSharedPrefs.remove(DVCSharedPrefs.AnonUserIdKey)
     }
@@ -463,6 +457,8 @@ class DVCClient private constructor(
 
         private var dvcUser: DVCUser? = null
 
+        private var dvcSharedPrefs: DVCSharedPrefs? = null
+
         fun withContext(context: Context): DVCClientBuilder {
             this.context = context
             return this
@@ -514,7 +510,16 @@ class DVCClient private constructor(
                 Timber.plant(tree)
             }
 
-            this.user = User.fromUserParam(dvcUser!!, context!!)
+            dvcSharedPrefs = DVCSharedPrefs(context!!);
+
+            val anonId: String? = dvcSharedPrefs!!.getString(DVCSharedPrefs.AnonUserIdKey)
+
+            this.user = User.fromUserParam(dvcUser!!, context!!, anonId)
+
+            if(this.user!!.isAnonymous && this.user!!.userId !== anonId){
+                dvcSharedPrefs!!.saveString(this.user!!.userId, DVCSharedPrefs.AnonUserIdKey)
+            }
+
 
             return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
         }

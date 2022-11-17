@@ -68,6 +68,25 @@ class DVCSharedPrefs(context: Context) {
         return null
     }
 
+    fun getString(key: String): String? {
+        val stringValue = preferences.getString(key,null)
+        if (stringValue == null) {
+            Timber.i("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
+            return null
+        }
+        return stringValue
+    }
+
+    @Synchronized
+    fun saveString(value: String, key: String) {
+        try {
+            preferences.edit().putString(key, value).apply()
+            preferences.edit().commit()
+        } catch (e: JsonProcessingException) {
+            Timber.e(e, e.message)
+        }
+    }
+
     init {
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
     }
