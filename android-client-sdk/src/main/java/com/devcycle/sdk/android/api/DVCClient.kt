@@ -162,7 +162,7 @@ class DVCClient private constructor(
             this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
         } else {
             val anonId: String? = dvcSharedPrefs.getString(DVCSharedPrefs.AnonUserIdKey);
-            User.fromUserParam(user, context, anonId!!)
+            User.fromUserParam(user, context, anonId)
         }
         latestIdentifiedUser = updatedUser
 
