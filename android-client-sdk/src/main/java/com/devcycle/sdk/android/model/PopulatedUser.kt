@@ -15,7 +15,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import kotlin.IllegalArgumentException
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-internal data class User constructor(
+internal data class PopulatedUser constructor(
     @Schema(required = true, description = "Unique id to identify the user")
     @JsonProperty("user_id")
     val userId: String,
@@ -53,7 +53,7 @@ internal data class User constructor(
     val lastSeenDate: Long? = Calendar.getInstance().time.time,
 ) {
     @Throws(IllegalArgumentException::class)
-    @JvmSynthetic internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): User {
+    @JvmSynthetic internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): PopulatedUser {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
@@ -69,14 +69,14 @@ internal data class User constructor(
     }
 
     internal companion object {
-        @JvmSynthetic internal fun buildAnonymous(): User {
+        @JvmSynthetic internal fun buildAnonymous(): PopulatedUser {
             val userId = UUID.randomUUID().toString()
             val isAnonymous = true
 
-            return User(userId, isAnonymous)
+            return PopulatedUser(userId, isAnonymous)
         }
 
-        @JvmSynthetic internal fun fromUserParam(user: DVCUser, context: Context, anonUserId: String?): User {
+        @JvmSynthetic internal fun fromUserParam(user: DVCUser, context: Context, anonUserId: String?): PopulatedUser {
             val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 context.resources.configuration.locales[0]
             } else {
@@ -112,7 +112,7 @@ internal data class User constructor(
                 throw IllegalArgumentException("Missing userId and isAnonymous is not true")
             }
 
-            return User(
+            return PopulatedUser(
                 userId!!,
                 isAnonymous,
                 email,

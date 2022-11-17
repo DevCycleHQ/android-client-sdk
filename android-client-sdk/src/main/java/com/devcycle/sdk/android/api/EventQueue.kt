@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 internal class EventQueue constructor(
     private val request: Request,
-    private val getUser: () -> User,
+    private val getUser: () -> PopulatedUser,
     private val coroutineScope: CoroutineScope,
     flushInMs: Long
 ) {

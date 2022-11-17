@@ -33,7 +33,7 @@ import kotlin.coroutines.CoroutineContext
 class DVCClient private constructor(
     private val context: Context,
     private val environmentKey: String,
-    private var user: User,
+    private var user: PopulatedUser,
     options: DVCOptions?,
     apiUrl: String,
     eventsUrl: String,
@@ -57,7 +57,7 @@ class DVCClient private constructor(
     private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
     private val configRequestMutex = Mutex()
 
-    private var latestIdentifiedUser: User = user
+    private var latestIdentifiedUser: PopulatedUser = user
 
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
 
@@ -158,11 +158,11 @@ class DVCClient private constructor(
     fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
         flushEvents()
 
-        val updatedUser: User = if (this@DVCClient.user.userId == user.userId) {
+        val updatedUser: PopulatedUser = if (this@DVCClient.user.userId == user.userId) {
             this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
         } else {
             val anonId: String? = dvcSharedPrefs.getString(DVCSharedPrefs.AnonUserIdKey);
-            User.fromUserParam(user, context, anonId)
+            PopulatedUser.fromUserParam(user, context, anonId)
         }
         latestIdentifiedUser = updatedUser
 
@@ -198,7 +198,7 @@ class DVCClient private constructor(
     @JvmOverloads
     @Synchronized
     fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
-        val newUser: User = User.buildAnonymous()
+        val newUser: PopulatedUser = PopulatedUser.buildAnonymous()
         latestIdentifiedUser = newUser
 
         if (isExecuting.get()) {
@@ -384,7 +384,7 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
     }
 
-    private suspend fun fetchConfig(user: User, sse: Boolean? = false, lastModified: Long? = null) {
+    private suspend fun fetchConfig(user: PopulatedUser, sse: Boolean? = false, lastModified: Long? = null) {
         val result = request.getConfigJson(environmentKey, user, enableEdgeDB, sse, lastModified)
         config = result
         observable.configUpdated(config)
@@ -441,7 +441,7 @@ class DVCClient private constructor(
         private var context: Context? = null
         private var customLifecycleHandler: Handler? = null
         private var environmentKey: String? = null
-        private var user: User? = null
+        private var user: PopulatedUser? = null
         private var options: DVCOptions? = null
         private var logLevel: LogLevel = LogLevel.ERROR
         private var tree: Timber.Tree = LogTree(logLevel.value)
@@ -507,7 +507,7 @@ class DVCClient private constructor(
 
             val anonId: String? = dvcSharedPrefs!!.getString(DVCSharedPrefs.AnonUserIdKey)
 
-            this.user = User.fromUserParam(dvcUser!!, context!!, anonId)
+            this.user = PopulatedUser.fromUserParam(dvcUser!!, context!!, anonId)
 
             if(this.user!!.isAnonymous && this.user!!.userId !== anonId){
                 dvcSharedPrefs!!.saveString(this.user!!.userId, DVCSharedPrefs.AnonUserIdKey)

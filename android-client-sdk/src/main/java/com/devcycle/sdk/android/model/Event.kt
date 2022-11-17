@@ -21,7 +21,7 @@ internal data class Event private constructor(
     val date get() = clientDate
 
     companion object {
-        @JvmSynthetic internal fun fromDVCEvent(dvcEvent: DVCEvent, user: User, featureVars: Map<String, String>?): Event {
+        @JvmSynthetic internal fun fromDVCEvent(dvcEvent: DVCEvent, user: PopulatedUser, featureVars: Map<String, String>?): Event {
             return Event(
                 EventTypes.customEvent,
                 dvcEvent.type,
@@ -50,7 +50,7 @@ internal data class Event private constructor(
             )
         }
 
-        @JvmSynthetic internal fun fromInternalEvent(event: InternalEvent, user: User, featureVars: Map<String, String>?) : Event {
+        @JvmSynthetic internal fun fromInternalEvent(event: InternalEvent, user: PopulatedUser, featureVars: Map<String, String>?) : Event {
             return Event(
                 event.type,
                 null,
