@@ -177,7 +177,6 @@ class DVCClient private constructor(
             withContext(coroutineContext) {
                 try {
                     fetchConfig(updatedUser)
-                    if (!updatedUser.isAnonymous) dvcSharedPrefs.remove(DVCSharedPrefs.AnonUserIdKey)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
                     callback?.onError(t)
@@ -214,7 +213,6 @@ class DVCClient private constructor(
                 isExecuting.set(true)
                 try {
                     fetchConfig(newUser)
-                    dvcSharedPrefs.saveString(newUser.userId, DVCSharedPrefs.AnonUserIdKey)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
                     callback?.onError(t)
@@ -382,6 +380,11 @@ class DVCClient private constructor(
 
     private fun saveUser() {
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
+        if (user.isAnonymous)
+            dvcSharedPrefs.saveString(user.userId, DVCSharedPrefs.AnonUserIdKey)
+        else
+            dvcSharedPrefs.remove(DVCSharedPrefs.AnonUserIdKey)
+
     }
 
     private suspend fun fetchConfig(user: PopulatedUser, sse: Boolean? = false, lastModified: Long? = null) {
@@ -509,9 +512,9 @@ class DVCClient private constructor(
 
             this.user = PopulatedUser.fromUserParam(dvcUser!!, context!!, anonId)
 
-            if(this.user!!.isAnonymous && this.user!!.userId !== anonId){
-                dvcSharedPrefs!!.saveString(this.user!!.userId, DVCSharedPrefs.AnonUserIdKey)
-            }
+//            if(this.user!!.isAnonymous && this.user!!.userId !== anonId){
+//                dvcSharedPrefs!!.saveString(this.user!!.userId, DVCSharedPrefs.AnonUserIdKey)
+//            }
 
 
             return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
