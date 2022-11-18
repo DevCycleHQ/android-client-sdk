@@ -512,11 +512,6 @@ class DVCClient private constructor(
 
             this.user = PopulatedUser.fromUserParam(dvcUser!!, context!!, anonId)
 
-//            if(this.user!!.isAnonymous && this.user!!.userId !== anonId){
-//                dvcSharedPrefs!!.saveString(this.user!!.userId, DVCSharedPrefs.AnonUserIdKey)
-//            }
-
-
             return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
         }
     }
