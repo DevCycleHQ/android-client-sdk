@@ -337,44 +337,47 @@ class DVCClient private constructor(
 
     private suspend fun handleQueuedConfigRequests() {
         configRequestMutex.withLock {
-            if (configRequestQueue.isEmpty()) {
-                return@withLock
-            }
+            /*
+             * In case a queued request callback adds another item to the queue
+             * iterate until the queue is empty
+             */
+            while (!configRequestQueue.isEmpty()) {
+                var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
+                val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> =
+                    mutableListOf()
 
-            var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
-            val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> =
-                mutableListOf()
-
-            if (latestUserAndCallback.callback != null) {
-                callbacks.add(latestUserAndCallback.callback!!)
-            }
-            val itr = configRequestQueue.iterator()
-
-            while (itr.hasNext()) {
-                val userAndCallback = itr.next()
-                if (userAndCallback.now > latestUserAndCallback.now) {
-                    latestUserAndCallback = userAndCallback
+                if (latestUserAndCallback.callback != null) {
+                    callbacks.add(latestUserAndCallback.callback!!)
                 }
-                if (userAndCallback.callback != null) {
-                    callbacks.add(userAndCallback.callback)
+                val itr = configRequestQueue.iterator()
+
+                while (itr.hasNext()) {
+                    val userAndCallback = itr.next()
+                    if (userAndCallback.now > latestUserAndCallback.now) {
+                        latestUserAndCallback = userAndCallback
+                    }
+                    if (userAndCallback.callback != null) {
+                        callbacks.add(userAndCallback.callback)
+                    }
+                    itr.remove()
                 }
-                itr.remove()
-            }
 
-            val localUser = latestUserAndCallback.user
+                val localUser = latestUserAndCallback.user
 
-            try {
-                fetchConfig(localUser)
-                config?.variables?.let { v ->
+                try {
+                    fetchConfig(localUser)
+                    config?.variables?.let { v ->
+                        callbacks.forEach {
+                            it.onSuccess(v)
+                        }
+                    }
+                } catch (t: Throwable) {
                     callbacks.forEach {
-                        it.onSuccess(v)
+                        it.onError(t)
                     }
                 }
-            } catch (t: Throwable) {
-                callbacks.forEach {
-                    it.onError(t)
-                }
             }
+            return@withLock
         }
     }
 
