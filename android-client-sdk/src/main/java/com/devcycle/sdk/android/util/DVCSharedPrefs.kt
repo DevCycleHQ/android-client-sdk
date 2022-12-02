@@ -10,9 +10,10 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import timber.log.Timber
+import java.util.Calendar
 
 // TODO: access disk on background thread
-class DVCSharedPrefs(context: Context) {
+internal class DVCSharedPrefs(context: Context) {
     private var preferences: SharedPreferences = context.getSharedPreferences(
         context.getString(R.string.cached_data),
         Context.MODE_PRIVATE
@@ -21,13 +22,13 @@ class DVCSharedPrefs(context: Context) {
 
     companion object {
         const val UserKey = "USER"
-        const val ConfigKey = "CONFIG"
         const val AnonUserIdKey = "ANONYMOUS_USER_ID"
+        const val IdentifiedConfigKey = "IDENTIFIED_CONFIG"
+        const val AnonymousConfigKey = "ANONYMOUS_CONFIG"
         private val prefs: MutableMap<String, TypeReference<*>> = HashMap()
 
         init {
             prefs[UserKey] = object : TypeReference<PopulatedUser?>() {}
-            prefs[ConfigKey] = object : TypeReference<BucketedUserConfig?>() {}
         }
     }
 
@@ -82,6 +83,21 @@ class DVCSharedPrefs(context: Context) {
         try {
             preferences.edit().putString(key, value).apply()
             preferences.edit().commit()
+        } catch (e: JsonProcessingException) {
+            Timber.e(e, e.message)
+        }
+    }
+
+    @Synchronized
+    fun saveConfig(configToSave: BucketedUserConfig, user: PopulatedUser) {
+        try {
+            val key = if (user.isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
+            val editor = preferences.edit()
+            val jsonString = objectMapper.writeValueAsString(configToSave)
+            editor.putString(key, jsonString)
+            editor.putString("$key.USER_ID", user.userId)
+            editor.putString("$key.FETCH_DATE", Calendar.getInstance().toString())
+            editor.apply()
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
         }

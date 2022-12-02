@@ -52,6 +52,7 @@ class DVCClient private constructor(
     private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
+    private val isConfigCached = AtomicBoolean(false)
     private val initializeJob: Deferred<Any>
 
     private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
@@ -394,7 +395,9 @@ class DVCClient private constructor(
         val result = request.getConfigJson(environmentKey, user, enableEdgeDB, sse, lastModified)
         config = result
         observable.configUpdated(config)
-        dvcSharedPrefs.save(config, DVCSharedPrefs.ConfigKey)
+        dvcSharedPrefs.saveConfig(config!!, user)
+        isConfigCached.set(false)
+        Timber.d("A new config has been fetched for $user")
 
         this@DVCClient.user = user
         saveUser()
