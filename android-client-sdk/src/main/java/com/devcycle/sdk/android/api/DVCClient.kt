@@ -17,7 +17,6 @@ import org.jetbrains.annotations.TestOnly
 import org.json.JSONObject
 import timber.log.Timber
 import java.lang.ref.WeakReference
-import java.math.BigDecimal
 import java.net.URI
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -57,12 +56,23 @@ class DVCClient private constructor(
 
     private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
     private val configRequestMutex = Mutex()
+    private val defaultCacheTTL = 7 * 24 * 3600000L // 7 days
+    private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
+    private val disableConfigCache = options?.disableConfigCache ?: false
 
     private var latestIdentifiedUser: PopulatedUser = user
 
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
 
     init {
+        val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user, configCacheTTL)
+        if (cachedConfig != null) {
+            config = cachedConfig
+            isConfigCached.set(true)
+            Timber.d("Loaded config from cache")
+            observable.configUpdated(config)
+        }
+
         initializeJob = coroutineScope.async(coroutineContext) {
             isExecuting.set(true)
             try {

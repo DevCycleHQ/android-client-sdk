@@ -29,6 +29,8 @@ internal class DVCSharedPrefs(context: Context) {
 
         init {
             prefs[UserKey] = object : TypeReference<PopulatedUser?>() {}
+            prefs[IdentifiedConfigKey] = object : TypeReference<BucketedUserConfig?>() {}
+            prefs[AnonymousConfigKey] = object : TypeReference<BucketedUserConfig?>() {}
         }
     }
 
@@ -96,10 +98,40 @@ internal class DVCSharedPrefs(context: Context) {
             val jsonString = objectMapper.writeValueAsString(configToSave)
             editor.putString(key, jsonString)
             editor.putString("$key.USER_ID", user.userId)
-            editor.putString("$key.FETCH_DATE", Calendar.getInstance().toString())
+            editor.putLong("$key.FETCH_DATE", Calendar.getInstance().timeInMillis)
             editor.apply()
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
+        }
+    }
+
+    @Synchronized
+    fun getConfig(user: PopulatedUser, ttlMs: Long): BucketedUserConfig? {
+        try {
+            val key = if (user.isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
+            val userId = preferences.getString("$key.USER_ID", null)
+            val fetchDateMs = preferences.getLong("$key.FETCH_DATE", 0)
+
+            if (userId != user.userId) {
+                Timber.d("Skipping cached config: user ID does not match")
+                return null
+            }
+
+            val oldestValidDateMs = Calendar.getInstance().timeInMillis - ttlMs
+            if (fetchDateMs < oldestValidDateMs) {
+                Timber.d("Skipping cached config: last fetched date is too old")
+                return null
+            }
+
+            val configString = preferences.getString(key, null)
+            if (configString == null) {
+                Timber.d("Skipping cached config: no config found")
+                return null
+            }
+            return objectMapper.readValue(configString, prefs[key]) as BucketedUserConfig?
+        } catch (e: JsonProcessingException) {
+            Timber.e(e, e.message)
+            return null
         }
     }
 
