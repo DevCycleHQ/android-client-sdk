@@ -4,13 +4,17 @@ class DVCOptions(
     private val environmentConfigPollingIntervalMs: Int,
     val flushEventsIntervalMs: Long,
     private val disableEventLogging: Boolean,
-    val enableEdgeDB: Boolean
+    val enableEdgeDB: Boolean,
+    val configCacheTTL: Long,
+    val disableConfigCache: Boolean
 ) {
     class DVCOptionsBuilder internal constructor() {
         private var environmentConfigPollingIntervalMs = 0
         private var flushEventsIntervalMs = 0L
         private var disableEventLogging = false
         private var enableEdgeDB = false
+        private var configCacheTTL= 0L
+        private var disableConfigCache = false
         fun environmentConfigPollingIntervalMs(environmentConfigPollingIntervalMs: Int): DVCOptionsBuilder {
             this.environmentConfigPollingIntervalMs = environmentConfigPollingIntervalMs
             return this
@@ -31,12 +35,24 @@ class DVCOptions(
             return this
         }
 
+        fun configCacheTTL(configCacheTTL: Long): DVCOptionsBuilder {
+            this.configCacheTTL = configCacheTTL
+            return this
+        }
+
+        fun disableConfigCache(disableConfigCache: Boolean): DVCOptionsBuilder {
+            this.disableConfigCache = disableConfigCache
+            return this
+        }
+
         fun build(): DVCOptions {
             return DVCOptions(
                 environmentConfigPollingIntervalMs,
                 flushEventsIntervalMs,
                 disableEventLogging,
-                enableEdgeDB
+                enableEdgeDB,
+                configCacheTTL,
+                disableConfigCache
             )
         }
     }
