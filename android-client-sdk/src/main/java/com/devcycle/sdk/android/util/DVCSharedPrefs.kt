@@ -113,7 +113,7 @@ internal class DVCSharedPrefs(context: Context) {
             val fetchDateMs = preferences.getLong("$key.FETCH_DATE", 0)
 
             if (userId != user.userId) {
-                Timber.d("Skipping cached config: user ID does not match")
+                Timber.d("Skipping cached config: no config for user ID ${user.userId}")
                 return null
             }
 
