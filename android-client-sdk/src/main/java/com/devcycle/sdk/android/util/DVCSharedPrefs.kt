@@ -8,7 +8,7 @@ import com.devcycle.sdk.android.model.PopulatedUser
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.google.gson.GsonBuilder
 import timber.log.Timber
 import java.util.Calendar
 
@@ -18,26 +18,19 @@ internal class DVCSharedPrefs(context: Context) {
         context.getString(R.string.cached_data),
         Context.MODE_PRIVATE
     )
-    private val objectMapper = jacksonObjectMapper()
+    private val gsonMapper = GsonBuilder().create()
 
     companion object {
         const val UserKey = "USER"
         const val AnonUserIdKey = "ANONYMOUS_USER_ID"
         const val IdentifiedConfigKey = "IDENTIFIED_CONFIG"
         const val AnonymousConfigKey = "ANONYMOUS_CONFIG"
-        private val prefs: MutableMap<String, TypeReference<*>> = HashMap()
-
-        init {
-            prefs[UserKey] = object : TypeReference<PopulatedUser?>() {}
-            prefs[IdentifiedConfigKey] = object : TypeReference<BucketedUserConfig?>() {}
-            prefs[AnonymousConfigKey] = object : TypeReference<BucketedUserConfig?>() {}
-        }
     }
 
     @Synchronized
     fun <T> save(objectToSave: T, key: String?) {
         try {
-            val jsonString = objectMapper.writeValueAsString(objectToSave)
+            val jsonString = gsonMapper.toJson(objectToSave)
             preferences.edit().putString(key, jsonString).apply()
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
@@ -53,22 +46,6 @@ internal class DVCSharedPrefs(context: Context) {
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
         }
-    }
-
-    @Synchronized
-    @Suppress("UNCHECKED_CAST")
-    fun <T> getCache(key: String): T? {
-        val jsonString = preferences.getString(key, null)
-        if (jsonString == null) {
-            Timber.e("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
-            return null
-        }
-        try {
-            return objectMapper.readValue(jsonString, prefs[key]) as T
-        } catch (e: JsonProcessingException) {
-            Timber.e(e, e.message)
-        }
-        return null
     }
 
     fun getString(key: String): String? {
@@ -95,7 +72,7 @@ internal class DVCSharedPrefs(context: Context) {
         try {
             val key = if (user.isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
             val editor = preferences.edit()
-            val jsonString = objectMapper.writeValueAsString(configToSave)
+            val jsonString = gsonMapper.toJson(configToSave)
             editor.putString(key, jsonString)
             editor.putString("$key.USER_ID", user.userId)
             editor.putLong("$key.FETCH_DATE", Calendar.getInstance().timeInMillis)
@@ -128,14 +105,11 @@ internal class DVCSharedPrefs(context: Context) {
                 Timber.d("Skipping cached config: no config found")
                 return null
             }
-            return objectMapper.readValue(configString, prefs[key]) as BucketedUserConfig?
+
+            return gsonMapper.fromJson(configString, BucketedUserConfig::class.java)
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
             return null
         }
-    }
-
-    init {
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
     }
 }
