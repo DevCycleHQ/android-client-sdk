@@ -396,9 +396,6 @@ class DVCClient private constructor(
         dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
         if (user.isAnonymous)
             dvcSharedPrefs.saveString(user.userId, DVCSharedPrefs.AnonUserIdKey)
-        else
-            dvcSharedPrefs.remove(DVCSharedPrefs.AnonUserIdKey)
-
     }
 
     private suspend fun fetchConfig(user: PopulatedUser, sse: Boolean? = false, lastModified: Long? = null) {
