@@ -24,6 +24,7 @@ class DVCEvent private constructor(
         private lateinit var type: String
         private var target: String? = null
         private var value: BigDecimal? = null
+        private var date: Date = Date()
         private var metaData: Map<String, Any>? = null
 
         fun withType(type: String): Builder {
@@ -41,6 +42,11 @@ class DVCEvent private constructor(
             return this
         }
 
+        fun clientDate(date: Date): Builder {
+            this.date = date
+            return this
+        }
+
         fun withMetaData(metaData: Map<String, Any>?): Builder {
             this.metaData = metaData
             return this
@@ -51,7 +57,8 @@ class DVCEvent private constructor(
                 type,
                 target,
                 value,
-                metaData
+                metaData,
+                date
             )
         }
     }

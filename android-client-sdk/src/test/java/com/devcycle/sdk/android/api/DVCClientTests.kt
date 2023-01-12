@@ -149,7 +149,7 @@ class DVCClientTests {
                 }
 
                 override fun onError(t: Throwable) {
-                    Assertions.assertEquals("Only 'mobile', 'dvc_mobile' keys are supported by this API", t.message)
+                    Assertions.assertEquals("Only 'mobile', 'dvc_mobile' keys are supported by this API. Invalid key: invalid-client-sdk", t.message)
                     calledBack = true
                     countDownLatch.countDown()
                 }
@@ -514,6 +514,7 @@ class DVCClientTests {
                     client.track(DVCEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
+                        .clientDate(Date())
                         .build())
 
                     Thread.sleep(1000L)
