@@ -514,7 +514,7 @@ class DVCClientTests {
                     client.track(DVCEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
-                        .clientDate(Date())
+                        .withDate(Date())
                         .build())
 
                     Thread.sleep(1000L)
