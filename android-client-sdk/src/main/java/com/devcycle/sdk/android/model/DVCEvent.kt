@@ -42,7 +42,7 @@ class DVCEvent private constructor(
             return this
         }
 
-        fun clientDate(date: Date): Builder {
+        fun withDate(date: Date): Builder {
             this.date = date
             return this
         }
