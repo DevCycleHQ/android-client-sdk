@@ -9,8 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send POST to Sleuth
-        run: curl -X POST \
-          -d api_key=${{ secrets.SLEUTH_API_KEY }} \
-          -d environment=production \
-          -d sha=${{ github.sha }} \
-          https://app.sleuth.io/api/1/deployments/taplytics/android-client-sdk/register_deploy
+        run: curl -X POST -d api_key=${{ secrets.SLEUTH_API_KEY }} -d environment=production -d sha=${{ github.sha }} https://app.sleuth.io/api/1/deployments/taplytics/android-client-sdk/register_deploy
