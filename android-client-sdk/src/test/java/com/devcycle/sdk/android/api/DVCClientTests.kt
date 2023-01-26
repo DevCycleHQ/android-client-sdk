@@ -13,7 +13,6 @@ import android.os.LocaleList
 import com.devcycle.sdk.android.api.DVCClient.Companion.builder
 import com.devcycle.sdk.android.helpers.TestTree
 import com.devcycle.sdk.android.model.*
-import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
 import io.mockk.mockk
