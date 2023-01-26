@@ -4,14 +4,12 @@ package com.devcycle.sdk.android.model
 import android.content.Context
 import android.os.Build
 import com.devcycle.sdk.android.BuildConfig
-import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.*
 import android.content.pm.PackageInfo
 import com.google.gson.annotations.SerializedName
 import kotlin.IllegalArgumentException
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 internal data class PopulatedUser constructor(
     @Schema(required = true, description = "Unique id to identify the user")
     @SerializedName("user_id")
