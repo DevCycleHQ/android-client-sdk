@@ -1,20 +1,26 @@
 package com.devcycle.sdk.android.model
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.google.gson.annotations.SerializedName
 import java.math.BigDecimal
 import java.util.*
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 internal data class Event private constructor(
+    @SerializedName("type")
     val type: String,
+    @SerializedName("customType")
     val customType: String?,
-    @JsonProperty("user_id")
+    @SerializedName("user_id")
     val userId: String,
+    @SerializedName("featureVars")
     val featureVars: Map<String, String>,
+    @SerializedName("target")
     val target: String?,
+    @SerializedName("clientDate")
     val clientDate: Long,
+    @SerializedName("value")
     val value: BigDecimal? = null,
+    @SerializedName("metaData")
     val metaData: Map<String, Any>? = null
 ){
     @get:JsonProperty("date")

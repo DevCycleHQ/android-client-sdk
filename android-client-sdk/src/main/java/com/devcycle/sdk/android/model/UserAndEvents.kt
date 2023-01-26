@@ -1,10 +1,10 @@
 package com.devcycle.sdk.android.model
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.google.gson.annotations.SerializedName
 
 internal data class UserAndEvents(
-    @JsonProperty("user")
+    @SerializedName("user")
     val user: PopulatedUser,
-    @JsonProperty("events")
+    @SerializedName("events")
     val events: List<Event>
 )

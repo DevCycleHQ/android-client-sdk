@@ -1,15 +1,13 @@
 package com.devcycle.sdk.android.api
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
-import retrofit2.converter.jackson.JacksonConverterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 
 internal class DVCApiClient {
     private val okBuilder: OkHttpClient.Builder = OkHttpClient.Builder()
-    private val objectMapper = jacksonObjectMapper()
     private val adapterBuilder: Retrofit.Builder = Retrofit.Builder()
-        .addConverterFactory(JacksonConverterFactory.create(objectMapper))
+        .addConverterFactory(GsonConverterFactory.create())
 
     fun initialize(baseUrl: String): DVCApi {
         return adapterBuilder

@@ -4,8 +4,8 @@ import com.devcycle.sdk.android.exception.DVCRequestException
 
 import com.devcycle.sdk.android.model.*
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.GsonBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -19,7 +19,8 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey, eventsBaseUrl)
     private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(envKey, apiBaseUrl)
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper: ObjectMapper = ObjectMapper()
+    private val gsonMapper = GsonBuilder().create()
     private val configMutex = Mutex()
 
     private fun <T> getResponseHandler(response: Response<T>): T {
@@ -31,7 +32,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
 
             if (response.errorBody() != null) {
                 try {
-                    errorResponse = objectMapper.readValue(
+                    errorResponse = gsonMapper.fromJson(
                         response.errorBody()!!.string(),
                         ErrorResponse::class.java
                     )
@@ -52,13 +53,13 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
         sse: Boolean? = false,
         lastModified: Long? = null
     ): BucketedUserConfig {
-        val map = (
-                objectMapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
-        ) as MutableMap<String, String>
-        if (map.contains("customData")) {
+        val map: MutableMap<String, String> =
+            gsonMapper.fromJson(gsonMapper.toJson(user), MutableMap::class.java) as MutableMap<String, String>
+
+        if(map.containsKey("customData")) {
             map["customData"] = objectMapper.writeValueAsString(map["customData"])
         }
-        if (map.contains("privateCustomData")) {
+        if(map.containsKey("privateCustomData")) {
             map["privateCustomData"] = objectMapper.writeValueAsString(map["privateCustomData"])
         }
         if (enableEdgeDB) {
