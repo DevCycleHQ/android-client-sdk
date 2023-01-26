@@ -5,7 +5,11 @@ import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.model.*
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -16,12 +20,35 @@ import timber.log.Timber
 import java.io.IOException
 
 internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
-    private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey, eventsBaseUrl)
     private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(envKey, apiBaseUrl)
     private val objectMapper: ObjectMapper = ObjectMapper()
-    private val gsonMapper = GsonBuilder().create()
+    private val gsonMapper = getGsonMapper();
+    private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl, gsonMapper)
     private val configMutex = Mutex()
+
+    private fun getGsonMapper(): Gson {
+        return GsonBuilder().registerTypeAdapter(Variable.TypeEnum::class.java, object : TypeAdapter<Variable.TypeEnum>() {
+            override fun read(jsonReader: JsonReader): Variable.TypeEnum? {
+                val jsonValue = jsonReader.nextString()
+                return Variable.TypeEnum.values().firstOrNull { it.value == jsonValue }
+            }
+
+            override fun write(jsonWriter: JsonWriter, typeEnum: Variable.TypeEnum) {
+                jsonWriter.value(typeEnum.value)
+            }
+        }).registerTypeAdapter(Feature.TypeEnum::class.java, object : TypeAdapter<Feature.TypeEnum>() {
+            override fun read(jsonReader: JsonReader): Feature.TypeEnum? {
+                val jsonValue = jsonReader.nextString()
+                return Feature.TypeEnum.values().firstOrNull { it.value == jsonValue }
+            }
+
+            override fun write(jsonWriter: JsonWriter, typeEnum: Feature.TypeEnum) {
+                jsonWriter.value(typeEnum.value)
+            }
+        }).create();
+    }
+
 
     private fun <T> getResponseHandler(response: Response<T>): T {
         if (response.isSuccessful) {
