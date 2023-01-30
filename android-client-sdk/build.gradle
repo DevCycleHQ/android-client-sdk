@@ -22,7 +22,6 @@ android {
         //Will create field in buildconfig.java for use in code. 
         buildConfigField 'String', 'VERSION_NAME', "\"$versionName\""
 
-        consumerProguardFiles 'consumer-rules.pro'
     }
 
     buildTypes {
