@@ -1,13 +1,10 @@
 package com.devcycle.sdk.android.api
 
 import com.devcycle.sdk.android.exception.DVCRequestException
-
 import com.devcycle.sdk.android.model.*
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.google.gson.*
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import kotlinx.coroutines.Dispatchers
@@ -22,8 +19,8 @@ import java.io.IOException
 internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey, eventsBaseUrl)
     private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(envKey, apiBaseUrl)
-    private val objectMapper: ObjectMapper = ObjectMapper()
-    private val gsonMapper = getGsonMapper();
+    private val objectMapper = jacksonObjectMapper()
+    private val gsonMapper = getGsonMapper()
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl, gsonMapper)
     private val configMutex = Mutex()
 
@@ -59,7 +56,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
 
             if (response.errorBody() != null) {
                 try {
-                    errorResponse = gsonMapper.fromJson(
+                    errorResponse = objectMapper.readValue(
                         response.errorBody()!!.string(),
                         ErrorResponse::class.java
                     )
