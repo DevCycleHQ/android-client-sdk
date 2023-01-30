@@ -670,9 +670,9 @@ class DVCClientTests {
                             val eventsReqObj = JSONObject(loggedEvents)
                             Mockito.spy(eventsReqObj)
                             val events: JSONArray = eventsReqObj.get("events") as JSONArray
-                            Assertions.assertEquals(2, events.length())
-                            Assertions.assertEquals("userConfig", events.getJSONObject(0).get("type"))
-                            Assertions.assertEquals("testEvent", events.getJSONObject(1).get("customType"))
+                            Assertions.assertEquals(1, events.length())
+                            Assertions.assertEquals("customEvent", events.getJSONObject(0).get("type"))
+                            Assertions.assertEquals("testEvent", events.getJSONObject(0).get("customType"))
                             countDownLatch.countDown()
                         }
                         override fun onError(t: Throwable) {

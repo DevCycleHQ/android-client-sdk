@@ -67,14 +67,7 @@ class Variable<T> internal constructor(
      * Variable type
      */
     enum class TypeEnum(@get:JsonValue val value: String) {
-        @SerializedName("0")
-        STRING("String"),
-        @SerializedName("1")
-        BOOLEAN("Boolean"),
-        @SerializedName("2")
-        NUMBER("Number"),
-        @SerializedName("3")
-        JSON("JSON");
+        STRING("String"), BOOLEAN("Boolean"), NUMBER("Number"), JSON("JSON");
     }
 
     @JsonIgnore
