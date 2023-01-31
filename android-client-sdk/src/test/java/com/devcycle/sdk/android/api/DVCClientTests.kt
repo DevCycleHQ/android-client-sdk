@@ -698,6 +698,394 @@ class DVCClientTests {
         }
     }
 
+    @Test
+    fun `variable calls return default value with a null config`() {
+        val config = BucketedUserConfig()
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val variable = client.variable("activate-flag", "Not activated")
+        val variable2 = client.variable("activate-flag", "Activated")
+
+        assert(variable !== variable2)
+        assert(variable.value === "Not activated")
+        assert(variable.isDefaulted == true)
+        assert(variable2.value === "Activated")
+        assert(variable2.isDefaulted == true)
+    }
+
+    @Test
+    fun `client initializes successfully, config is still parsed correctly with an extra root level field that is ignored`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{\n" +
+                "  \"ignore-me\": \"whoa there!\",\n" +
+                "  \"variables\": {\n" +
+                "    \"test-feature\": {\n" +
+                "      \"_id\": \"1\",\n" +
+                "      \"key\": \"test-feature\",\n" +
+                "      \"type\": \"Boolean\",\n" +
+                "      \"value\": true\n" +
+                "    },\n" +
+                "    \"test-feature-number\": {\n" +
+                "      \"_id\": \"2\",\n" +
+                "      \"key\": \"test-feature-number\",\n" +
+                "      \"type\": \"Number\",\n" +
+                "      \"value\": 42\n" +
+                "    },\n" +
+                "    \"test-feature-string\": {\n" +
+                "      \"_id\": \"3\",\n" +
+                "      \"key\": \"test-feature-string\",\n" +
+                "      \"type\": \"String\",\n" +
+                "      \"value\": \"it works!\"\n" +
+                "    },\n" +
+                "    \"test-feature-json\": {\n" +
+                "      \"_id\": \"4\",\n" +
+                "      \"key\": \"test-feature-json\",\n" +
+                "      \"type\": \"JSON\",\n" +
+                "      \"value\": { \"test\": \"feature\"}\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        try {
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            assert(boolVar.value)
+            assert(boolVar.isDefaulted == false)
+
+            assert(numVar.value == 42)
+            assert(numVar.isDefaulted == false)
+
+            assert(strVar.value == "it works!")
+            assert(strVar.isDefaulted == false)
+
+            val expectedJSON = JSONObject()
+            expectedJSON.put("test", "feature")
+            assert(jsonVar.value.toString() == expectedJSON.toString())
+            assert(jsonVar.isDefaulted == false)
+        }
+    }
+
+    @Test
+    fun `client fails to initialize, all variables default with an undefined variable key for any variable in config`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{\n" +
+                "  \"variables\": {\n" +
+                "    \"test-feature\": {\n" +
+                "      \"_id\": \"1\",\n" +
+                "      \"key\": \"test-feature\",\n" +
+                "      \"type\": \"Boolean\",\n" +
+                "      \"value\": true\n" +
+                "    },\n" +
+                "    \"test-feature-number\": {\n" +
+                "      \"_id\": \"2\",\n" +
+                "      \"key\": \"test-feature-number\",\n" +
+                "      \"type\": \"Number\",\n" +
+                "      \"value\": 42\n" +
+                "    },\n" +
+                "    \"test-feature-string\": {\n" +                // No Variable key
+                "      \"_id\": \"3\",\n" +
+                "      \"type\": \"String\",\n" +
+                "      \"value\": \"it works!\"\n" +
+                "    },\n" +
+                "    \"test-feature-json\": {\n" +
+                "      \"_id\": \"4\",\n" +
+                "      \"key\": \"test-feature-json\",\n" +
+                "      \"type\": \"JSON\",\n" +
+                "      \"value\": { \"test\": \"feature\"}\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        try {
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            // Expect Client to have failed to initialize, all variables default
+            assert(!boolVar.value)
+            assert(boolVar.isDefaulted == true)
+
+            assert(numVar.value == 0)
+            assert(numVar.isDefaulted == true)
+
+            assert(strVar.value == "Not activated")
+            assert(strVar.isDefaulted == true)
+
+            assert(jsonVar.value.toString() == defaultJSON.toString())
+            assert(jsonVar.isDefaulted == true)
+        }
+    }
+
+    @Test
+    fun `client fails to initialize, all variables default with an undefined variable type for any variable in config`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{\n" +
+                "  \"variables\": {\n" +
+                "    \"test-feature\": {\n" +
+                "      \"_id\": \"1\",\n" +
+                "      \"key\": \"test-feature\",\n" +
+                "      \"type\": \"Boolean\",\n" +
+                "      \"value\": true\n" +
+                "    },\n" +
+                "    \"test-feature-number\": {\n" +
+                "      \"_id\": \"2\",\n" +
+                "      \"key\": \"test-feature-number\",\n" +
+                "      \"type\": \"Number\",\n" +
+                "      \"value\": 42\n" +
+                "    },\n" +
+                "    \"test-feature-string\": {\n" +                // No Variable type
+                "      \"_id\": \"3\",\n" +
+                "      \"key\": \"test-feature-string\",\n" +
+                "      \"value\": \"it works!\"\n" +
+                "    },\n" +
+                "    \"test-feature-json\": {\n" +
+                "      \"_id\": \"4\",\n" +
+                "      \"key\": \"test-feature-json\",\n" +
+                "      \"type\": \"JSON\",\n" +
+                "      \"value\": { \"test\": \"feature\"}\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        try {
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            // Expect Client to have failed to initialize, all variables default
+            assert(!boolVar.value)
+            assert(boolVar.isDefaulted == true)
+
+            assert(numVar.value == 0)
+            assert(numVar.isDefaulted == true)
+
+            assert(strVar.value == "Not activated")
+            assert(strVar.isDefaulted == true)
+
+            assert(jsonVar.value.toString() == defaultJSON.toString())
+            assert(jsonVar.isDefaulted == true)
+        }
+    }
+
+    @Test
+    fun `client fails to initialize, all variables default with a null variable key for any variable in config`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{\n" +
+                "  \"variables\": {\n" +
+                "    \"test-feature\": {\n" +
+                "      \"_id\": \"1\",\n" +
+                "      \"key\": \"test-feature\",\n" +
+                "      \"type\": \"Boolean\",\n" +
+                "      \"value\": true\n" +
+                "    },\n" +
+                "    \"test-feature-number\": {\n" +            // null Variable key
+                "      \"_id\": \"2\",\n" +
+                "      \"key\": null,\n" +
+                "      \"type\": \"Number\",\n" +
+                "      \"value\": 42\n" +
+                "    },\n" +
+                "    \"test-feature-string\": {\n" +
+                "      \"_id\": \"3\",\n" +
+                "      \"key\": \"test-feature-string\",\n" +
+                "      \"type\": \"String\",\n" +
+                "      \"value\": \"it works!\"\n" +
+                "    },\n" +
+                "    \"test-feature-json\": {\n" +
+                "      \"_id\": \"4\",\n" +
+                "      \"key\": \"test-feature-json\",\n" +
+                "      \"type\": \"JSON\",\n" +
+                "      \"value\": { \"test\": \"feature\"}\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        try {
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            // Expect Client to have failed to initialize, all variables default
+            assert(!boolVar.value)
+            assert(boolVar.isDefaulted == true)
+
+            assert(numVar.value == 0)
+            assert(numVar.isDefaulted == true)
+
+            assert(strVar.value == "Not activated")
+            assert(strVar.isDefaulted == true)
+
+            assert(jsonVar.value.toString() == defaultJSON.toString())
+            assert(jsonVar.isDefaulted == true)
+        }
+    }
+
+    @Test
+    fun `client fails to initialize, all variables default with a null variable type for any variable in config`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{\n" +
+                "  \"variables\": {\n" +
+                "    \"test-feature\": {\n" +
+                "      \"_id\": \"1\",\n" +
+                "      \"key\": \"test-feature\",\n" +
+                "      \"type\": \"Boolean\",\n" +
+                "      \"value\": true\n" +
+                "    },\n" +
+                "    \"test-feature-number\": {\n" +            // null Variable type
+                "      \"_id\": \"2\",\n" +
+                "      \"key\": \"test-feature-number\",\n" +
+                "      \"type\": null,\n" +
+                "      \"value\": 42\n" +
+                "    },\n" +
+                "    \"test-feature-string\": {\n" +
+                "      \"_id\": \"3\",\n" +
+                "      \"key\": \"test-feature-string\",\n" +
+                "      \"type\": \"String\",\n" +
+                "      \"value\": \"it works!\"\n" +
+                "    },\n" +
+                "    \"test-feature-json\": {\n" +
+                "      \"_id\": \"4\",\n" +
+                "      \"key\": \"test-feature-json\",\n" +
+                "      \"type\": \"JSON\",\n" +
+                "      \"value\": { \"test\": \"feature\"}\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        try {
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            // Expect Client to have failed initialization, all variables should default
+            assert(!boolVar.value)
+            assert(boolVar.isDefaulted == true)
+
+            assert(numVar.value == 0)
+            assert(numVar.isDefaulted == true)
+
+            assert(strVar.value === "Not activated")
+            assert(strVar.isDefaulted == true)
+
+            assert(jsonVar.value === defaultJSON)
+            assert(jsonVar.isDefaulted == true)
+        }
+    }
+
     private fun handleFinally(
         calledBack: Boolean,
         error: Throwable?,
