@@ -25,7 +25,7 @@ class KotlinApplication: Application() {
                     .withCustomData(mapOf("custom_value" to "test"))
                     .build()
             )
-            .withEnvironmentKey("asdas")
+            .withEnvironmentKey("asdsa")
             .withLogLevel(LogLevel.DEBUG)
             .withLogger(Timber.DebugTree())
             .build()
