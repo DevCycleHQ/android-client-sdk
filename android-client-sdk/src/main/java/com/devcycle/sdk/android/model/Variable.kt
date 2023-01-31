@@ -11,7 +11,6 @@
  */
 package com.devcycle.sdk.android.model
 
-import androidx.annotation.Keep
 import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
@@ -22,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import org.json.JSONObject
 import timber.log.Timber
