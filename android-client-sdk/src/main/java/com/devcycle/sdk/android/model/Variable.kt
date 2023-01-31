@@ -11,6 +11,7 @@
  */
 package com.devcycle.sdk.android.model
 
+import androidx.annotation.Keep
 import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
@@ -34,13 +35,14 @@ import java.lang.IllegalArgumentException
 /**
  * Variable
  */
+@Keep
 class Variable<T> internal constructor(
     /**
      * unique database id
      * @return _id
      */
     @get:Schema(required = true, description = "unique database id")
-    @JsonProperty("_id")
+    @field:JsonProperty("_id")
     var id: String? = null,
     /**
      * Unique key by Project, can be used in the SDK / API to reference by &#x27;key&#x27; rather than _id.

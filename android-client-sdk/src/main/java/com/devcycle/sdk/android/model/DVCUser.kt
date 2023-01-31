@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class DVCUser private constructor(
+    @JsonProperty("user_id")
     var userId: String? = null,
     var isAnonymous: Boolean? = true,
     var email: String? = null,

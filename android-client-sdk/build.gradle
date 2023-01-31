@@ -14,10 +14,9 @@ android {
     defaultConfig {
         minSdk 21
         targetSdk 31
-        versionCode 1
-        versionName version
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("proguard-rules.pro")
 
         //Will create field in buildconfig.java for use in code. 
         buildConfigField 'String', 'VERSION_NAME', "\"$versionName\""
@@ -92,6 +91,8 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-jackson:$retrofit_version") {
         exclude group: 'com.squareup.okhttp3', module: 'okhttp'
     }
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
+
     implementation("io.swagger.core.v3:swagger-annotations:$swagger_annotations_version")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_kotlin_version}")

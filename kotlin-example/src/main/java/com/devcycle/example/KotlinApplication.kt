@@ -21,10 +21,11 @@ class KotlinApplication: Application() {
             .withUser(
                 DVCUser.builder()
                     .withUserId("test_user")
+//                    .withIsAnonymous(true)
                     .withCustomData(mapOf("custom_value" to "test"))
                     .build()
             )
-            .withEnvironmentKey("<YOUR_MOBILE_SDK_KEY>")
+            .withEnvironmentKey("asdas")
             .withLogLevel(LogLevel.DEBUG)
             .withLogger(Timber.DebugTree())
             .build()
