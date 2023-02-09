@@ -166,7 +166,7 @@ class DVCClient private constructor(
      */
     @JvmOverloads
     @Synchronized
-    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, ReadOnlyVariable<Any>>>? = null) {
         flushEvents()
 
         val updatedUser: PopulatedUser = if (this@DVCClient.user.userId == user.userId) {
@@ -207,7 +207,7 @@ class DVCClient private constructor(
      */
     @JvmOverloads
     @Synchronized
-    fun resetUser(callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+    fun resetUser(callback: DVCCallback<Map<String, ReadOnlyVariable<Any>>>? = null) {
         val newUser: PopulatedUser = PopulatedUser.buildAnonymous()
         latestIdentifiedUser = newUser
 
@@ -257,7 +257,7 @@ class DVCClient private constructor(
      * Returns the Map of Variables in the config
      */
     @Synchronized
-    fun allVariables(): Map<String, Variable<Any>>? {
+    fun allVariables(): Map<String, ReadOnlyVariable<Any>>? {
         return if (config == null) emptyMap() else config!!.variables
     }
 
@@ -291,7 +291,7 @@ class DVCClient private constructor(
     }
 
     private fun <T: Any> getCachedVariable(key: String, defaultValue: T): Variable<T> {
-        val variableByKey: Variable<Any>? = config?.variables?.get(key)
+        val variableByKey: ReadOnlyVariable<Any>? = config?.variables?.get(key)
         val variable: Variable<T>
 
         if (!variableInstanceMap.containsKey(key)) {
@@ -354,7 +354,7 @@ class DVCClient private constructor(
              */
             while (!configRequestQueue.isEmpty()) {
                 var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
-                val callbacks: MutableList<DVCCallback<Map<String, Variable<Any>>>> =
+                val callbacks: MutableList<DVCCallback<Map<String, ReadOnlyVariable<Any>>>> =
                     mutableListOf()
 
                 if (latestUserAndCallback.callback != null) {
@@ -420,7 +420,7 @@ class DVCClient private constructor(
         }
     }
 
-    private fun refetchConfig(sse: Boolean = false, lastModified: Long? = null, callback: DVCCallback<Map<String, Variable<Any>>>? = null) {
+    private fun refetchConfig(sse: Boolean = false, lastModified: Long? = null, callback: DVCCallback<Map<String, ReadOnlyVariable<Any>>>? = null) {
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
             Timber.d("Queued refetchConfig request")

@@ -18,10 +18,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
-import io.swagger.v3.oas.annotations.media.Schema
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import org.json.JSONObject
 import timber.log.Timber
@@ -39,34 +37,27 @@ class Variable<T> internal constructor(
      * unique database id
      * @return _id
      */
-    @get:Schema(required = true, description = "unique database id")
     @JsonProperty("_id")
     var id: String? = null,
     /**
      * Unique key by Project, can be used in the SDK / API to reference by &#x27;key&#x27; rather than _id.
      * @return key
      */
-    @get:Schema(
-        required = true,
-        description = "Unique key by Project, can be used in the SDK / API to reference by 'key' rather than _id."
-    )
     val key: String,
     /**
      * Variable type
      * @return type
      */
-    @get:Schema(required = true, description = "Variable type")
     val type: TypeEnum,
 
     /**
      * Variable value can be a string, number, boolean, or JSON
      * @return value
      */
-    @get:Schema(
-        required = true,
-        description = "Variable value can be a string, number, boolean, or JSON"
-    )
     var value: T,
+
+    @JsonIgnore
+    val defaultValue: T,
 
     @JsonIgnore
     var isDefaulted: Boolean? = null
@@ -83,9 +74,6 @@ class Variable<T> internal constructor(
     var evalReason: String? = null
 
     @JsonIgnore
-    var defaultValue: T? = null
-
-    @JsonIgnore
     private var callback: DVCCallback<Variable<T>>? = null
 
     @JsonIgnore
@@ -93,9 +81,9 @@ class Variable<T> internal constructor(
 
     @Throws(IllegalArgumentException::class)
     @Suppress("UNCHECKED_CAST")
-    private fun updateVariable(variable: Variable<Any>) {
+    private fun updateVariable(variable: ReadOnlyVariable<Any>) {
         var executeCallBack = false
-        if (variable.type != type) {
+        if (getType(variable.value) != type) {
             throw DVCVariableException("Cannot update Variable with a different type", this as Variable<Any>, variable)
         }
         id = variable.id
@@ -126,9 +114,10 @@ class Variable<T> internal constructor(
         var executeCallBack = false
         if (value != defaultValue) {
             executeCallBack = true
-            value = defaultValue!!
-            isDefaulted = true
+            value = defaultValue
         }
+
+        isDefaulted = true
 
         if (executeCallBack) {
             val self = this
@@ -139,27 +128,29 @@ class Variable<T> internal constructor(
     }
 
     companion object {
-        @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, variable: Variable<Any>?): Variable<T> {
-            if (variable != null && variable.type === getType(defaultValue)) {
+        @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, readOnlyVariable: ReadOnlyVariable<Any>?): Variable<T> {
+            val type = getType(defaultValue)
+            if (readOnlyVariable != null && type != null && getType(readOnlyVariable.value) === type) {
                 @Suppress("UNCHECKED_CAST")
                 val returnVariable = Variable(
-                    id = variable.id,
-                    key = variable.key,
-                    value = variable.value as T,
-                    type = variable.type
+                    id = readOnlyVariable.id,
+                    key = key,
+                    value = readOnlyVariable.value as T,
+                    type = type,
+                    defaultValue = defaultValue as T
                 )
-                returnVariable.evalReason = variable.evalReason
-                returnVariable.isDefaulted = variable.isDefaulted
+                returnVariable.evalReason = readOnlyVariable.evalReason
+                returnVariable.isDefaulted = false
                 return returnVariable
             } else {
                 val returnVariable = Variable(
                     key = key,
                     value = defaultValue,
-                    type = getAndValidateType(defaultValue)
+                    type = getAndValidateType(defaultValue),
+                    defaultValue = defaultValue
                 )
-                returnVariable.defaultValue = defaultValue
                 returnVariable.isDefaulted = true
-                if (variable != null) {
+                if (readOnlyVariable != null) {
                     Timber.e("Mismatched variable type for variable: $key, using default")
                 }
                 return returnVariable
@@ -198,7 +189,8 @@ class Variable<T> internal constructor(
     override fun propertyChange(evt: PropertyChangeEvent) {
         if (evt.propertyName == BucketedUserConfigListener.BucketedUserConfigObserverConstants.propertyChangeConfigUpdated) {
             val config = evt.newValue as BucketedUserConfig
-            val variable: Variable<Any>? = config.variables?.get(key)
+            val variable: ReadOnlyVariable<Any>? = config.variables?.get(key)
+            Timber.v("Triggering property change handler for $key")
             if (variable != null) {
                 try {
                     updateVariable(variable)
