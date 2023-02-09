@@ -220,8 +220,8 @@ class DVCClientTests {
         try {
             client.onInitialized(object : DVCCallback<String> {
                 override fun onSuccess(result: String) {
-                    client.resetUser(object: DVCCallback<Map<String, Variable<Any>>> {
-                        override fun onSuccess(result: Map<String, Variable<Any>>) {
+                    client.resetUser(object: DVCCallback<Map<String, ReadOnlyVariable<Any>>> {
+                        override fun onSuccess(result: Map<String, ReadOnlyVariable<Any>>) {
                             Assertions.assertEquals("Flag activated!", result["activate-flag"]?.value.toString())
                         }
 
@@ -233,8 +233,8 @@ class DVCClientTests {
 
                     })
 
-                    client.identifyUser(DVCUser.builder().withUserId("new_userid").build(), object: DVCCallback<Map<String, Variable<Any>>> {
-                        override fun onSuccess(result: Map<String, Variable<Any>>) {
+                    client.identifyUser(DVCUser.builder().withUserId("new_userid").build(), object: DVCCallback<Map<String, ReadOnlyVariable<Any>>> {
+                        override fun onSuccess(result: Map<String, ReadOnlyVariable<Any>>) {
                             Assertions.assertEquals("Second!", result["wobble"]?.value.toString())
                             calledBack = true
                             countDownLatch.countDown()
@@ -283,8 +283,8 @@ class DVCClientTests {
 
         val i = AtomicInteger(0)
 
-        val callback = object: DVCCallback<Map<String, Variable<Any>>> {
-            override fun onSuccess(result: Map<String, Variable<Any>>) {
+        val callback = object: DVCCallback<Map<String, ReadOnlyVariable<Any>>> {
+            override fun onSuccess(result: Map<String, ReadOnlyVariable<Any>>) {
                 Assertions.assertEquals("Flag activated!", result["activate-flag"]?.value.toString())
 
                 if (i.get() == 0) {
@@ -461,8 +461,8 @@ class DVCClientTests {
 
         val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
         val newUser = DVCUser.builder().withUserId("123").withIsAnonymous(false).build()
-        val callback = object: DVCCallback<Map<String, Variable<Any>>> {
-            override fun onSuccess(result: Map<String, Variable<Any>>) {
+        val callback = object: DVCCallback<Map<String, ReadOnlyVariable<Any>>> {
+            override fun onSuccess(result: Map<String, ReadOnlyVariable<Any>>) {
                 verify(editor, times(1))?.remove(eq("ANONYMOUS_USER_ID"))
             }
             override fun onError(t: Throwable) {}
@@ -477,8 +477,8 @@ class DVCClientTests {
         user.setAccessible(true)
 
         val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
-        val callback = object: DVCCallback<Map<String, Variable<Any>>> {
-            override fun onSuccess(result: Map<String, Variable<Any>>) {
+        val callback = object: DVCCallback<Map<String, ReadOnlyVariable<Any>>> {
+            override fun onSuccess(result: Map<String, ReadOnlyVariable<Any>>) {
                 var anonUser: PopulatedUser = user.get(client) as PopulatedUser
                 verify(editor, times(1))?.putString(eq("ANONYMOUS_USER_ID"), eq(anonUser.userId))
             }
@@ -735,19 +735,20 @@ class DVCClientTests {
     }
 
     private fun generateConfig(key: String, value: String, type: Variable.TypeEnum): BucketedUserConfig {
-        val variables: MutableMap<String, Variable<Any>> = HashMap()
+        val variables: MutableMap<String, ReadOnlyVariable<Any>> = HashMap()
         variables[key] = createNewVariable(key, value, type)
         val sse = SSE()
         sse.url = "https://www.bread.com"
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun <T> createNewVariable(key: String, value: T, type: Variable.TypeEnum): Variable<T> {
-        return Variable(
+    private fun <T> createNewVariable(key: String, value: T, type: Variable.TypeEnum): ReadOnlyVariable<T> {
+        return ReadOnlyVariable(
             id = UUID.randomUUID().toString(),
             key = key,
             value = value,
-            type = type
+            type = type,
+            evalReason = null
         )
     }
 
