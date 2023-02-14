@@ -166,11 +166,14 @@ class Variable<T> internal constructor(
                 Number::class.java.isAssignableFrom(typeClass) -> TypeEnum.NUMBER
                 Boolean::class.java.isAssignableFrom(typeClass) -> TypeEnum.BOOLEAN
                 JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+                LinkedHashMap::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
                 // Java types
                 java.lang.String::class.java.isAssignableFrom(typeClass) -> TypeEnum.STRING
                 java.lang.Number::class.java.isAssignableFrom(typeClass) -> TypeEnum.NUMBER
                 java.lang.Boolean::class.java.isAssignableFrom(typeClass) -> TypeEnum.BOOLEAN
                 org.json.JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+                java.util.LinkedHashMap::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+
                 else -> null
             }
 
