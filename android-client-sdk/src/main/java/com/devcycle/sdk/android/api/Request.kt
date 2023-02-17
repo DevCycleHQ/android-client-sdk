@@ -15,10 +15,10 @@ import retrofit2.Response
 import timber.log.Timber
 import java.io.IOException
 
-internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
+internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
-    private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(envKey, eventsBaseUrl)
-    private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(envKey, apiBaseUrl)
+    private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(sdkKey, eventsBaseUrl)
+    private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(sdkKey, apiBaseUrl)
     private val objectMapper = jacksonObjectMapper()
     private val configMutex = Mutex()
 
@@ -46,7 +46,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
     }
 
     suspend fun getConfigJson(
-        environmentKey: String,
+        sdkKey: String,
         user: PopulatedUser,
         enableEdgeDB: Boolean,
         sse: Boolean? = false,
@@ -79,7 +79,7 @@ internal class Request constructor(envKey: String, apiBaseUrl: String, eventsBas
             val maxDelay = 10000L
 
             flow {
-                val response = api.getConfigJson(environmentKey, map)
+                val response = api.getConfigJson(sdkKey, map)
                 emit(getResponseHandler(response))
             }
                 .flowOn(Dispatchers.Default)

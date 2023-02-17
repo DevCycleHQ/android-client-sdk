@@ -721,7 +721,7 @@ class DVCClientTests {
             .withContext(mockContext!!)
             .withHandler(mockHandler)
             .withUser(user ?: DVCUser.builder().withUserId("nic_test").build())
-            .withEnvironmentKey(sdkKey)
+            .withSDKKey(sdkKey)
             .withLogger(tree)
             .withApiUrl(mockUrl)
             .withOptions(

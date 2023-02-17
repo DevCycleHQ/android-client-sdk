@@ -31,7 +31,7 @@ import kotlin.coroutines.CoroutineContext
  */
 class DVCClient private constructor(
     private val context: Context,
-    private val environmentKey: String,
+    private val sdkKey: String,
     private var user: PopulatedUser,
     options: DVCOptions?,
     apiUrl: String,
@@ -45,7 +45,7 @@ class DVCClient private constructor(
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request(environmentKey, apiUrl, eventsUrl)
+    private val request: Request = Request(sdkKey, apiUrl, eventsUrl)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
     private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
@@ -399,7 +399,7 @@ class DVCClient private constructor(
     }
 
     private suspend fun fetchConfig(user: PopulatedUser, sse: Boolean? = false, lastModified: Long? = null) {
-        val result = request.getConfigJson(environmentKey, user, enableEdgeDB, sse, lastModified)
+        val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified)
         config = result
         observable.configUpdated(config)
         dvcSharedPrefs.saveConfig(config!!, user)
@@ -456,7 +456,7 @@ class DVCClient private constructor(
     class DVCClientBuilder {
         private var context: Context? = null
         private var customLifecycleHandler: Handler? = null
-        private var environmentKey: String? = null
+        private var sdkKey: String? = null
         private var user: PopulatedUser? = null
         private var options: DVCOptions? = null
         private var logLevel: LogLevel = LogLevel.ERROR
@@ -478,8 +478,14 @@ class DVCClient private constructor(
             return this
         }
 
+        fun withSDKKey(sdkKey: String): DVCClientBuilder {
+            this.sdkKey = sdkKey
+            return this
+        }
+
+        @Deprecated("Use withSDKKey() instead")
         fun withEnvironmentKey(environmentKey: String): DVCClientBuilder {
-            this.environmentKey = environmentKey
+            this.sdkKey = environmentKey
             return this
         }
 
@@ -512,7 +518,7 @@ class DVCClient private constructor(
 
         fun build(): DVCClient {
             requireNotNull(context) { "Context must be set" }
-            require(!(environmentKey == null || environmentKey == "")) { "SDK key must be set" }
+            require(!(sdkKey == null || sdkKey == "")) { "SDK key must be set" }
             requireNotNull(dvcUser) { "User must be set" }
 
             if (logLevel.value > 0) {
@@ -525,7 +531,7 @@ class DVCClient private constructor(
 
             this.user = PopulatedUser.fromUserParam(dvcUser!!, context!!, anonId)
 
-            return DVCClient(context!!, environmentKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
+            return DVCClient(context!!, sdkKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
         }
     }
 
