@@ -30,7 +30,7 @@ public class JavaApplication extends Application {
                                 .withUserId("test_user")
                                 .build()
                 )
-                .withEnvironmentKey("<ADD-MOBILE-KEY-HERE>")
+                .withSDKKey("<YOUR_MOBILE_SDK_KEY>")
                 .withLogLevel(LogLevel.DEBUG)
                 .build();
 

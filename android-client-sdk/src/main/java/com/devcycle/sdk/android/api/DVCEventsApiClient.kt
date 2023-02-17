@@ -12,8 +12,8 @@ internal class DVCEventsApiClient {
     private val adapterBuilder: Retrofit.Builder = Retrofit.Builder()
         .addConverterFactory(JacksonConverterFactory.create(objectMapper))
 
-    fun initialize(envKey: String, baseUrl: String): DVCEventsApi {
-        okBuilder.addInterceptor(AuthorizationHeaderInterceptor(envKey))
+    fun initialize(sdkKey: String, baseUrl: String): DVCEventsApi {
+        okBuilder.addInterceptor(AuthorizationHeaderInterceptor(sdkKey))
         return adapterBuilder
             .baseUrl(baseUrl)
             .client(okBuilder.build())

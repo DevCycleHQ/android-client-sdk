@@ -24,7 +24,7 @@ class KotlinApplication: Application() {
                     .withCustomData(mapOf("custom_value" to "test"))
                     .build()
             )
-            .withEnvironmentKey("<YOUR_MOBILE_SDK_KEY>")
+            .withSDKKey("<YOUR_MOBILE_SDK_KEY>")
             .withLogLevel(LogLevel.DEBUG)
             .withLogger(Timber.DebugTree())
             .build()
