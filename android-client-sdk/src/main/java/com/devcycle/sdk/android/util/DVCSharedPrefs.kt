@@ -6,8 +6,6 @@ import com.devcycle.sdk.android.R
 import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.devcycle.sdk.android.model.PopulatedUser
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import timber.log.Timber
 import java.util.*
@@ -19,8 +17,6 @@ internal class DVCSharedPrefs(context: Context) {
         Context.MODE_PRIVATE
     )
 
-    private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
-
     companion object {
         const val UserKey = "USER"
         const val AnonUserIdKey = "ANONYMOUS_USER_ID"
@@ -31,7 +27,7 @@ internal class DVCSharedPrefs(context: Context) {
     @Synchronized
     fun <T> save(objectToSave: T, key: String?) {
         try {
-            val jsonString = objectMapper.writeValueAsString(objectToSave)
+            val jsonString = JSONMapper.mapper.writeValueAsString(objectToSave)
             preferences.edit().putString(key, jsonString).apply()
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
@@ -73,7 +69,7 @@ internal class DVCSharedPrefs(context: Context) {
         try {
             val key = if (user.isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
             val editor = preferences.edit()
-            val jsonString = objectMapper.writeValueAsString(configToSave)
+            val jsonString = JSONMapper.mapper.writeValueAsString(configToSave)
             editor.putString(key, jsonString)
             editor.putString("$key.USER_ID", user.userId)
             editor.putLong("$key.FETCH_DATE", Calendar.getInstance().timeInMillis)
@@ -107,7 +103,7 @@ internal class DVCSharedPrefs(context: Context) {
                 return null
             }
 
-            return objectMapper.readValue(configString)
+            return JSONMapper.mapper.readValue(configString)
         } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
             return null

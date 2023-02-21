@@ -14,6 +14,7 @@ package com.devcycle.sdk.android.model
 import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
+import com.devcycle.sdk.android.util.JSONMapper
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -88,9 +89,17 @@ class Variable<T> internal constructor(
             throw DVCVariableException("Cannot update Variable with a different type", this as Variable<Any>, variable)
         }
         id = variable.id
-        if (variable.value != value) {
+        if (variable::class == JSONObjectConfigVariable::class || variable::class == JSONArrayConfigVariable::class) {
+            val new = JSONMapper.mapper.readTree(variable.value.toString())
+            val existing = JSONMapper.mapper.readTree(value.toString())
+
+            if (new != existing) {
+                executeCallBack = true
+            }
+        } else if (variable.value != value) {
             executeCallBack = true
         }
+
 
         value = variable.value as T
 
@@ -148,7 +157,6 @@ class Variable<T> internal constructor(
                 )
                 returnVariable.isDefaulted = true
                 if (readOnlyVariable != null) {
-                    Timber.d(getType(readOnlyVariable.value).toString())
                     Timber.e("Mismatched variable type for variable: $key, using default")
                 }
                 return returnVariable
@@ -170,8 +178,8 @@ class Variable<T> internal constructor(
                 java.lang.String::class.java.isAssignableFrom(typeClass) -> TypeEnum.STRING
                 java.lang.Number::class.java.isAssignableFrom(typeClass) -> TypeEnum.NUMBER
                 java.lang.Boolean::class.java.isAssignableFrom(typeClass) -> TypeEnum.BOOLEAN
-                JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
-                JSONArray::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+                org.json.JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+                org.json.JSONArray::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
                 else -> null
             }
 
