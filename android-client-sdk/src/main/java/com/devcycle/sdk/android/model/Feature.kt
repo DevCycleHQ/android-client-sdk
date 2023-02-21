@@ -44,7 +44,14 @@ class Feature {
      * Feature type
      */
     enum class TypeEnum(@get:JsonValue val value: String) {
-        RELEASE("release"), EXPERIMENT("experiment"), PERMISSION("permission"), OPS("ops");
+        @JsonProperty("release")
+        RELEASE("release"),
+        @JsonProperty("experiment")
+        EXPERIMENT("experiment"),
+        @JsonProperty("permission")
+        PERMISSION("permission"),
+        @JsonProperty("ops")
+        OPS("ops");
 
         override fun toString(): String {
             return value
