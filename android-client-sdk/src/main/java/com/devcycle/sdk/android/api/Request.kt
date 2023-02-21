@@ -3,10 +3,9 @@ package com.devcycle.sdk.android.api
 import com.devcycle.sdk.android.exception.DVCRequestException
 
 import com.devcycle.sdk.android.model.*
+import com.devcycle.sdk.android.util.JSONMapper
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -20,7 +19,6 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(sdkKey, eventsBaseUrl)
     private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(sdkKey, apiBaseUrl)
-    private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
     private val configMutex = Mutex()
 
     private fun <T> getResponseHandler(response: Response<T>): T {
@@ -32,7 +30,7 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
 
             if (response.errorBody() != null) {
                 try {
-                    errorResponse = objectMapper.readValue(
+                    errorResponse = JSONMapper.mapper.readValue(
                         response.errorBody()!!.string(),
                         ErrorResponse::class.java
                     )
@@ -54,13 +52,13 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
         lastModified: Long? = null
     ): BucketedUserConfig {
         val map = (
-                objectMapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
+                JSONMapper.mapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
         ) as MutableMap<String, String>
         if (map.contains("customData")) {
-            map["customData"] = objectMapper.writeValueAsString(map["customData"])
+            map["customData"] = JSONMapper.mapper.writeValueAsString(map["customData"])
         }
         if (map.contains("privateCustomData")) {
-            map["privateCustomData"] = objectMapper.writeValueAsString(map["privateCustomData"])
+            map["privateCustomData"] = JSONMapper.mapper.writeValueAsString(map["privateCustomData"])
         }
         if (enableEdgeDB) {
             map["enableEdgeDB"] = "true"
@@ -117,6 +115,6 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
     }
 
     init {
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        JSONMapper.mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
     }
 }

@@ -1,16 +1,14 @@
 package com.devcycle.sdk.android.api
 
-import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.devcycle.sdk.android.util.JSONMapper
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
 
 internal class DVCApiClient {
     private val okBuilder: OkHttpClient.Builder = OkHttpClient.Builder()
-    private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
     private val adapterBuilder: Retrofit.Builder = Retrofit.Builder()
-        .addConverterFactory(JacksonConverterFactory.create(objectMapper))
+        .addConverterFactory(JacksonConverterFactory.create(JSONMapper.mapper))
 
     fun initialize(baseUrl: String): DVCApi {
         return adapterBuilder
