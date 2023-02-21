@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonValue
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
+import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 import java.beans.PropertyChangeEvent
@@ -81,7 +82,7 @@ class Variable<T> internal constructor(
 
     @Throws(IllegalArgumentException::class)
     @Suppress("UNCHECKED_CAST")
-    private fun updateVariable(variable: ReadOnlyVariable<Any>) {
+    private fun updateVariable(variable: BaseConfigVariable) {
         var executeCallBack = false
         if (getType(variable.value) != type) {
             throw DVCVariableException("Cannot update Variable with a different type", this as Variable<Any>, variable)
@@ -91,11 +92,7 @@ class Variable<T> internal constructor(
             executeCallBack = true
         }
 
-        value = if (type == TypeEnum.JSON) {
-            JSONObject(variable.value as MutableMap<Any?, Any?>) as T
-        } else {
-            variable.value as T
-        }
+        value = variable.value as T
 
         isDefaulted = false
         evalReason = variable.evalReason
@@ -128,7 +125,7 @@ class Variable<T> internal constructor(
     }
 
     companion object {
-        @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, readOnlyVariable: ReadOnlyVariable<Any>?): Variable<T> {
+        @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, readOnlyVariable: BaseConfigVariable?): Variable<T> {
             val type = getType(defaultValue)
             if (readOnlyVariable != null && type != null && getType(readOnlyVariable.value) === type) {
                 @Suppress("UNCHECKED_CAST")
@@ -151,13 +148,14 @@ class Variable<T> internal constructor(
                 )
                 returnVariable.isDefaulted = true
                 if (readOnlyVariable != null) {
+                    Timber.d(getType(readOnlyVariable.value).toString())
                     Timber.e("Mismatched variable type for variable: $key, using default")
                 }
                 return returnVariable
             }
         }
 
-        private fun <T: Any> getType(value: T): TypeEnum? {
+        private fun <T: Any> getType(value: T, fromReadOnlyVariable: Boolean = false): TypeEnum? {
             val typeClass = value::class.java
 
             var typeEnum = when {
@@ -166,11 +164,14 @@ class Variable<T> internal constructor(
                 Number::class.java.isAssignableFrom(typeClass) -> TypeEnum.NUMBER
                 Boolean::class.java.isAssignableFrom(typeClass) -> TypeEnum.BOOLEAN
                 JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+                JSONArray::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+
                 // Java types
                 java.lang.String::class.java.isAssignableFrom(typeClass) -> TypeEnum.STRING
                 java.lang.Number::class.java.isAssignableFrom(typeClass) -> TypeEnum.NUMBER
                 java.lang.Boolean::class.java.isAssignableFrom(typeClass) -> TypeEnum.BOOLEAN
-                org.json.JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+                JSONObject::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
+                JSONArray::class.java.isAssignableFrom(typeClass) -> TypeEnum.JSON
                 else -> null
             }
 
@@ -189,7 +190,7 @@ class Variable<T> internal constructor(
     override fun propertyChange(evt: PropertyChangeEvent) {
         if (evt.propertyName == BucketedUserConfigListener.BucketedUserConfigObserverConstants.propertyChangeConfigUpdated) {
             val config = evt.newValue as BucketedUserConfig
-            val variable: ReadOnlyVariable<Any>? = config.variables?.get(key)
+            val variable: BaseConfigVariable? = config.variables?.get(key)
             Timber.v("Triggering property change handler for $key")
             if (variable != null) {
                 try {

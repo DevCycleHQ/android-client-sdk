@@ -5,30 +5,12 @@ import android.content.SharedPreferences
 import com.devcycle.sdk.android.R
 import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.devcycle.sdk.android.model.PopulatedUser
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.google.gson.*
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import timber.log.Timber
 import java.util.*
-
-/**
- * Strategies to use Jackson annotations for GSON serialization
- */
-val exclusionStrategy: ExclusionStrategy = object : ExclusionStrategy {
-    override fun shouldSkipClass(c: Class<*>?): Boolean {
-        return false
-    }
-
-    override fun shouldSkipField(field: FieldAttributes): Boolean {
-        return field.getAnnotation(JsonIgnore::class.java) != null
-    }
-}
-
-val fieldNameStrategy = FieldNamingStrategy { field ->
-    val jsonProperty = field.getAnnotation(JsonProperty::class.java)
-    jsonProperty?.value ?: field.name
-}
-
 
 // TODO: access disk on background thread
 internal class DVCSharedPrefs(context: Context) {
@@ -36,10 +18,8 @@ internal class DVCSharedPrefs(context: Context) {
         context.getString(R.string.cached_data),
         Context.MODE_PRIVATE
     )
-    private val gsonMapper = GsonBuilder()
-        .addSerializationExclusionStrategy(exclusionStrategy)
-        .setFieldNamingStrategy(fieldNameStrategy)
-        .create()
+
+    private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
 
     companion object {
         const val UserKey = "USER"
@@ -51,9 +31,9 @@ internal class DVCSharedPrefs(context: Context) {
     @Synchronized
     fun <T> save(objectToSave: T, key: String?) {
         try {
-            val jsonString = gsonMapper.toJson(objectToSave)
+            val jsonString = objectMapper.writeValueAsString(objectToSave)
             preferences.edit().putString(key, jsonString).apply()
-        } catch (e: JsonSyntaxException) {
+        } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
         }
     }
@@ -64,7 +44,7 @@ internal class DVCSharedPrefs(context: Context) {
             val editor: SharedPreferences.Editor = preferences.edit()
             editor.remove(key)
             editor.commit()
-        } catch (e: JsonSyntaxException) {
+        } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
         }
     }
@@ -83,7 +63,7 @@ internal class DVCSharedPrefs(context: Context) {
         try {
             preferences.edit().putString(key, value).apply()
             preferences.edit().commit()
-        } catch (e: JsonSyntaxException) {
+        } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
         }
     }
@@ -93,12 +73,12 @@ internal class DVCSharedPrefs(context: Context) {
         try {
             val key = if (user.isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
             val editor = preferences.edit()
-            val jsonString = gsonMapper.toJson(configToSave)
+            val jsonString = objectMapper.writeValueAsString(configToSave)
             editor.putString(key, jsonString)
             editor.putString("$key.USER_ID", user.userId)
             editor.putLong("$key.FETCH_DATE", Calendar.getInstance().timeInMillis)
             editor.apply()
-        } catch (e: JsonSyntaxException) {
+        } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
         }
     }
@@ -127,8 +107,8 @@ internal class DVCSharedPrefs(context: Context) {
                 return null
             }
 
-            return gsonMapper.fromJson(configString, BucketedUserConfig::class.java)
-        } catch (e: JsonSyntaxException) {
+            return objectMapper.readValue(configString)
+        } catch (e: JsonProcessingException) {
             Timber.e(e, e.message)
             return null
         }

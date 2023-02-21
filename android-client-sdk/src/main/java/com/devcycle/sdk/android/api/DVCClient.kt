@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.TestOnly
+import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 import java.lang.ref.WeakReference
@@ -166,7 +167,7 @@ class DVCClient private constructor(
      */
     @JvmOverloads
     @Synchronized
-    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, ReadOnlyVariable<Any>>>? = null) {
+    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, BaseConfigVariable>>? = null) {
         flushEvents()
 
         val updatedUser: PopulatedUser = if (this@DVCClient.user.userId == user.userId) {
@@ -207,7 +208,7 @@ class DVCClient private constructor(
      */
     @JvmOverloads
     @Synchronized
-    fun resetUser(callback: DVCCallback<Map<String, ReadOnlyVariable<Any>>>? = null) {
+    fun resetUser(callback: DVCCallback<Map<String, BaseConfigVariable>>? = null) {
         val newUser: PopulatedUser = PopulatedUser.buildAnonymous()
         latestIdentifiedUser = newUser
 
@@ -257,7 +258,7 @@ class DVCClient private constructor(
      * Returns the Map of Variables in the config
      */
     @Synchronized
-    fun allVariables(): Map<String, ReadOnlyVariable<Any>>? {
+    fun allVariables(): Map<String, BaseConfigVariable>? {
         return if (config == null) emptyMap() else config!!.variables
     }
 
@@ -269,8 +270,28 @@ class DVCClient private constructor(
      * [defaultValue] is set on the Variable and used to provide a default value if the Variable
      * could not be fetched or does not exist
      */
+    fun variable(key: String, defaultValue: String): Variable<String> {
+        return this._variable(key, defaultValue)
+    }
+
+    fun variable(key: String, defaultValue: Number): Variable<Number> {
+        return this._variable(key, defaultValue)
+    }
+
+    fun variable(key: String, defaultValue: Boolean): Variable<Boolean> {
+        return this._variable(key, defaultValue)
+    }
+
+    fun variable(key: String, defaultValue: JSONObject): Variable<JSONObject> {
+        return this._variable(key, defaultValue)
+    }
+
+    fun variable(key: String, defaultValue: JSONArray): Variable<JSONArray> {
+        return this._variable(key, defaultValue)
+    }
+
     @Synchronized
-    fun <T: Any> variable(key: String, defaultValue: T): Variable<T> {
+    private fun <T: Any> _variable(key: String, defaultValue: T): Variable<T> {
         Variable.getAndValidateType(defaultValue)
         val variable = this.getCachedVariable(key, defaultValue)
 
@@ -291,7 +312,7 @@ class DVCClient private constructor(
     }
 
     private fun <T: Any> getCachedVariable(key: String, defaultValue: T): Variable<T> {
-        val variableByKey: ReadOnlyVariable<Any>? = config?.variables?.get(key)
+        val variableByKey: BaseConfigVariable? = config?.variables?.get(key)
         val variable: Variable<T>
 
         if (!variableInstanceMap.containsKey(key)) {
@@ -354,7 +375,7 @@ class DVCClient private constructor(
              */
             while (!configRequestQueue.isEmpty()) {
                 var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
-                val callbacks: MutableList<DVCCallback<Map<String, ReadOnlyVariable<Any>>>> =
+                val callbacks: MutableList<DVCCallback<Map<String, BaseConfigVariable>>> =
                     mutableListOf()
 
                 if (latestUserAndCallback.callback != null) {
@@ -420,7 +441,7 @@ class DVCClient private constructor(
         }
     }
 
-    private fun refetchConfig(sse: Boolean = false, lastModified: Long? = null, callback: DVCCallback<Map<String, ReadOnlyVariable<Any>>>? = null) {
+    private fun refetchConfig(sse: Boolean = false, lastModified: Long? = null, callback: DVCCallback<Map<String, BaseConfigVariable>>? = null) {
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
             Timber.d("Queued refetchConfig request")

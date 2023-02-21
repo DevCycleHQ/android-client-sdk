@@ -5,6 +5,7 @@ import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.model.*
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -19,7 +20,7 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(sdkKey, eventsBaseUrl)
     private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(sdkKey, apiBaseUrl)
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
     private val configMutex = Mutex()
 
     private fun <T> getResponseHandler(response: Response<T>): T {
