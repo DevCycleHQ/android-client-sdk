@@ -13,7 +13,6 @@ import android.os.LocaleList
 import com.devcycle.sdk.android.api.DVCClient.Companion.builder
 import com.devcycle.sdk.android.helpers.TestTree
 import com.devcycle.sdk.android.model.*
-import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
@@ -72,6 +71,8 @@ class DVCClientTests {
     @DelicateCoroutinesApi
     private val mainThreadSurrogate = newSingleThreadContext("UI thread")
 
+    val requests = ConcurrentLinkedQueue<RecordedRequest>()
+
     @DelicateCoroutinesApi
     @ExperimentalCoroutinesApi
     @BeforeEach
@@ -121,6 +122,8 @@ class DVCClientTests {
 
         Dispatchers.setMain(mainThreadSurrogate)
 
+        requests.clear()
+
         mockWebServer = MockWebServer()
         mockWebServer.start()
 
@@ -163,6 +166,7 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
@@ -195,6 +199,7 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
@@ -263,68 +268,79 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
     fun `ensure config requests are queued and executed later`() {
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
         generateDispatcher(config = config)
+        val initializeLatch = CountDownLatch(1)
 
         val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
         client.onInitialized(object: DVCCallback<String> {
             override fun onSuccess(result: String) {
+                calledBack = true
                 val takeRequest = requests.remove()
                 takeRequest.path?.contains("nic_test")?.let { Assertions.assertTrue(it) }
+                initializeLatch.countDown()
             }
 
             override fun onError(t: Throwable) {
-                calledBack = true
                 error = t
-                countDownLatch.countDown()
             }
         })
 
+        waitForOpenLatch(initializeLatch, 2000, TimeUnit.MILLISECONDS)
+
         val i = AtomicInteger(0)
+        val callbackLatch = CountDownLatch(5)
 
         val callback = object: DVCCallback<Map<String, BaseConfigVariable>> {
             override fun onSuccess(result: Map<String, BaseConfigVariable>) {
                 Assertions.assertEquals("Flag activated!", result["activate-flag"]?.value.toString())
 
-                if (i.get() == 0) {
-                    // If there are no more requests mockwebserver awaits the next response and we're not expecting any more
-                    val takeRequest = requests.remove()
-                    takeRequest.path?.contains("new_userid5")?.let { Assertions.assertTrue(it) }
-                }
-
-                calledBack = true
                 i.getAndIncrement()
 
-                if (i.get() == 5) {
-                    countDownLatch.countDown()
-                }
+                callbackLatch.countDown()
             }
 
             override fun onError(t: Throwable) {
                 error = t
-                calledBack = true
-                countDownLatch.countDown()
             }
         }
 
-        try {
-            client.identifyUser(DVCUser.builder().withUserId("new_userid").build(), callback)
-            client.identifyUser(DVCUser.builder().withUserId("new_userid1").build(), callback)
-            client.identifyUser(DVCUser.builder().withUserId("new_userid2").build(), callback)
-            client.identifyUser(DVCUser.builder().withUserId("new_userid3").build(), callback)
-            client.identifyUser(DVCUser.builder().withUserId("new_userid4").build(), callback)
-            client.identifyUser(DVCUser.builder().withUserId("new_userid5").build(), callback)
-        } catch(t: Throwable) {
-            countDownLatch.countDown()
-        } finally {
-            countDownLatch.await(4000, TimeUnit.MILLISECONDS)
-            handleFinally(calledBack, error)
-            Assertions.assertEquals(2, configRequestCount)
+        client.identifyUser(DVCUser.builder().withUserId("new_userid").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("new_userid1").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("new_userid2").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("new_userid3").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("new_userid4").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("new_userid5").build(), callback)
+
+        waitForOpenLatch(callbackLatch, 5000, TimeUnit.MILLISECONDS)
+
+        // initial config request + leading and trailing edge debounce of identify calls
+        Assertions.assertEquals(3, configRequestCount)
+        requests.forEach {
+            if (it.path?.contains("/events") == true) {
+                return
+            } else {
+                // expect only the first and last user id to be sent as a result of the identify calls
+                try {
+                    Assertions.assertTrue(it.path?.contains("new_userid5") == true ||
+                            it.path?.contains("new_userid&") == true
+                    )
+                } catch (e: org.opentest4j.AssertionFailedError) {
+                    println(it.path)
+                    throw e
+                }
+
+            }
         }
+
+        handleFinally(calledBack, error)
+
+        client.close()
     }
 
     @Test
@@ -357,7 +373,7 @@ class DVCClientTests {
         countDownLatch.await(2000, TimeUnit.MILLISECONDS)
         // only the init and refetchConfig requests should have been sent bc the identifyUser requests should have been skipped in the queue
         Assertions.assertEquals(2, configRequestCount)
-
+        client.close()
     }
 
     @Test
@@ -389,6 +405,7 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
@@ -412,6 +429,7 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
@@ -420,8 +438,7 @@ class DVCClientTests {
         val config2 = generateJSONObjectConfig("activate-flag", JSONObject(mapOf("test2" to "value2")))
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
-        // events request
-        mockWebServer.enqueue(MockResponse().setResponseCode(201))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config2)))
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config2)))
 
         Assertions.assertEquals(0, mockWebServer.requestCount)
@@ -449,10 +466,14 @@ class DVCClientTests {
         Assertions.assertEquals(variable.value.getString("arg"), "yeah")
         initializedLatch.await(2000, TimeUnit.MILLISECONDS)
         Assertions.assertEquals(variable.value.getString("test"), "value")
+
         countDownLatch.await(3000, TimeUnit.MILLISECONDS)
         Assertions.assertEquals(variable.value.getString("test2"), "value2")
+
         Assertions.assertEquals(0, countDownLatch.count)
         Assertions.assertEquals(0, initializedLatch.count)
+
+        client.close()
     }
 
     @Test
@@ -485,6 +506,7 @@ class DVCClientTests {
         Assertions.assertEquals(2, configRequestCount)
         Assertions.assertEquals(1, countDownLatch.count)
         Assertions.assertEquals(0, initializedLatch.count)
+        client.close()
     }
 
     @Test
@@ -517,6 +539,7 @@ class DVCClientTests {
         Assertions.assertEquals(2, configRequestCount)
         Assertions.assertEquals(1, countDownLatch.count)
         Assertions.assertEquals(0, initializedLatch.count)
+        client.close()
     }
 
     @Test
@@ -537,6 +560,7 @@ class DVCClientTests {
         client.variable("activate-flag", "Test Weak Reference")
         val variable4 = client.variable("activate-flag", "Test Weak Reference")
         assert(variable !== variable4)
+        client.close()
     }
 
     @Test
@@ -550,6 +574,7 @@ class DVCClientTests {
         var anonUser: PopulatedUser = user.get(client) as PopulatedUser
 
         Assertions.assertEquals("some-anon-id", anonUser.userId)
+        client.close()
     }
 
     @Test
@@ -561,6 +586,7 @@ class DVCClientTests {
         var anonUser: PopulatedUser = user.get(client) as PopulatedUser
 
         verify(editor, times(1))?.putString(eq("ANONYMOUS_USER_ID"), eq(anonUser.userId))
+        client.close()
     }
 
     @Test
@@ -576,6 +602,7 @@ class DVCClientTests {
             override fun onError(t: Throwable) {}
         }
         client.identifyUser(newUser, callback)
+        client.close()
     }
 
     @Test
@@ -593,6 +620,7 @@ class DVCClientTests {
             override fun onError(t: Throwable) {}
         }
         client.resetUser(callback)
+        client.close()
     }
 
     @Test
@@ -648,6 +676,7 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
@@ -673,7 +702,7 @@ class DVCClientTests {
                         .withMetaData(mapOf("test" to "value"))
                         .build())
 
-                    Thread.sleep(250L)
+                    Thread.sleep(500L)
 
                     val logs = tree.logs
 
@@ -693,9 +722,10 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(5000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
@@ -737,6 +767,7 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     @Test
@@ -804,6 +835,7 @@ class DVCClientTests {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
+        client.close()
     }
 
     private fun handleFinally(
@@ -896,19 +928,17 @@ class DVCClientTests {
         )
     }
 
-    val requests = ConcurrentLinkedQueue<RecordedRequest>()
-
     private fun generateDispatcher(routes: List<Pair<String, MockResponse>>? = null, config: BucketedUserConfig? = null) {
         mockWebServer.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 if (routes == null) {
                     requests.add(request)
                     if (request.path == "/v1/events") {
-                        return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
+                        return MockResponse().setResponseCode(201).setBodyDelay(200, TimeUnit.MILLISECONDS).setBody("{\"message\": \"Success\"}")
                     } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
                         configRequestCount++
                         Assertions.assertEquals(false, request.path.toString().contains("enableEdgeDB"))
-                        return MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
+                        return MockResponse().setResponseCode(200).setBodyDelay(400, TimeUnit.MILLISECONDS).setBody(objectMapper.writeValueAsString(config))
                     }
                 } else {
                     for (route: Pair<String, MockResponse> in routes) {
@@ -920,6 +950,11 @@ class DVCClientTests {
                 return MockResponse().setResponseCode(404)
             }
         }
+    }
+
+    private fun waitForOpenLatch(latch: CountDownLatch, timeout: Long, units: TimeUnit) {
+        latch.await(timeout, units)
+        Assertions.assertEquals(0, latch.count)
     }
 }
 
