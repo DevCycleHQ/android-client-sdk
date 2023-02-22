@@ -84,22 +84,11 @@ class Variable<T> internal constructor(
     @Throws(IllegalArgumentException::class)
     @Suppress("UNCHECKED_CAST")
     private fun updateVariable(variable: BaseConfigVariable) {
-        var executeCallBack = false
         if (getType(variable.value) != type) {
             throw DVCVariableException("Cannot update Variable with a different type", this as Variable<Any>, variable)
         }
         id = variable.id
-        if (variable::class == JSONObjectConfigVariable::class || variable::class == JSONArrayConfigVariable::class) {
-            val new = JSONMapper.mapper.readTree(variable.value.toString())
-            val existing = JSONMapper.mapper.readTree(value.toString())
-
-            if (new != existing) {
-                executeCallBack = true
-            }
-        } else if (variable.value != value) {
-            executeCallBack = true
-        }
-
+        val executeCallBack = hasValueChanged(value, variable.value as T)
 
         value = variable.value as T
 
@@ -117,20 +106,31 @@ class Variable<T> internal constructor(
     @Throws(IllegalArgumentException::class)
     @Suppress("UNCHECKED_CAST")
     private fun defaultVariable() {
-        var executeCallBack = false
-        if (value != defaultValue) {
-            executeCallBack = true
-            value = defaultValue
-        }
-
+        val executeCallBack = hasValueChanged(value, defaultValue)
         isDefaulted = true
 
         if (executeCallBack) {
+            value = defaultValue
             val self = this
             coroutineScope.launch {
                 callback?.onSuccess(self)
             }
         }
+    }
+
+    private fun hasValueChanged(oldValue: T, newValue: T): Boolean {
+        if (newValue!!::class == JSONObject::class || newValue!!::class == JSONArray::class) {
+            val new = JSONMapper.mapper.readTree(newValue.toString())
+            val existing = JSONMapper.mapper.readTree(oldValue.toString())
+
+            if (new != existing) {
+                return true
+            }
+        } else if (newValue != oldValue) {
+            return true
+        }
+
+        return false
     }
 
     companion object {

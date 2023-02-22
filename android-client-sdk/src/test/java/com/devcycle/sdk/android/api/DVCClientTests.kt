@@ -14,6 +14,7 @@ import com.devcycle.sdk.android.api.DVCClient.Companion.builder
 import com.devcycle.sdk.android.helpers.TestTree
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DVCSharedPrefs
+import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
 import io.mockk.mockk
@@ -47,6 +48,8 @@ import kotlin.streams.toList
 class DVCClientTests {
 
     private lateinit var mockWebServer: MockWebServer
+
+    private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
 
     private val tree = TestTree()
     private var configRequestCount = 0
@@ -166,7 +169,7 @@ class DVCClientTests {
     fun `onInitialized will return successfully if SDK key is valid`() {
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
@@ -206,9 +209,9 @@ class DVCClientTests {
                     return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
                 } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
                     return if (request.sequenceNumber == 1) {
-                        MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config))
+                        MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
                     } else {
-                        MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(configTwo))
+                        MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(configTwo))
                     }
                 }
                 return MockResponse().setResponseCode(404)
@@ -361,7 +364,7 @@ class DVCClientTests {
     fun `variable calls back when variable value changes`() {
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
@@ -392,7 +395,7 @@ class DVCClientTests {
     fun `variable calls back when variable value changes using plain function`() {
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
@@ -412,10 +415,115 @@ class DVCClientTests {
     }
 
     @Test
+    fun `variable calls back when variable value has changed for json object`() {
+        val config = generateJSONObjectConfig("activate-flag", JSONObject(mapOf("test" to "value")))
+        val config2 = generateJSONObjectConfig("activate-flag", JSONObject(mapOf("test2" to "value2")))
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+        // events request
+        mockWebServer.enqueue(MockResponse().setResponseCode(201))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config2)))
+
+        Assertions.assertEquals(0, mockWebServer.requestCount)
+
+        val client = createClient("dvc-mobile-pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val countDownLatch = CountDownLatch(2)
+        val initializedLatch = CountDownLatch(1)
+
+        val variable = client.variable("activate-flag", JSONObject(mapOf("arg" to "yeah")))
+        variable.onUpdate {
+            countDownLatch.countDown()
+        }
+
+        client.onInitialized(object: DVCCallback<String> {
+            override fun onSuccess(result: String) {
+                client.identifyUser(DVCUser.builder().withUserId("asdasdas").build())
+                initializedLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                error = t
+            }
+        })
+
+        Assertions.assertEquals(variable.value.getString("arg"), "yeah")
+        initializedLatch.await(2000, TimeUnit.MILLISECONDS)
+        Assertions.assertEquals(variable.value.getString("test"), "value")
+        countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+        Assertions.assertEquals(variable.value.getString("test2"), "value2")
+        Assertions.assertEquals(0, countDownLatch.count)
+        Assertions.assertEquals(0, initializedLatch.count)
+    }
+
+    @Test
+    fun `variable does not call back when variable value has not changed for json object`() {
+        val config = generateJSONObjectConfig("activate-flag", JSONObject(mapOf("test" to "value")))
+
+        generateDispatcher(config = config)
+        val client = createClient("dvc-mobile-pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val countDownLatch = CountDownLatch(2)
+        val initializedLatch = CountDownLatch(1)
+
+        val variable = client.variable("activate-flag", JSONObject(mapOf("arg" to "yeah")))
+        variable.onUpdate {
+            countDownLatch.countDown()
+        }
+
+        client.onInitialized(object: DVCCallback<String> {
+            override fun onSuccess(result: String) {
+                client.identifyUser(DVCUser.builder().withUserId("test_2").build())
+                initializedLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                error = t
+            }
+        })
+
+        initializedLatch.await(2000, TimeUnit.MILLISECONDS)
+        countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+        Assertions.assertEquals(2, configRequestCount)
+        Assertions.assertEquals(1, countDownLatch.count)
+        Assertions.assertEquals(0, initializedLatch.count)
+    }
+
+    @Test
+    fun `variable does not call back when variable value has not changed for json array`() {
+        val config = generateJSONArrayConfig("activate-flag", JSONArray(arrayOf(1,2)))
+
+        generateDispatcher(config = config)
+        val client = createClient("dvc-mobile-pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val countDownLatch = CountDownLatch(2)
+        val initializedLatch = CountDownLatch(1)
+
+        val variable = client.variable("activate-flag", JSONArray(arrayOf(2,3)))
+        variable.onUpdate {
+            countDownLatch.countDown()
+        }
+
+        client.onInitialized(object: DVCCallback<String> {
+            override fun onSuccess(result: String) {
+                client.identifyUser(DVCUser.builder().withUserId("test_2").build())
+                initializedLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                error = t
+            }
+        })
+
+        initializedLatch.await(2000, TimeUnit.MILLISECONDS)
+        countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+        Assertions.assertEquals(2, configRequestCount)
+        Assertions.assertEquals(1, countDownLatch.count)
+        Assertions.assertEquals(0, initializedLatch.count)
+    }
+
+    @Test
     fun `variable calls return the same instance for the same key and default value`() {
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
@@ -496,7 +604,7 @@ class DVCClientTests {
 
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
 
         mockWebServer.enqueue(MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}"))
         mockWebServer.enqueue(MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}"))
@@ -604,7 +712,7 @@ class DVCClientTests {
                 } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
                     Assertions.assertEquals(true, request.path.toString().endsWith("enableEdgeDB=true"))
                     return MockResponse().setResponseCode(200)
-                        .setBody(jacksonObjectMapper().writeValueAsString(config))
+                        .setBody(objectMapper.writeValueAsString(config))
                 }
                 return MockResponse().setResponseCode(404)
             }
@@ -640,7 +748,7 @@ class DVCClientTests {
 
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
 
-        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
 
         mockWebServer.enqueue(MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}"))
 
@@ -742,8 +850,44 @@ class DVCClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
+    private fun generateJSONObjectConfig(key: String, value: JSONObject): BucketedUserConfig {
+        val variables: MutableMap<String, BaseConfigVariable> = HashMap()
+        variables[key] = createNewJSONObjectVariable(key, value, Variable.TypeEnum.JSON)
+        val sse = SSE()
+        sse.url = "https://www.bread.com"
+        return BucketedUserConfig(variables = variables, sse=sse)
+    }
+
+    private fun generateJSONArrayConfig(key: String, value: JSONArray): BucketedUserConfig {
+        val variables: MutableMap<String, BaseConfigVariable> = HashMap()
+        variables[key] = createNewJSONArrayVariable(key, value, Variable.TypeEnum.JSON)
+        val sse = SSE()
+        sse.url = "https://www.bread.com"
+        return BucketedUserConfig(variables = variables, sse=sse)
+    }
+
     private fun createNewStringVariable(key: String, value: String, type: Variable.TypeEnum): StringConfigVariable {
         return StringConfigVariable(
+            id = UUID.randomUUID().toString(),
+            key = key,
+            value = value,
+            type = type,
+            evalReason = null
+        )
+    }
+
+    private fun createNewJSONObjectVariable(key: String, value: JSONObject, type: Variable.TypeEnum): JSONObjectConfigVariable {
+        return JSONObjectConfigVariable(
+            id = UUID.randomUUID().toString(),
+            key = key,
+            value = value,
+            type = type,
+            evalReason = null
+        )
+    }
+
+    private fun createNewJSONArrayVariable(key: String, value: JSONArray, type: Variable.TypeEnum): JSONArrayConfigVariable {
+        return JSONArrayConfigVariable(
             id = UUID.randomUUID().toString(),
             key = key,
             value = value,
@@ -764,7 +908,7 @@ class DVCClientTests {
                     } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
                         configRequestCount++
                         Assertions.assertEquals(false, request.path.toString().contains("enableEdgeDB"))
-                        return MockResponse().setResponseCode(200).setBody(jacksonObjectMapper().writeValueAsString(config))
+                        return MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
                     }
                 } else {
                     for (route: Pair<String, MockResponse> in routes) {
