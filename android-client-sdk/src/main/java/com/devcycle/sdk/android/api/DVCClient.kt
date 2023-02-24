@@ -36,7 +36,6 @@ class DVCClient private constructor(
     options: DVCOptions?,
     apiUrl: String,
     eventsUrl: String,
-    private val logger: DVCLogger,
     private val customLifecycleHandler: Handler? = null,
     private val coroutineScope: CoroutineScope = MainScope(),
     private val coroutineContext: CoroutineContext = Dispatchers.Default
@@ -45,10 +44,10 @@ class DVCClient private constructor(
     private var eventSource: EventSource? = null
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
-    private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context, logger)
-    private val request: Request = Request(sdkKey, apiUrl, eventsUrl, logger)
+    private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
+    private val request: Request = Request(sdkKey, apiUrl, eventsUrl)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), logger, flushInMs)
+    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
     private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
@@ -70,7 +69,7 @@ class DVCClient private constructor(
         if (cachedConfig != null) {
             config = cachedConfig
             isConfigCached.set(true)
-            logger.d("Loaded config from cache")
+            DVCLogger.d("Loaded config from cache")
             observable.configUpdated(config)
         }
 
@@ -90,7 +89,7 @@ class DVCClient private constructor(
                 }
 
             } catch (t: Throwable) {
-                logger.e("DevCycle SDK Failed to Initialize!", t)
+                DVCLogger.e(t, "DevCycle SDK Failed to Initialize!")
                 throw t
             }
         }
@@ -104,14 +103,14 @@ class DVCClient private constructor(
     }
 
     private val onPauseApplication = fun () {
-        logger.d("Closing streaming event source connection")
+        DVCLogger.d("Closing streaming event source connection")
         eventSource?.close()
     }
 
     private val onResumeApplication = fun () {
         if (eventSource?.state != ReadyState.OPEN) {
             eventSource?.close()
-            logger.d("Restarting streaming event source connection")
+            DVCLogger.d("Restarting streaming event source connection")
             initEventSource()
             refetchConfig(false, null)
         }
@@ -137,7 +136,7 @@ class DVCClient private constructor(
             if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
                 refetchConfig(true, lastModified)
             }
-        }, logger), URI(config?.sse?.url)).build()
+        }), URI(config?.sse?.url)).build()
         eventSource?.start()
     }
 
@@ -180,7 +179,7 @@ class DVCClient private constructor(
 
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(updatedUser, callback))
-            logger.d("Queued identifyUser request for user_id ${updatedUser.userId}")
+            DVCLogger.d("Queued identifyUser request for user_id %s", updatedUser.userId)
             return
         }
 
@@ -214,7 +213,7 @@ class DVCClient private constructor(
 
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(newUser, callback))
-            logger.d("Queued resetUser request for new anonymous user")
+            DVCLogger.d("Queued resetUser request for new anonymous user")
             return
         }
 
@@ -305,7 +304,7 @@ class DVCClient private constructor(
         try {
             eventQueue.queueAggregateEvent(event)
         } catch(e: IllegalArgumentException) {
-            e.message?.let { logger.e(it) }
+            e.message?.let { DVCLogger.e(it) }
         }
 
         return variable
@@ -341,7 +340,7 @@ class DVCClient private constructor(
      */
     fun track(event: DVCEvent) {
         if (eventQueue.isClosed.get()) {
-            logger.d("DVC sdk has been closed, skipping call to track")
+            DVCLogger.d("DVC sdk has been closed, skipping call to track")
             return
         }
         eventQueue.queueEvent(Event.fromDVCEvent(event, user, config?.featureVariationMap))
@@ -425,7 +424,7 @@ class DVCClient private constructor(
         observable.configUpdated(config)
         dvcSharedPrefs.saveConfig(config!!, user)
         isConfigCached.set(false)
-        logger.d("A new config has been fetched for $user")
+        DVCLogger.d("A new config has been fetched for $user")
 
         this@DVCClient.user = user
         saveUser()
@@ -435,7 +434,7 @@ class DVCClient private constructor(
                 try {
                     request.saveEntity(user)
                 } catch (exception: DVCRequestException) {
-                    logger.e("Error saving user entity for $user. Error: $exception")
+                    DVCLogger.e("Error saving user entity for $user. Error: $exception")
                 }
             }
         }
@@ -444,7 +443,7 @@ class DVCClient private constructor(
     private fun refetchConfig(sse: Boolean = false, lastModified: Long? = null, callback: DVCCallback<Map<String, BaseConfigVariable>>? = null) {
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
-            logger.d("Queued refetchConfig request")
+            DVCLogger.d("Queued refetchConfig request")
             return
         }
 
@@ -469,7 +468,7 @@ class DVCClient private constructor(
         return if (config.project?.settings?.edgeDB?.enabled == true) {
             enableEdgeDB
         } else {
-            logger.d("EdgeDB is not enabled for this project. Only using local user data.")
+            DVCLogger.d("EdgeDB is not enabled for this project. Only using local user data.")
             return false
         }
     }
@@ -481,7 +480,7 @@ class DVCClient private constructor(
         private var user: PopulatedUser? = null
         private var options: DVCOptions? = null
         private var logLevel: LogLevel = LogLevel.ERROR
-        private var logger: DVCLogger = DVCLogger.getInstance(logLevel)
+        private var logger: DVCLogger.Logger = DVCLogger.DebugLogger()
         private var apiUrl: String = DVCApiClient.BASE_URL
         private var eventsUrl: String = DVCEventsApiClient.BASE_URL
 
@@ -525,7 +524,7 @@ class DVCClient private constructor(
             return this
         }
 
-        fun withLogger(logger: DVCLogger): DVCClientBuilder {
+        fun withLogger(logger: DVCLogger.Logger): DVCClientBuilder {
             this.logger = logger
             return this
         }
@@ -542,13 +541,17 @@ class DVCClient private constructor(
             require(!(sdkKey == null || sdkKey == "")) { "SDK key must be set" }
             requireNotNull(dvcUser) { "User must be set" }
 
-            dvcSharedPrefs = DVCSharedPrefs(context!!, logger);
+            if (logLevel.value > 0) {
+                DVCLogger.start(logger)
+            }
+
+            dvcSharedPrefs = DVCSharedPrefs(context!!);
 
             val anonId: String? = dvcSharedPrefs!!.getString(DVCSharedPrefs.AnonUserIdKey)
 
             this.user = PopulatedUser.fromUserParam(dvcUser!!, context!!, anonId)
 
-            return DVCClient(context!!, sdkKey!!, user!!, options, apiUrl, eventsUrl, logger, customLifecycleHandler)
+            return DVCClient(context!!, sdkKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
         }
     }
 

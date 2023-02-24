@@ -4,6 +4,7 @@ import com.devcycle.sdk.android.helpers.TestDVCLogger
 import com.devcycle.sdk.android.model.DVCUser
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.PopulatedUser
+import com.devcycle.sdk.android.util.DVCLogger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -15,8 +16,6 @@ import org.mockito.Mockito
 import java.math.BigDecimal
 
 class EventQueueTests {
-
-    private val logger = TestDVCLogger()
 
     @DelicateCoroutinesApi
     private val mainThreadSurrogate = newSingleThreadContext("UI thread")
@@ -38,9 +37,9 @@ class EventQueueTests {
 
     @Test
     fun `events are aggregated correctly`() {
-        val request = Request("some-key", "http://fake.com", "http://fake.com", logger)
+        val request = Request("some-key", "http://fake.com", "http://fake.com")
         val user = PopulatedUser("test")
-        val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), logger, 10000)
+        val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
 
         val event1 = Event.fromInternalEvent(
             Event.variableEvent(false, "dummy_key1"),

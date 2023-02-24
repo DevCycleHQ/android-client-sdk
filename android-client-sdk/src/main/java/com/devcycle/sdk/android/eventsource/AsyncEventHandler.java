@@ -18,8 +18,6 @@ final class AsyncEventHandler implements EventHandler {
   private final EventHandler eventSourceHandler;
   final Semaphore semaphore; // visible for tests
 
-  private final DVCLogger logger = DVCLogger.Companion.getInstance();
-
   AsyncEventHandler(Executor executor, EventHandler eventSourceHandler, Semaphore semaphore) {
     this.executor = executor;
     this.eventSourceHandler = eventSourceHandler;
@@ -73,19 +71,19 @@ final class AsyncEventHandler implements EventHandler {
       onErrorInternal(error);
     });
   }
-  
+
   private void handleUnexpectedError(Throwable error) {
-    logger.w("Caught unexpected error from EventHandler: ${error.toString()}");
-    logger.d("Stack trace: ${new LazyStackTrace(error)}");
+    DVCLogger.w("Caught unexpected error from EventHandler: " + error.toString());
+    DVCLogger.d("Stack trace: %s", new LazyStackTrace(error));
     onErrorInternal(error);
   }
-  
+
   private void onErrorInternal(Throwable error) {
     try {
       eventSourceHandler.onError(error);
     } catch (Throwable errorFromErrorHandler) {
-      logger.w("Caught unexpected error from EventHandler.onError(): ${errorFromErrorHandler.getMessage()}");
-      logger.d("Stack trace: ${new LazyStackTrace(error)}");
+      DVCLogger.w("Caught unexpected error from EventHandler.onError(): " + errorFromErrorHandler.toString());
+      DVCLogger.d("Stack trace: %s", new LazyStackTrace(error));
     }
   }
 

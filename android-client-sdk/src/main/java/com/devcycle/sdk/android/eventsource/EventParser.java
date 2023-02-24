@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import static com.devcycle.sdk.android.eventsource.Helpers.UTF8;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.devcycle.sdk.android.util.DVCLogger;
 
 /**
@@ -22,7 +24,7 @@ import com.devcycle.sdk.android.util.DVCLogger;
 final class EventParser {
   static final int VALUE_BUFFER_INITIAL_CAPACITY = 1000;
   private static final int MIN_READ_BUFFER_SIZE = 200;
-  
+
   private static final String DATA = "data";
   private static final String EVENT = "event";
   private static final String ID = "id";
@@ -38,7 +40,7 @@ final class EventParser {
   private final URI origin;
 
   private BufferedLineParser lineParser;
-  
+
   private ByteArrayOutputStream dataBuffer;  // accumulates "data" lines if we are not using streaming mode
   private ByteArrayOutputStream valueBuffer; // used whenever a field other than "data" has a value longer than one chunk
 
@@ -51,40 +53,38 @@ final class EventParser {
   private String eventName;       // value of "event:" field in this event, if any
   private boolean skipRestOfLine; // true if we are skipping over an invalid line
 
-  private final DVCLogger logger = DVCLogger.Companion.getInstance();
-
   EventParser(
-      InputStream inputStream,
-      URI origin,
-      EventHandler handler,
-      ConnectionHandler connectionHandler,
-      int readBufferSize,
-      boolean streamEventData,
-      Set<String> expectFields
-      ) {
+          InputStream inputStream,
+          URI origin,
+          EventHandler handler,
+          ConnectionHandler connectionHandler,
+          int readBufferSize,
+          boolean streamEventData,
+          Set<String> expectFields
+  ) {
     this.lineParser = new BufferedLineParser(inputStream,
-        readBufferSize < MIN_READ_BUFFER_SIZE ? MIN_READ_BUFFER_SIZE : readBufferSize);
+            readBufferSize < MIN_READ_BUFFER_SIZE ? MIN_READ_BUFFER_SIZE : readBufferSize);
     this.handler = handler;
     this.origin = origin;
     this.connectionHandler = connectionHandler;
     this.streamEventData = streamEventData;
     this.expectFields = expectFields;
-    
+
     dataBuffer = new ByteArrayOutputStream(VALUE_BUFFER_INITIAL_CAPACITY);
   }
 
   /**
    * Returns true if the input stream has run out.
-   * 
+   *
    * @return true if at end of stream
    */
   public boolean isEof() {
     return lineParser.isEof();
   }
-  
+
   /**
    * Attempts to get more data from the stream, and dispatches events as appropriate.
-   * 
+   *
    * @return true if some data was received; false if at end of stream
    * @throws IOException if the stream throws an I/O error
    */
@@ -95,7 +95,7 @@ final class EventParser {
     byte[] chunkData = lineParser.getBuffer();
     int chunkOffset = lineParser.getChunkOffset();
     int chunkSize = lineParser.getChunkSize();
-    
+
     if (skipRestOfLine) {
       // If we're in this state, it means we already know we want to ignore this line and
       // not bother buffering or parsing the rest of it - just keep reading till we see a
@@ -104,7 +104,7 @@ final class EventParser {
       skipRestOfLine = !lineEnded;
       return true;
     }
-    
+
     if (chunkSize == 0) {
       if (lineEnded) {
         eventTerminated();
@@ -116,7 +116,7 @@ final class EventParser {
       // might not be blocking and so this may just indicate "no data available right now".
       return false;
     }
-    
+
     int valueOffset = chunkOffset, valueLength = chunkSize;
     if (fieldName == null) { // we haven't yet parsed the field name 
       int nameLength = 0;
@@ -145,7 +145,7 @@ final class EventParser {
       valueOffset += nameLength;
       valueLength -= nameLength;
     }
-    
+
     if (fieldName.equals(DATA)) {
       if (writingDataStream != null) {
         // We have already started streaming data for this event.
@@ -162,11 +162,11 @@ final class EventParser {
           writingDataStream = new PipedOutputStream();
           InputStream pipedInputStream = new PipedInputStream(writingDataStream);
           MessageEvent event = new MessageEvent(
-              eventName,
-              new InputStreamReader(pipedInputStream),
-              lastEventId,
-              origin
-              );
+                  eventName,
+                  new InputStreamReader(pipedInputStream, UTF_8),
+                  lastEventId,
+                  origin
+          );
           dispatchMessage(event);
           try {
             writingDataStream.write(chunkData, valueOffset, valueLength);
@@ -188,7 +188,7 @@ final class EventParser {
       }
       return true;
     }
-    
+
     // For any field other than "data:", we don't do any kind of streaming shenanigans -
     // we just get the whole value as a string. If the whole line fits into the buffer
     // then we can do this in one step; otherwise we'll accumulate chunks in another
@@ -209,29 +209,29 @@ final class EventParser {
       fieldValue = valueBuffer.toString(UTF8.name());
       resetValueBuffer();
     }
-    
+
     switch (fieldName) {
-    case COMMENT:
-      processComment(fieldValue);
-      break;
-    case EVENT:
-      eventName = fieldValue;
-      break;
-    case ID:
-      if (!fieldValue.contains("\u0000")) { // per specification, id field cannot contain a null character
-        lastEventId = fieldValue;
-        if (lastEventId != null) {
-          connectionHandler.setLastEventId(lastEventId);
+      case COMMENT:
+        processComment(fieldValue);
+        break;
+      case EVENT:
+        eventName = fieldValue;
+        break;
+      case ID:
+        if (!fieldValue.contains("\u0000")) { // per specification, id field cannot contain a null character
+          lastEventId = fieldValue;
+          if (lastEventId != null) {
+            connectionHandler.setLastEventId(lastEventId);
+          }
         }
-      }
-      break;
-    case RETRY:
-      if (DIGITS_ONLY.matcher(fieldValue).matches()) {
-        connectionHandler.setReconnectionTime(Duration.ofMillis(Long.parseLong(fieldValue)));
-      }
-      break;
-    default:
-      // For an unrecognized field name, we do nothing.  
+        break;
+      case RETRY:
+        if (DIGITS_ONLY.matcher(fieldValue).matches()) {
+          connectionHandler.setReconnectionTime(Duration.ofMillis(Long.parseLong(fieldValue)));
+        }
+        break;
+      default:
+        // For an unrecognized field name, we do nothing.  
     }
     fieldName = null;
     return true;
@@ -251,12 +251,12 @@ final class EventParser {
     }
     return true;
   }
-  
+
   private void processComment(String comment) {
     try {
       handler.onComment(comment);
     } catch (Exception e) {
-      logger.w("Message handler threw an exception: ${e.toString()}");
+      DVCLogger.w("Message handler threw an exception: " + e.toString());
       handler.onError(e);
     }
   }
@@ -272,33 +272,33 @@ final class EventParser {
       resetState();
       return;
     }
-    
+
     if (!haveData) {
       resetState();
       return;
     }
-    
+
     String dataString = dataBuffer.toString(UTF8.name()); // unfortunately, toString(Charset) isn't available in Java 8
     MessageEvent message = new MessageEvent(eventName, dataString, lastEventId, origin);
     if (lastEventId != null) {
       connectionHandler.setLastEventId(lastEventId);
     }
     dispatchMessage(message);
-    
+
     resetState();
   }
-  
+
   private void dispatchMessage(MessageEvent message) {
     try {
-      logger.d("Dispatching message: ${message.toString()}");
+      DVCLogger.d("Dispatching message: %s", message);
       handler.onMessage(message.getEventName(), message);
     } catch (Exception e) {
-      logger.w("Message handler threw an exception: ${e.toString()}");
-      logger.d("Stack trace: ${new LazyStackTrace(e)}");
+      DVCLogger.w("Message handler threw an exception: " + e.toString());
+      DVCLogger.d("Stack trace: %s", new LazyStackTrace(e));
       handler.onError(e);
     }
   }
-  
+
   private void resetState() {
     haveData = false;
     dataLineEnded = false;
@@ -312,7 +312,7 @@ final class EventParser {
       }
     }
   }
-  
+
   private void resetValueBuffer( ) {
     if (valueBuffer != null) {
       if (valueBuffer.size() > VALUE_BUFFER_INITIAL_CAPACITY) {

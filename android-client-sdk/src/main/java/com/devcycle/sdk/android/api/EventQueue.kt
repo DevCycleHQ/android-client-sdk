@@ -19,7 +19,6 @@ internal class EventQueue constructor(
     private val request: Request,
     private val getUser: () -> PopulatedUser,
     private val coroutineScope: CoroutineScope,
-    private val logger: DVCLogger,
     flushInMs: Long
 ) {
     private val eventQueue: MutableList<Event> = mutableListOf()
@@ -57,11 +56,11 @@ internal class EventQueue constructor(
                 }
 
                 if (eventsToFlush.size == 0) {
-                    logger.d("No events to flush.")
+                    DVCLogger.d("No events to flush.")
                     return@withLock
                 }
 
-                logger.i("DVC Flush ${eventsToFlush.size} Events")
+                DVCLogger.i("DVC Flush " + eventsToFlush.size + " Events")
 
                 val payload = UserAndEvents(user.copy(), eventsToFlush)
 
@@ -74,15 +73,15 @@ internal class EventQueue constructor(
                         try {
                             request.publishEvents(it)
                             emit(it)
-                            logger.i("DVC Flushed ${payload.events.size} Events.")
+                            DVCLogger.i("DVC Flushed " + payload.events.size + " Events.")
                         } catch (t: DVCRequestException) {
                             if (t.isRetryable) {
-                                logger.e("Error with event flushing, will be retried", t)
+                                DVCLogger.e(t, "Error with event flushing, will be retried")
                                 // Don't raise the error but keep the payload in the queue, it will be
                                 // retried on the next flush
                                 firstError = firstError ?: t
                             } else {
-                                logger.e("Non-retryable error with event flushing.", t)
+                                DVCLogger.e(t, "Non-retryable error with event flushing.")
                                 emit(it)
                             }
                         }
@@ -99,7 +98,7 @@ internal class EventQueue constructor(
                     DVCFlushResult(true)
                 }
             } catch(t: Throwable) {
-                logger.e("Error flushing events", t)
+                DVCLogger.e(t, "Error flushing events")
                 result = DVCFlushResult(false, t)
             }
 
@@ -134,13 +133,13 @@ internal class EventQueue constructor(
      */
     fun queueEvent(event: Event) {
         if (isClosed.get()) {
-            logger.w("Attempting to queue event after closing DVC.")
+            DVCLogger.w("Attempting to queue event after closing DVC.")
             return
         }
         runBlocking {
             queueMutex.withLock {
                 eventQueue.add(event)
-                logger.i("Event queued successfully $event")
+                DVCLogger.i("Event queued successfully %s", event)
                 scheduleJob = scheduler.scheduleWithDelay { run() }
             }
         }
@@ -153,7 +152,7 @@ internal class EventQueue constructor(
     @Throws(IllegalArgumentException::class)
     fun queueAggregateEvent(event: Event) {
         if (isClosed.get()) {
-            logger.w("Attempting to queue aggregate event after closing DVC.")
+            DVCLogger.w("Attempting to queue aggregate event after closing DVC.")
             return
         }
         runBlocking {
@@ -191,7 +190,7 @@ internal class EventQueue constructor(
 
     private fun run() {
         if (flushMutex.isLocked) {
-            logger.i("Skipping event flush due to pending flush operation")
+            DVCLogger.i("Skipping event flush due to pending flush operation")
             return
         }
         coroutineScope.launch {
@@ -205,5 +204,4 @@ internal class EventQueue constructor(
         flushEvents()
         scheduleJob.cancelAndJoin()
     }
-
 }

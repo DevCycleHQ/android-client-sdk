@@ -2,12 +2,9 @@ package com.devcycle.sdk.android.eventsource
 
 import com.devcycle.sdk.android.util.DVCLogger
 
-
 class Handler(
-    private var onMessageHandler: (messageEvent: MessageEvent?) -> Any,
-    private val logger: DVCLogger
+    private var onMessageHandler: (messageEvent: MessageEvent?) -> Any
 ): EventHandler {
-
     fun init() {}
 
     /**
@@ -15,7 +12,7 @@ class Handler(
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onOpen() {
-        logger.d("Opened SSE connection. Now listening for config updates.")
+        DVCLogger.d("Opened SSE connection. Now listening for config updates.")
     }
 
     /**
@@ -33,7 +30,7 @@ class Handler(
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onClosed() {
-        logger.d("Closed SSE connection.")
+        DVCLogger.d("Closed SSE connection.")
     }
 
     /**
@@ -65,6 +62,6 @@ class Handler(
      * @param t  a `Throwable` object
      */
     override fun onError(t: Throwable?) {
-        logger.e("", t)
+        DVCLogger.e(t)
     }
 }

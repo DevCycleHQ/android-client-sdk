@@ -7,6 +7,7 @@ import com.devcycle.sdk.android.api.DVCClient
 import com.devcycle.sdk.android.model.DVCEvent
 import com.devcycle.sdk.android.model.DVCUser
 import com.devcycle.sdk.android.model.Variable
+import com.devcycle.sdk.android.util.DVCLogger
 import com.devcycle.sdk.android.util.LogLevel
 
 
@@ -25,6 +26,7 @@ class KotlinApplication: Application() {
             )
             .withSDKKey("<YOUR_MOBILE_SDK_KEY>")
             .withLogLevel(LogLevel.DEBUG)
+            .withLogger(DVCLogger.DebugLogger())
             .build()
 
         // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
