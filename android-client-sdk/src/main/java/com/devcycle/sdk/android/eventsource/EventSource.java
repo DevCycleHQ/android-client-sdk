@@ -37,7 +37,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import timber.log.Timber;
 
 import static com.devcycle.sdk.android.eventsource.Helpers.pow2;
 import static com.devcycle.sdk.android.eventsource.ReadyState.CLOSED;
@@ -46,6 +45,8 @@ import static com.devcycle.sdk.android.eventsource.ReadyState.OPEN;
 import static com.devcycle.sdk.android.eventsource.ReadyState.RAW;
 import static com.devcycle.sdk.android.eventsource.ReadyState.SHUTDOWN;
 import static java.lang.String.format;
+
+import com.devcycle.sdk.android.util.DVCLogger;
 
 /**
  * A client for the <a href="https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events">Server-Sent
@@ -119,6 +120,8 @@ public class EventSource implements Closeable {
   private volatile Call call;
   private final SecureRandom jitter = new SecureRandom();
 
+  private final DVCLogger logger = DVCLogger.Companion.getInstance();
+
   EventSource(Builder builder) {
     this.name = builder.name == null ? "" : builder.name;
     this.url = builder.url;
@@ -171,11 +174,11 @@ public class EventSource implements Closeable {
    */
   public void start() {
     if (!readyState.compareAndSet(RAW, CONNECTING)) {
-      Timber.i("Start method called on this already-started EventSource object. Doing nothing");
+      logger.i("Start method called on this already-started EventSource object. Doing nothing");
       return;
     }
-    Timber.d("readyState change: %s -> %s", RAW, CONNECTING);
-    Timber.i("Starting EventSource client using URI: %s", url);
+    logger.d("readyState change: " + RAW + " -> " + CONNECTING);
+    logger.i("Starting EventSource client using URI: " + url);
     streamExecutor.execute(this::run);
   }
   
@@ -213,7 +216,7 @@ public class EventSource implements Closeable {
   @Override
   public void close() {
     ReadyState currentState = readyState.getAndSet(SHUTDOWN);
-    Timber.d("readyState change: %s -> %s", currentState, SHUTDOWN);
+    logger.d("readyState change: " + currentState + " -> " + SHUTDOWN);
     if (currentState == SHUTDOWN) {
       return;
     }
@@ -275,7 +278,7 @@ public class EventSource implements Closeable {
       // Otherwise, an IllegalArgumentException "Unbalanced enter/exit" error is thrown by okhttp.
       // https://github.com/google/ExoPlayer/issues/1348
       call.cancel();
-      Timber.d("call cancelled");
+      logger.d("call cancelled");
     }
   }
   
@@ -309,7 +312,7 @@ public class EventSource implements Closeable {
     } catch (RejectedExecutionException ignored) {
       // COVERAGE: there is no way to simulate this condition in unit tests
       call = null;
-      Timber.d("Rejected execution exception ignored: %s", ignored);
+      logger.d("Rejected execution exception ignored: " + ignored);
       // During shutdown, we tried to send a message to the event handler
       // Do not reconnect; the executor has been shut down
     }
@@ -330,7 +333,7 @@ public class EventSource implements Closeable {
     
     try {
       Duration sleepTime = backoffWithJitter(counter);
-      Timber.i("Waiting %s milliseconds before reconnecting...", sleepTime.toMillis());
+      logger.i("Waiting %s milliseconds before reconnecting..." + sleepTime.toMillis());
       Thread.sleep(sleepTime.toMillis());
     } catch (InterruptedException ignored) { // COVERAGE: no way to cause this in unit tests
     }
@@ -342,7 +345,7 @@ public class EventSource implements Closeable {
     ConnectionErrorHandler.Action errorHandlerAction = ConnectionErrorHandler.Action.PROCEED;
 
     ReadyState stateBeforeConnecting = readyState.getAndSet(CONNECTING);
-    Timber.d("readyState change: %s -> %s", stateBeforeConnecting, CONNECTING);
+    logger.d("readyState change: " + stateBeforeConnecting + " -> " + CONNECTING);
     
     connectedTime.set(0);
     call = client.newCall(buildRequest());
@@ -360,32 +363,32 @@ public class EventSource implements Closeable {
           // should check the state in case we've been deliberately closed from elsewhere.
           ReadyState state = readyState.get();
           if (state != SHUTDOWN && state != CLOSED) {
-            Timber.w("Connection unexpectedly closed");
+            logger.w("Connection unexpectedly closed");
             errorHandlerAction = connectionErrorHandler.onConnectionError(new EOFException());
           }
         } else {
-          Timber.d("Unsuccessful response: %s", response);
+          logger.d("Unsuccessful response: " + response);
           errorHandlerAction = dispatchError(new UnsuccessfulResponseException(response.code()));
         }
       }
     } catch (IOException e) {
       ReadyState state = readyState.get();
       if (state != SHUTDOWN && state != CLOSED) {
-        Timber.d("Connection problem: %s", e);
+        logger.d("Connection problem: " + e);
         errorHandlerAction = dispatchError(e);
       }
     } finally {
       if (errorHandlerAction == ConnectionErrorHandler.Action.SHUTDOWN) {
-        Timber.i("Connection has been explicitly shut down by error handler");
+        logger.i("Connection has been explicitly shut down by error handler");
         close();
       } else {
         boolean wasOpen = readyState.compareAndSet(OPEN, CLOSED);
         boolean wasConnecting = readyState.compareAndSet(CONNECTING, CLOSED);
         if (wasOpen) {
-          Timber.d("readyState change: %s -> %s", OPEN, CLOSED);
+          logger.d("readyState change: " + OPEN + " -> " + CLOSED);
           handler.onClosed(); 
         } else if (wasConnecting) {
-          Timber.d("readyState change: %s -> %s", CONNECTING, CLOSED);
+          logger.d("readyState change: " + CONNECTING + " -> " + CLOSED);
         }
       }
     }
@@ -411,11 +414,11 @@ public class EventSource implements Closeable {
     ReadyState previousState = readyState.getAndSet(OPEN);
     if (previousState != CONNECTING) {
       // COVERAGE: there is no way to simulate this condition in unit tests
-      Timber.w("Unexpected readyState change: " + previousState + " -> " + OPEN);
+      logger.w("Unexpected readyState change: " + previousState + " -> " + OPEN);
     } else {
-      Timber.d("readyState change: %s -> %s", previousState, OPEN);
+      logger.d("readyState change: " + previousState + " -> " + OPEN);
     }
-    Timber.i("Connected to EventSource stream.");
+    logger.i("Connected to EventSource stream.");
     handler.onOpen();
     
     EventParser parser = new EventParser(

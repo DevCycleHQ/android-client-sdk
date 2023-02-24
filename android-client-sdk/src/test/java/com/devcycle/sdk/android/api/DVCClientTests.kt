@@ -11,8 +11,9 @@ import android.content.res.Resources
 import android.os.Handler
 import android.os.LocaleList
 import com.devcycle.sdk.android.api.DVCClient.Companion.builder
-import com.devcycle.sdk.android.helpers.TestTree
+import com.devcycle.sdk.android.helpers.TestDVCLogger
 import com.devcycle.sdk.android.model.*
+import com.devcycle.sdk.android.util.LogLevel
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
@@ -41,7 +42,6 @@ import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.streams.toList
 
 
 class DVCClientTests {
@@ -50,7 +50,7 @@ class DVCClientTests {
 
     private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
 
-    private val tree = TestTree()
+    private val logger = TestDVCLogger()
     private var configRequestCount = 0
     private var calledBack = false
     private var error: Throwable? = null
@@ -655,11 +655,15 @@ class DVCClientTests {
 
                     Thread.sleep(1000L)
 
-                    val logs = tree.logs
+                    val logs = logger.logs
 
                     val searchString = "DVC Flushed 1 Events."
 
-                    Assertions.assertEquals(2, logs.stream().filter { l -> l.message == searchString }.toList().size)
+                    val filteredLogs = logs.filter { it.second.contains(searchString)}
+
+                    Assertions.assertEquals(filteredLogs.size, 1)
+                    Assertions.assertEquals(filteredLogs[0].first, LogLevel.INFO.value)
+                    Assertions.assertEquals(filteredLogs[0].second, searchString)
 
                     countDownLatch.countDown()
                 }
@@ -673,7 +677,7 @@ class DVCClientTests {
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
-            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            countDownLatch.await(5000, TimeUnit.MILLISECONDS)
             handleFinally(calledBack, error)
         }
         client.close()
@@ -704,11 +708,15 @@ class DVCClientTests {
 
                     Thread.sleep(500L)
 
-                    val logs = tree.logs
+                    val logs = logger.logs
 
                     val searchString = "DVC Flushed 2 Events."
 
-                    Assertions.assertEquals(1, logs.stream().filter { l -> l.message == searchString }.toList().size)
+                    val filteredLogs = logs.filter { it.second.contains(searchString) }
+
+                    Assertions.assertEquals(filteredLogs.size, 1)
+                    Assertions.assertEquals(filteredLogs[0].first, LogLevel.INFO.value)
+                    Assertions.assertEquals(filteredLogs[0].second, searchString)
 
                     countDownLatch.countDown()
                 }
@@ -862,7 +870,7 @@ class DVCClientTests {
             .withHandler(mockHandler)
             .withUser(user ?: DVCUser.builder().withUserId("nic_test").build())
             .withSDKKey(sdkKey)
-            .withLogger(tree)
+            .withLogger(logger)
             .withApiUrl(mockUrl)
             .withOptions(
                 DVCOptions.builder()

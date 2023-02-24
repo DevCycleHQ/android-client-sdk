@@ -15,6 +15,7 @@ import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
 import com.devcycle.sdk.android.util.JSONMapper
+import com.devcycle.sdk.android.util.DVCLogger
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -24,13 +25,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import org.json.JSONArray
 import org.json.JSONObject
-import timber.log.Timber
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+private val logger: DVCLogger = DVCLogger.getInstance()
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 /**
  * Variable
  */
@@ -157,7 +158,7 @@ class Variable<T> internal constructor(
                 )
                 returnVariable.isDefaulted = true
                 if (readOnlyVariable != null) {
-                    Timber.e("Mismatched variable type for variable: $key, using default")
+                    logger.e("Mismatched variable type for variable: $key, using default")
                 }
                 return returnVariable
             }
@@ -199,18 +200,18 @@ class Variable<T> internal constructor(
         if (evt.propertyName == BucketedUserConfigListener.BucketedUserConfigObserverConstants.propertyChangeConfigUpdated) {
             val config = evt.newValue as BucketedUserConfig
             val variable: BaseConfigVariable? = config.variables?.get(key)
-            Timber.v("Triggering property change handler for $key")
+            logger.v("Triggering property change handler for $key")
             if (variable != null) {
                 try {
                     updateVariable(variable)
                 } catch (e: DVCVariableException) {
-                    Timber.e("Mismatched variable type for variable: ${variable.key}, using default")
+                    logger.e("Mismatched variable type for variable: ${variable.key}, using default")
                 }
             } else {
                 try {
                     defaultVariable()
                 } catch (e: DVCVariableException) {
-                    Timber.e("Unable to restore variable to default")
+                    logger.e("Unable to restore variable to default")
                 }
             }
         }

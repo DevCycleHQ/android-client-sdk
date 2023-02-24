@@ -4,6 +4,7 @@ import com.devcycle.sdk.android.exception.DVCRequestException
 
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.JSONMapper
+import com.devcycle.sdk.android.util.DVCLogger
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.type.TypeReference
 import kotlinx.coroutines.Dispatchers
@@ -12,10 +13,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.Response
-import timber.log.Timber
 import java.io.IOException
 
-internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
+internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBaseUrl: String, private val logger: DVCLogger) {
     private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(sdkKey, eventsBaseUrl)
     private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(sdkKey, apiBaseUrl)
@@ -88,9 +88,9 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
                     } else {
                         delay(currentDelay)
                         currentDelay = (currentDelay * delayFactor).coerceAtMost(maxDelay)
-                        Timber.w(
-                            cause,
-                            "Request Config Failed. Retrying in %s seconds.", currentDelay / 1000
+                        logger.w(
+                            "Request Config Failed. Retrying in ${currentDelay / 1000} seconds.",
+                            cause
                         )
                         return@retryWhen true
                     }

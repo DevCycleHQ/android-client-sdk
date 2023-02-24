@@ -12,9 +12,8 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import timber.log.Timber;
-
 import static com.devcycle.sdk.android.eventsource.Helpers.UTF8;
+import com.devcycle.sdk.android.util.DVCLogger;
 
 /**
  * All of the SSE parsing logic is implemented in this class (except for the detection of line
@@ -51,6 +50,8 @@ final class EventParser {
   private String lastEventId;     // value of "id:" field in this event, if any
   private String eventName;       // value of "event:" field in this event, if any
   private boolean skipRestOfLine; // true if we are skipping over an invalid line
+
+  private final DVCLogger logger = DVCLogger.Companion.getInstance();
 
   EventParser(
       InputStream inputStream,
@@ -255,7 +256,7 @@ final class EventParser {
     try {
       handler.onComment(comment);
     } catch (Exception e) {
-      Timber.w("Message handler threw an exception: " + e.toString());
+      logger.w("Message handler threw an exception: ${e.toString()}");
       handler.onError(e);
     }
   }
@@ -289,11 +290,11 @@ final class EventParser {
   
   private void dispatchMessage(MessageEvent message) {
     try {
-      Timber.d("Dispatching message: %s", message);
+      logger.d("Dispatching message: ${message.toString()}");
       handler.onMessage(message.getEventName(), message);
     } catch (Exception e) {
-      Timber.w("Message handler threw an exception: " + e.toString());
-      Timber.d("Stack trace: %s", new LazyStackTrace(e));
+      logger.w("Message handler threw an exception: ${e.toString()}");
+      logger.d("Stack trace: ${new LazyStackTrace(e)}");
       handler.onError(e);
     }
   }

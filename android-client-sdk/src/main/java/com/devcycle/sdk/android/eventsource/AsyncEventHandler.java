@@ -1,11 +1,9 @@
 package com.devcycle.sdk.android.eventsource;
 
-
+import com.devcycle.sdk.android.util.DVCLogger;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
-
-import timber.log.Timber;
 
 /**
  * Adapted from https://github.com/aslakhellesoy/eventsource-java/blob/master/src/main/java/com/github/eventsource/client/impl/AsyncEventSourceHandler.java
@@ -19,6 +17,8 @@ final class AsyncEventHandler implements EventHandler {
   private final Executor executor;
   private final EventHandler eventSourceHandler;
   final Semaphore semaphore; // visible for tests
+
+  private final DVCLogger logger = DVCLogger.Companion.getInstance();
 
   AsyncEventHandler(Executor executor, EventHandler eventSourceHandler, Semaphore semaphore) {
     this.executor = executor;
@@ -75,8 +75,8 @@ final class AsyncEventHandler implements EventHandler {
   }
   
   private void handleUnexpectedError(Throwable error) {
-    Timber.w("Caught unexpected error from EventHandler: " + error.toString());
-    Timber.d("Stack trace: %s", new LazyStackTrace(error));
+    logger.w("Caught unexpected error from EventHandler: ${error.toString()}");
+    logger.d("Stack trace: ${new LazyStackTrace(error)}");
     onErrorInternal(error);
   }
   
@@ -84,8 +84,8 @@ final class AsyncEventHandler implements EventHandler {
     try {
       eventSourceHandler.onError(error);
     } catch (Throwable errorFromErrorHandler) {
-      Timber.w("Caught unexpected error from EventHandler.onError(): " + errorFromErrorHandler.toString());
-      Timber.d("Stack trace: %s", new LazyStackTrace(error));
+      logger.w("Caught unexpected error from EventHandler.onError(): ${errorFromErrorHandler.getMessage()}");
+      logger.d("Stack trace: ${new LazyStackTrace(error)}");
     }
   }
 
