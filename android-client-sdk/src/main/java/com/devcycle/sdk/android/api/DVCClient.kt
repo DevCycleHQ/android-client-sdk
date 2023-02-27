@@ -103,16 +103,24 @@ class DVCClient private constructor(
     }
 
     private val onPauseApplication = fun () {
-        DVCLogger.d("Closing streaming event source connection")
-        eventSource?.close()
+        coroutineScope.launch {
+            withContext(Dispatchers.IO) {
+                DVCLogger.d("Closing streaming event source connection")
+                eventSource?.close()
+            }
+        }
     }
 
     private val onResumeApplication = fun () {
         if (eventSource?.state != ReadyState.OPEN) {
-            eventSource?.close()
-            DVCLogger.d("Restarting streaming event source connection")
-            initEventSource()
-            refetchConfig(false, null)
+            coroutineScope.launch {
+                withContext(Dispatchers.IO) {
+                    eventSource?.close()
+                    DVCLogger.d("Restarting streaming event source connection")
+                    initEventSource()
+                    refetchConfig(false, null)
+                }
+            }
         }
     }
 
