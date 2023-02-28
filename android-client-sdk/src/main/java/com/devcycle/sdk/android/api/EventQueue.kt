@@ -4,13 +4,13 @@ import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.UserAndEvents
+import com.devcycle.sdk.android.util.DVCLogger
 import com.devcycle.sdk.android.util.Scheduler
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import timber.log.Timber
 import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -56,11 +56,11 @@ internal class EventQueue constructor(
                 }
 
                 if (eventsToFlush.size == 0) {
-                    Timber.d("No events to flush.")
+                    DVCLogger.d("No events to flush.")
                     return@withLock
                 }
 
-                Timber.i("DVC Flush " + eventsToFlush.size + " Events")
+                DVCLogger.i("DVC Flush " + eventsToFlush.size + " Events")
 
                 val payload = UserAndEvents(user.copy(), eventsToFlush)
 
@@ -73,15 +73,15 @@ internal class EventQueue constructor(
                         try {
                             request.publishEvents(it)
                             emit(it)
-                            Timber.i("DVC Flushed " + payload.events.size + " Events.")
+                            DVCLogger.i("DVC Flushed " + payload.events.size + " Events.")
                         } catch (t: DVCRequestException) {
                             if (t.isRetryable) {
-                                Timber.e(t, "Error with event flushing, will be retried")
+                                DVCLogger.e(t, "Error with event flushing, will be retried")
                                 // Don't raise the error but keep the payload in the queue, it will be
                                 // retried on the next flush
                                 firstError = firstError ?: t
                             } else {
-                                Timber.e(t, "Non-retryable error with event flushing.")
+                                DVCLogger.e(t, "Non-retryable error with event flushing.")
                                 emit(it)
                             }
                         }
@@ -98,7 +98,7 @@ internal class EventQueue constructor(
                     DVCFlushResult(true)
                 }
             } catch(t: Throwable) {
-                Timber.e(t, "Error flushing events")
+                DVCLogger.e(t, "Error flushing events")
                 result = DVCFlushResult(false, t)
             }
 
@@ -133,13 +133,13 @@ internal class EventQueue constructor(
      */
     fun queueEvent(event: Event) {
         if (isClosed.get()) {
-            Timber.w("Attempting to queue event after closing DVC.")
+            DVCLogger.w("Attempting to queue event after closing DVC.")
             return
         }
         runBlocking {
             queueMutex.withLock {
                 eventQueue.add(event)
-                Timber.i("Event queued successfully %s", event)
+                DVCLogger.i("Event queued successfully %s", event)
                 scheduleJob = scheduler.scheduleWithDelay { run() }
             }
         }
@@ -152,7 +152,7 @@ internal class EventQueue constructor(
     @Throws(IllegalArgumentException::class)
     fun queueAggregateEvent(event: Event) {
         if (isClosed.get()) {
-            Timber.w("Attempting to queue aggregate event after closing DVC.")
+            DVCLogger.w("Attempting to queue aggregate event after closing DVC.")
             return
         }
         runBlocking {
@@ -190,7 +190,7 @@ internal class EventQueue constructor(
 
     private fun run() {
         if (flushMutex.isLocked) {
-            Timber.i("Skipping event flush due to pending flush operation")
+            DVCLogger.i("Skipping event flush due to pending flush operation")
             return
         }
         coroutineScope.launch {
@@ -204,5 +204,4 @@ internal class EventQueue constructor(
         flushEvents()
         scheduleJob.cancelAndJoin()
     }
-
 }

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.Response
-import timber.log.Timber
+import com.devcycle.sdk.android.util.DVCLogger
 import java.io.IOException
 
 internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
@@ -53,7 +53,7 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
     ): BucketedUserConfig {
         val map = (
                 JSONMapper.mapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
-        ) as MutableMap<String, String>
+                ) as MutableMap<String, String>
         if (map.contains("customData")) {
             map["customData"] = JSONMapper.mapper.writeValueAsString(map["customData"])
         }
@@ -88,7 +88,7 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
                     } else {
                         delay(currentDelay)
                         currentDelay = (currentDelay * delayFactor).coerceAtMost(maxDelay)
-                        Timber.w(
+                        DVCLogger.w(
                             cause,
                             "Request Config Failed. Retrying in %s seconds.", currentDelay / 1000
                         )

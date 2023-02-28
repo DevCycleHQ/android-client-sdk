@@ -37,7 +37,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import timber.log.Timber;
 
 import static com.devcycle.sdk.android.eventsource.Helpers.pow2;
 import static com.devcycle.sdk.android.eventsource.ReadyState.CLOSED;
@@ -46,6 +45,8 @@ import static com.devcycle.sdk.android.eventsource.ReadyState.OPEN;
 import static com.devcycle.sdk.android.eventsource.ReadyState.RAW;
 import static com.devcycle.sdk.android.eventsource.ReadyState.SHUTDOWN;
 import static java.lang.String.format;
+
+import com.devcycle.sdk.android.util.DVCLogger;
 
 /**
  * A client for the <a href="https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events">Server-Sent
@@ -93,10 +94,10 @@ public class EventSource implements Closeable {
    * The default value for {@link Builder#readBufferSize(int)}.
    */
   public static final int DEFAULT_READ_BUFFER_SIZE = 1000;
-  
+
   private static final Headers defaultHeaders =
-      new Headers.Builder().add("Accept", "text/event-stream").add("Cache-Control", "no-cache").build();
-  
+          new Headers.Builder().add("Accept", "text/event-stream").add("Cache-Control", "no-cache").build();
+
   private final String name;
   private volatile HttpUrl url;
   private final Headers headers;
@@ -145,7 +146,7 @@ public class EventSource implements Closeable {
     }
     this.handler = new AsyncEventHandler(this.eventExecutor, builder.handler, eventThreadSemaphore);
     this.connectionErrorHandler = builder.connectionErrorHandler == null ?
-        ConnectionErrorHandler.DEFAULT : builder.connectionErrorHandler;
+            ConnectionErrorHandler.DEFAULT : builder.connectionErrorHandler;
     this.readBufferSize = builder.readBufferSize;
     this.readyState = new AtomicReference<>(RAW);
     this.client = builder.clientBuilder.build();
@@ -171,14 +172,14 @@ public class EventSource implements Closeable {
    */
   public void start() {
     if (!readyState.compareAndSet(RAW, CONNECTING)) {
-      Timber.i("Start method called on this already-started EventSource object. Doing nothing");
+      DVCLogger.i("Start method called on this already-started EventSource object. Doing nothing");
       return;
     }
-    Timber.d("readyState change: %s -> %s", RAW, CONNECTING);
-    Timber.i("Starting EventSource client using URI: %s", url);
+    DVCLogger.d("readyState change: %s -> %s", RAW, CONNECTING);
+    DVCLogger.i("Starting EventSource client using URI: %s", url);
     streamExecutor.execute(this::run);
   }
-  
+
   /**
    * Drops the current stream connection (if any) and attempts to reconnect.
    * <p>
@@ -198,7 +199,7 @@ public class EventSource implements Closeable {
     }
     // if already connecting or already shutdown or in the process of closing, do nothing
   }
-  
+
   /**
    * Returns an enum indicating the current status of the connection.
    * @return a {@link ReadyState} value
@@ -213,11 +214,11 @@ public class EventSource implements Closeable {
   @Override
   public void close() {
     ReadyState currentState = readyState.getAndSet(SHUTDOWN);
-    Timber.d("readyState change: %s -> %s", currentState, SHUTDOWN);
+    DVCLogger.d("readyState change: %s -> %s", currentState, SHUTDOWN);
     if (currentState == SHUTDOWN) {
       return;
     }
-    
+
     closeCurrentStream(currentState);
 
     eventExecutor.shutdown();
@@ -264,7 +265,7 @@ public class EventSource implements Closeable {
 
     return true;
   }
-  
+
   private void closeCurrentStream(ReadyState previousState) {
     if (previousState == ReadyState.OPEN) {
       handler.onClosed();
@@ -275,20 +276,20 @@ public class EventSource implements Closeable {
       // Otherwise, an IllegalArgumentException "Unbalanced enter/exit" error is thrown by okhttp.
       // https://github.com/google/ExoPlayer/issues/1348
       call.cancel();
-      Timber.d("call cancelled");
+      DVCLogger.d("call cancelled");
     }
   }
-  
+
   Request buildRequest() {
     Request.Builder builder = new Request.Builder()
-        .headers(headers)
-        .url(url)
-        .method(method, body);
+            .headers(headers)
+            .url(url)
+            .method(method, body);
 
     if (lastEventId != null && !lastEventId.isEmpty()) {
       builder.addHeader("Last-Event-ID", lastEventId);
     }
-    
+
     Request request = builder.build();
     return requestTransformer == null ? request : requestTransformer.transformRequest(request);
   }
@@ -296,7 +297,7 @@ public class EventSource implements Closeable {
   private void run() {
     AtomicLong connectedTime = new AtomicLong();
     int reconnectAttempts = 0;
-    
+
     try {
       while (!Thread.currentThread().isInterrupted() && readyState.get() != SHUTDOWN) {
         if (reconnectAttempts == 0) {
@@ -309,7 +310,7 @@ public class EventSource implements Closeable {
     } catch (RejectedExecutionException ignored) {
       // COVERAGE: there is no way to simulate this condition in unit tests
       call = null;
-      Timber.d("Rejected execution exception ignored: %s", ignored);
+      DVCLogger.d("Rejected execution exception ignored: %s", ignored);
       // During shutdown, we tried to send a message to the event handler
       // Do not reconnect; the executor has been shut down
     }
@@ -319,34 +320,34 @@ public class EventSource implements Closeable {
     if (reconnectTime.isZero() || reconnectTime.isNegative()) {
       return reconnectAttempts;
     }
-    
+
     int counter = reconnectAttempts;
-    
+
     // Reset the backoff if we had a successful connection that stayed good for at least
     // backoffResetThresholdMs milliseconds.
     if (connectedTime > 0 && (System.currentTimeMillis() - connectedTime) >= backoffResetThreshold.toMillis()) {
       counter = 1;
     }
-    
+
     try {
       Duration sleepTime = backoffWithJitter(counter);
-      Timber.i("Waiting %s milliseconds before reconnecting...", sleepTime.toMillis());
+      DVCLogger.i("Waiting %s milliseconds before reconnecting...", sleepTime.toMillis());
       Thread.sleep(sleepTime.toMillis());
     } catch (InterruptedException ignored) { // COVERAGE: no way to cause this in unit tests
     }
-    
+
     return ++counter;
   }
-  
+
   private void newConnectionAttempt(AtomicLong connectedTime) {
     ConnectionErrorHandler.Action errorHandlerAction = ConnectionErrorHandler.Action.PROCEED;
 
     ReadyState stateBeforeConnecting = readyState.getAndSet(CONNECTING);
-    Timber.d("readyState change: %s -> %s", stateBeforeConnecting, CONNECTING);
-    
+    DVCLogger.d("readyState change: %s -> %s", stateBeforeConnecting, CONNECTING);
+
     connectedTime.set(0);
     call = client.newCall(buildRequest());
-    
+
     try {
       try (Response response = call.execute()) {
         if (response.isSuccessful()) {
@@ -360,37 +361,37 @@ public class EventSource implements Closeable {
           // should check the state in case we've been deliberately closed from elsewhere.
           ReadyState state = readyState.get();
           if (state != SHUTDOWN && state != CLOSED) {
-            Timber.w("Connection unexpectedly closed");
+            DVCLogger.w("Connection unexpectedly closed");
             errorHandlerAction = connectionErrorHandler.onConnectionError(new EOFException());
           }
         } else {
-          Timber.d("Unsuccessful response: %s", response);
+          DVCLogger.d("Unsuccessful response: %s", response);
           errorHandlerAction = dispatchError(new UnsuccessfulResponseException(response.code()));
         }
       }
     } catch (IOException e) {
       ReadyState state = readyState.get();
       if (state != SHUTDOWN && state != CLOSED) {
-        Timber.d("Connection problem: %s", e);
+        DVCLogger.d("Connection problem: %s", e);
         errorHandlerAction = dispatchError(e);
       }
     } finally {
       if (errorHandlerAction == ConnectionErrorHandler.Action.SHUTDOWN) {
-        Timber.i("Connection has been explicitly shut down by error handler");
+        DVCLogger.i("Connection has been explicitly shut down by error handler");
         close();
       } else {
         boolean wasOpen = readyState.compareAndSet(OPEN, CLOSED);
         boolean wasConnecting = readyState.compareAndSet(CONNECTING, CLOSED);
         if (wasOpen) {
-          Timber.d("readyState change: %s -> %s", OPEN, CLOSED);
-          handler.onClosed(); 
+          DVCLogger.d("readyState change: %s -> %s", OPEN, CLOSED);
+          handler.onClosed();
         } else if (wasConnecting) {
-          Timber.d("readyState change: %s -> %s", CONNECTING, CLOSED);
+          DVCLogger.d("readyState change: %s -> %s", CONNECTING, CLOSED);
         }
       }
     }
   }
-  
+
   // Read the response body as an SSE stream and dispatch each received event to the EventHandler.
   // This function exits in one of two ways:
   // 1. A normal return - this means the response simply ended.
@@ -401,7 +402,7 @@ public class EventSource implements Closeable {
       public void setReconnectionTime(Duration reconnectionTime) {
         EventSource.this.setReconnectionTime(reconnectionTime);
       }
-      
+
       @Override
       public void setLastEventId(String lastEventId) {
         EventSource.this.setLastEventId(lastEventId);
@@ -411,29 +412,29 @@ public class EventSource implements Closeable {
     ReadyState previousState = readyState.getAndSet(OPEN);
     if (previousState != CONNECTING) {
       // COVERAGE: there is no way to simulate this condition in unit tests
-      Timber.w("Unexpected readyState change: " + previousState + " -> " + OPEN);
+      DVCLogger.w("Unexpected readyState change: " + previousState + " -> " + OPEN);
     } else {
-      Timber.d("readyState change: %s -> %s", previousState, OPEN);
+      DVCLogger.d("readyState change: %s -> %s", previousState, OPEN);
     }
-    Timber.i("Connected to EventSource stream.");
+    DVCLogger.i("Connected to EventSource stream.");
     handler.onOpen();
-    
+
     EventParser parser = new EventParser(
-        response.body().byteStream(),
-        url.uri(),
-        handler,
-        connectionHandler,
-        readBufferSize,
-        streamEventData,
-        expectFields
-        );
-    
+            response.body().byteStream(),
+            url.uri(),
+            handler,
+            connectionHandler,
+            readBufferSize,
+            streamEventData,
+            expectFields
+    );
+
     // COVERAGE: the isInterrupted() condition is not encountered in unit tests and it's unclear if it can ever happen
     while (!Thread.currentThread().isInterrupted() && !parser.isEof()) {
       parser.processStream();
     }
   }
-  
+
   private ConnectionErrorHandler.Action dispatchError(Throwable t) {
     ConnectionErrorHandler.Action action = connectionErrorHandler.onConnectionError(t);
     if (action != ConnectionErrorHandler.Action.SHUTDOWN) {
@@ -455,7 +456,7 @@ public class EventSource implements Closeable {
     for (String name : defaultHeaders.names()) {
       if (!custom.names().contains(name)) { // skip the default if they set any custom values for this key
         for (String value: defaultHeaders.values(name)) {
-          builder.add(name, value);         
+          builder.add(name, value);
         }
       }
     }
@@ -486,7 +487,7 @@ public class EventSource implements Closeable {
    * This can be set initially with {@link Builder#lastEventId(String)}, and is updated whenever an event
    * is received that has an ID. Whether event IDs are supported depends on the server; it may ignore this
    * value.
-   * 
+   *
    * @return the last known event ID, or null
    * @see Builder#lastEventId(String)
    * @since 2.0.0
@@ -494,10 +495,10 @@ public class EventSource implements Closeable {
   public String getLastEventId() {
     return lastEventId;
   }
-  
+
   /**
    * Returns the current stream endpoint as an OkHttp HttpUrl.
-   * 
+   *
    * @return the endpoint URL
    * @since 1.9.0
    * @see #getUri()
@@ -505,10 +506,10 @@ public class EventSource implements Closeable {
   public HttpUrl getHttpUrl() {
     return this.url;
   }
-  
+
   /**
    * Returns the current stream endpoint as a java.net.URI.
-   * 
+   *
    * @return the endpoint URI
    * @see #getHttpUrl()
    */
@@ -528,10 +529,10 @@ public class EventSource implements Closeable {
    *     return input.newBuilder().tag("hello").build();
    *   }
    * }
-   * 
+   *
    * EventSource es = new EventSource.Builder(handler, uri).requestTransformer(new RequestTagger()).build();
    * </code></pre>
-   * 
+   *
    * @since 1.9.0
    */
   public static interface RequestTransformer {
@@ -539,13 +540,13 @@ public class EventSource implements Closeable {
      * Returns a request that is either the same as the input request or based on it. When
      * this method is called, EventSource has already set all of its standard properties on
      * the request.
-     * 
+     *
      * @param input the original request
      * @return the request that will be used
      */
     public Request transformRequest(Request input);
   }
-  
+
   /**
    * Builder for {@link EventSource}.
    */
@@ -570,10 +571,10 @@ public class EventSource implements Closeable {
     private int maxEventTasksInFlight = 0;
     private boolean streamEventData;
     private Set<String> expectFields = null;
-    
+
     /**
      * Creates a new builder.
-     * 
+     *
      * @param handler the event handler
      * @param uri the endpoint as a java.net.URI
      * @throws IllegalArgumentException if either argument is null, or if the endpoint is not HTTP or HTTPS
@@ -584,11 +585,11 @@ public class EventSource implements Closeable {
 
     /**
      * Creates a new builder.
-     * 
+     *
      * @param handler the event handler
      * @param url the endpoint as an OkHttp HttpUrl
      * @throws IllegalArgumentException if either argument is null, or if the endpoint is not HTTP or HTTPS
-     * 
+     *
      * @since 1.9.0
      */
     public Builder(EventHandler handler, HttpUrl url) {
@@ -602,14 +603,14 @@ public class EventSource implements Closeable {
       this.handler = handler;
       this.clientBuilder = createInitialClientBuilder();
     }
-    
+
     private static OkHttpClient.Builder createInitialClientBuilder() {
       OkHttpClient.Builder b = new OkHttpClient.Builder()
-          .connectionPool(new ConnectionPool(1, 1, TimeUnit.SECONDS))
-          .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
-          .readTimeout(DEFAULT_READ_TIMEOUT)
-          .writeTimeout(DEFAULT_WRITE_TIMEOUT)
-          .retryOnConnectionFailure(true);
+              .connectionPool(new ConnectionPool(1, 1, TimeUnit.SECONDS))
+              .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
+              .readTimeout(DEFAULT_READ_TIMEOUT)
+              .writeTimeout(DEFAULT_WRITE_TIMEOUT)
+              .retryOnConnectionFailure(true);
       try {
         b.sslSocketFactory(new ModernTLSSocketFactory(), defaultTrustManager());
       } catch (GeneralSecurityException e) {
@@ -618,7 +619,7 @@ public class EventSource implements Closeable {
       }
       return b;
     }
-    
+
     /**
      * Set the HTTP method used for this EventSource client to use for requests to establish the EventSource.
      * <p>
@@ -634,7 +635,7 @@ public class EventSource implements Closeable {
 
     /**
      * Sets the request body to be used for this EventSource client to use for requests to establish the EventSource.
-     * 
+     *
      * @param body the body to use in HTTP requests
      * @return the builder
      */
@@ -645,17 +646,17 @@ public class EventSource implements Closeable {
 
     /**
      * Specifies an object that will be used to customize outgoing requests. See {@link RequestTransformer} for details.
-     * 
+     *
      * @param requestTransformer the transformer object
      * @return the builder
-     * 
+     *
      * @since 1.9.0
      */
     public Builder requestTransformer(RequestTransformer requestTransformer) {
       this.requestTransformer = requestTransformer;
       return this;
     }
-    
+
     /**
      * Set the name for this EventSource client to be used when naming thread pools.
      * This is mainly useful when multiple EventSource clients exist within the same process.
@@ -676,7 +677,7 @@ public class EventSource implements Closeable {
      * skip past previously sent events if it supports this behavior. Once the connection is established,
      * this value will be updated whenever an event is received that has an ID. Whether event IDs are
      * supported depends on the server; it may ignore this value.
-     * 
+     *
      * @param lastEventId the last event identifier
      * @return the builder
      * @since 2.0.0
@@ -685,14 +686,14 @@ public class EventSource implements Closeable {
       this.lastEventId = lastEventId;
       return this;
     }
-    
+
     /**
      * Sets the minimum delay between connection attempts. The actual delay may be slightly less or
      * greater, since there is a random jitter. When there is a connection failure, the delay will
      * start at this value and will increase exponentially up to the {@link #maxReconnectTime(Duration)}
      * value with each subsequent failure, unless it is reset as described in
      * {@link Builder#backoffResetThreshold(Duration)}.
-     * 
+     *
      * @param reconnectTime the minimum delay; null to use the default
      * @return the builder
      * @see EventSource#DEFAULT_RECONNECT_TIME
@@ -705,7 +706,7 @@ public class EventSource implements Closeable {
     /**
      * Sets the maximum delay between connection attempts. See {@link #reconnectTime(Duration)}.
      * The default value is 30 seconds.
-     * 
+     *
      * @param maxReconnectTime the maximum delay; null to use the default
      * @return the builder
      * @see EventSource#DEFAULT_MAX_RECONNECT_TIME
@@ -721,7 +722,7 @@ public class EventSource implements Closeable {
      * will be greater than the last delay; if it fails after the threshold, the delay will start over at
      * the initial minimum value. This prevents long delays from occurring on connections that are only
      * rarely restarted.
-     *   
+     *
      * @param backoffResetThreshold the minimum time that a connection must stay open to avoid resetting
      *   the delay; null to use the default 
      * @return the builder
@@ -823,7 +824,7 @@ public class EventSource implements Closeable {
      * @see EventSource#DEFAULT_READ_TIMEOUT
      */
     public Builder readTimeout(Duration readTimeout) {
-      this.clientBuilder.readTimeout(readTimeout == null ? DEFAULT_READ_TIMEOUT : readTimeout); 
+      this.clientBuilder.readTimeout(readTimeout == null ? DEFAULT_READ_TIMEOUT : readTimeout);
       return this;
     }
 
@@ -843,7 +844,7 @@ public class EventSource implements Closeable {
      * <p>
      * If this is left unset, or set to {@code null}, threads will inherit the default priority
      * provided by {@code Executors.defaultThreadFactory()}.
-     * 
+     *
      * @param threadPriority the thread priority, or null to ue the default
      * @return the builder
      * @since 2.2.0
@@ -852,7 +853,7 @@ public class EventSource implements Closeable {
       this.threadPriority = threadPriority;
       return this;
     }
-    
+
     /**
      * Specifies any type of configuration actions you want to perform on the OkHttpClient builder.
      * <p>
@@ -868,7 +869,7 @@ public class EventSource implements Closeable {
      *     eventSourceBuilder.clientBuilderActions(b -&gt; {
      *         b.sslSocketFactory(mySocketFactory, myTrustManager);
      *     });
-     * 
+     *
      *     // Java 7 example (anonymous class)
      *     eventSourceBuilder.clientBuilderActions(new EventSource.Builder.ClientConfigurer() {
      *         public void configure(OkHttpClient.Builder v) {
@@ -884,7 +885,7 @@ public class EventSource implements Closeable {
       configurer.configure(clientBuilder);
       return this;
     }
-    
+
     /**
      * Specifies the fixed size of the buffer that EventSource uses to parse incoming data.
      * <p>
@@ -895,7 +896,7 @@ public class EventSource implements Closeable {
      * Therefore, if an application expects to see many lines in the stream that are longer
      * than {@link EventSource#DEFAULT_READ_BUFFER_SIZE}, it can specify a larger buffer size
      * to avoid unnecessary heap allocations.
-     * 
+     *
      * @param readBufferSize the buffer size
      * @return the builder
      * @throws IllegalArgumentException if the size is less than or equal to zero
@@ -925,7 +926,7 @@ public class EventSource implements Closeable {
       this.maxEventTasksInFlight = maxEventTasksInFlight;
       return this;
     }
-    
+
     /**
      * Specifies whether EventSource should send a {@link MessageEvent} to the handler as soon as it receives the
      * beginning of the event data, allowing the handler to read the data incrementally with
@@ -957,7 +958,7 @@ public class EventSource implements Closeable {
      * happens to cut off abnormally without a trailing blank line, technically you will be receiving an incomplete
      * event that should have been ignored. </li>
      * </ul>  
-     * 
+     *
      * @param streamEventData true if events should be dispatched immediately with asynchronous data rather than
      *   read fully before dispatch 
      * @return the builder
@@ -992,7 +993,7 @@ public class EventSource implements Closeable {
      * <p>
      * Such behavior is not automatic because in some applications, there might never be an {@code event:} field,
      * and EventSource has no way to anticipate this.
-     * 
+     *
      * @param fieldNames a list of SSE field names (case-sensitive; any names other than "event" and "id" are ignored)
      * @return the builder
      * @see #streamEventData(boolean)
@@ -1011,7 +1012,7 @@ public class EventSource implements Closeable {
       }
       return this;
     }
-    
+
     /**
      * Constructs an {@link EventSource} using the builder's current properties.
      * @return the new EventSource instance
@@ -1044,7 +1045,7 @@ public class EventSource implements Closeable {
       }
       return (X509TrustManager) trustManagers[0];
     }
-    
+
     /**
      * An interface for use with {@link Builder#clientBuilderActions(ClientConfigurer)}.
      * @since 1.10.0

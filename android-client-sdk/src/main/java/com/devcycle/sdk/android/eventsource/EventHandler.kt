@@ -1,6 +1,6 @@
 package com.devcycle.sdk.android.eventsource
 
-import timber.log.Timber
+import com.devcycle.sdk.android.util.DVCLogger
 
 class Handler(
     private var onMessageHandler: (messageEvent: MessageEvent?) -> Any
@@ -12,7 +12,7 @@ class Handler(
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onOpen() {
-        Timber.d("Opened SSE connection. Now listening for config updates.")
+        DVCLogger.d("Opened SSE connection. Now listening for config updates.")
     }
 
     /**
@@ -30,7 +30,7 @@ class Handler(
      * @throws Exception throwing an exception here will cause it to be logged and also sent to [.onError]
      */
     override fun onClosed() {
-        Timber.d("Closed SSE connection.")
+        DVCLogger.d("Closed SSE connection.")
     }
 
     /**
@@ -62,6 +62,6 @@ class Handler(
      * @param t  a `Throwable` object
      */
     override fun onError(t: Throwable?) {
-        Timber.e(t)
+        DVCLogger.e(t)
     }
 }

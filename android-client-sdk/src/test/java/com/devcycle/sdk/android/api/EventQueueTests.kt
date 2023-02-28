@@ -1,8 +1,10 @@
 package com.devcycle.sdk.android.api
 
+import com.devcycle.sdk.android.helpers.TestDVCLogger
 import com.devcycle.sdk.android.model.DVCUser
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.PopulatedUser
+import com.devcycle.sdk.android.util.DVCLogger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain

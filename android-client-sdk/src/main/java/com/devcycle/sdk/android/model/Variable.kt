@@ -24,7 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import org.json.JSONArray
 import org.json.JSONObject
-import timber.log.Timber
+import com.devcycle.sdk.android.util.DVCLogger
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
@@ -157,7 +157,7 @@ class Variable<T> internal constructor(
                 )
                 returnVariable.isDefaulted = true
                 if (readOnlyVariable != null) {
-                    Timber.e("Mismatched variable type for variable: $key, using default")
+                    DVCLogger.e("Mismatched variable type for variable: $key, using default")
                 }
                 return returnVariable
             }
@@ -199,18 +199,18 @@ class Variable<T> internal constructor(
         if (evt.propertyName == BucketedUserConfigListener.BucketedUserConfigObserverConstants.propertyChangeConfigUpdated) {
             val config = evt.newValue as BucketedUserConfig
             val variable: BaseConfigVariable? = config.variables?.get(key)
-            Timber.v("Triggering property change handler for $key")
+            DVCLogger.v("Triggering property change handler for $key")
             if (variable != null) {
                 try {
                     updateVariable(variable)
                 } catch (e: DVCVariableException) {
-                    Timber.e("Mismatched variable type for variable: ${variable.key}, using default")
+                    DVCLogger.e("Mismatched variable type for variable: ${variable.key}, using default")
                 }
             } else {
                 try {
                     defaultVariable()
                 } catch (e: DVCVariableException) {
-                    Timber.e("Unable to restore variable to default")
+                    DVCLogger.e("Unable to restore variable to default")
                 }
             }
         }

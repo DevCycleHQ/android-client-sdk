@@ -7,7 +7,7 @@ import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.devcycle.sdk.android.model.PopulatedUser
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.module.kotlin.readValue
-import timber.log.Timber
+import com.devcycle.sdk.android.util.DVCLogger
 import java.util.*
 
 // TODO: access disk on background thread
@@ -30,7 +30,7 @@ internal class DVCSharedPrefs(context: Context) {
             val jsonString = JSONMapper.mapper.writeValueAsString(objectToSave)
             preferences.edit().putString(key, jsonString).apply()
         } catch (e: JsonProcessingException) {
-            Timber.e(e, e.message)
+            DVCLogger.e(e, e.message)
         }
     }
 
@@ -41,14 +41,14 @@ internal class DVCSharedPrefs(context: Context) {
             editor.remove(key)
             editor.commit()
         } catch (e: JsonProcessingException) {
-            Timber.e(e, e.message)
+            DVCLogger.e(e, e.message)
         }
     }
 
     fun getString(key: String): String? {
         val stringValue = preferences.getString(key,null)
         if (stringValue == null) {
-            Timber.i("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
+            DVCLogger.i("%s could not be found in SharedPreferences file: %s", key, R.string.cached_data)
             return null
         }
         return stringValue
@@ -60,7 +60,7 @@ internal class DVCSharedPrefs(context: Context) {
             preferences.edit().putString(key, value).apply()
             preferences.edit().commit()
         } catch (e: JsonProcessingException) {
-            Timber.e(e, e.message)
+            DVCLogger.e(e, e.message)
         }
     }
 
@@ -75,7 +75,7 @@ internal class DVCSharedPrefs(context: Context) {
             editor.putLong("$key.FETCH_DATE", Calendar.getInstance().timeInMillis)
             editor.apply()
         } catch (e: JsonProcessingException) {
-            Timber.e(e, e.message)
+            DVCLogger.e(e, e.message)
         }
     }
 
@@ -87,25 +87,25 @@ internal class DVCSharedPrefs(context: Context) {
             val fetchDateMs = preferences.getLong("$key.FETCH_DATE", 0)
 
             if (userId != user.userId) {
-                Timber.d("Skipping cached config: no config for user ID ${user.userId}")
+                DVCLogger.d("Skipping cached config: no config for user ID ${user.userId}")
                 return null
             }
 
             val oldestValidDateMs = Calendar.getInstance().timeInMillis - ttlMs
             if (fetchDateMs < oldestValidDateMs) {
-                Timber.d("Skipping cached config: last fetched date is too old")
+                DVCLogger.d("Skipping cached config: last fetched date is too old")
                 return null
             }
 
             val configString = preferences.getString(key, null)
             if (configString == null) {
-                Timber.d("Skipping cached config: no config found")
+                DVCLogger.d("Skipping cached config: no config found")
                 return null
             }
 
             return JSONMapper.mapper.readValue(configString)
         } catch (e: JsonProcessingException) {
-            Timber.e(e, e.message)
+            DVCLogger.e(e, e.message)
             return null
         }
     }
