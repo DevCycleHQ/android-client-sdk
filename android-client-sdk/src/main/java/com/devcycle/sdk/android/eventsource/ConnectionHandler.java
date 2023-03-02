@@ -1,8 +1,8 @@
 package com.devcycle.sdk.android.eventsource;
 
-import java.time.Duration;
 
 interface ConnectionHandler {
-  void setReconnectionTime(Duration reconnectionTime);
+  // setReconnectionTime should be in Milliseconds
+  void setReconnectionTime(long reconnectionTime);
   void setLastEventId(String lastEventId);
 }
