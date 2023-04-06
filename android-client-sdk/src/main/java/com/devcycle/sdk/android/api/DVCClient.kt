@@ -59,6 +59,7 @@ class DVCClient private constructor(
     private val defaultCacheTTL = 7 * 24 * 3600000L // 7 days
     private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
     private val disableConfigCache = options?.disableConfigCache ?: false
+    private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
 
     private var latestIdentifiedUser: PopulatedUser = user
 
@@ -105,7 +106,7 @@ class DVCClient private constructor(
     private val onPauseApplication = fun () {
         coroutineScope.launch {
             withContext(Dispatchers.IO) {
-                DVCLogger.d("Closing streaming event source connection")
+                DVCLogger.d("Closing Realtime Updates connection")
                 eventSource?.close()
             }
         }
@@ -116,7 +117,7 @@ class DVCClient private constructor(
             coroutineScope.launch {
                 withContext(Dispatchers.IO) {
                     eventSource?.close()
-                    DVCLogger.d("Restarting streaming event source connection")
+                    DVCLogger.d("Attempting to restart Realtime Updates connection")
                     initEventSource()
                     refetchConfig(false, null)
                 }
@@ -125,6 +126,10 @@ class DVCClient private constructor(
     }
 
     private fun initEventSource () {
+        if (disableRealtimeUpdates) {
+            DVCLogger.i("Realtime Updates disabled via initialization parameter")
+            return
+        }
         if (config?.sse?.url == null) { return }
         eventSource = EventSource.Builder(Handler(fun(messageEvent: MessageEvent?) {
             if (messageEvent == null) { return }

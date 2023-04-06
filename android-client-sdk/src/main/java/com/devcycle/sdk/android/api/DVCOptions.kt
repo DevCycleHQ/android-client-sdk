@@ -5,7 +5,8 @@ class DVCOptions(
     private val disableEventLogging: Boolean,
     val enableEdgeDB: Boolean,
     val configCacheTTL: Long?,
-    val disableConfigCache: Boolean
+    val disableConfigCache: Boolean,
+    val disableRealtimeUpdates: Boolean
 ) {
     class DVCOptionsBuilder internal constructor() {
         private var flushEventsIntervalMs = 0L
@@ -13,6 +14,7 @@ class DVCOptions(
         private var enableEdgeDB = false
         private var configCacheTTL: Long? = null
         private var disableConfigCache = false
+        private var disableRealtimeUpdates = false
 
         fun flushEventsIntervalMs(flushEventsIntervalMs: Long): DVCOptionsBuilder {
             this.flushEventsIntervalMs = flushEventsIntervalMs
@@ -38,14 +40,18 @@ class DVCOptions(
             this.disableConfigCache = disableConfigCache
             return this
         }
-
+        fun disableRealtimeUpdates(disableRealtimeUpdates: Boolean): DVCOptionsBuilder {
+            this.disableRealtimeUpdates = disableRealtimeUpdates
+            return this
+        }
         fun build(): DVCOptions {
             return DVCOptions(
                 flushEventsIntervalMs,
                 disableEventLogging,
                 enableEdgeDB,
                 configCacheTTL,
-                disableConfigCache
+                disableConfigCache,
+                disableRealtimeUpdates
             )
         }
     }
