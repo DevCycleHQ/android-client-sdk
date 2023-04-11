@@ -21,3 +21,26 @@ Versions earlier than 1.0.6 are deprecated and contain either third party CVEs o
 ## Usage
 
 To find usage documentation, visit out [docs](https://docs.devcycle.com/docs/sdk/client-side-sdks/android#usage).
+
+## Running the included Example Apps
+
+To run the examples you will need to include your Mobile SDK Key and a Variable Key. The Variable
+used should be a 'string' type.
+
+### Java Example
+
+The Java Example apps consist of a simple blank screen that automatically triggers a variable evaluation
+on run and then displays a toast notification.
+
+Code locations to update: 
+* [Mobile SDK Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/java-example/src/main/java/com/devcycle/javaexample/JavaApplication.java#L33)
+* [Variable Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/java-example/src/main/java/com/devcycle/javaexample/JavaApplication.java#L38)
+
+### Kotlin Example
+
+The Kotlin Example provides a simplified interface to evaluate flags manually, but will also
+automatically triggers a variable evaluation on run and then displays a toast notification.
+
+Code locations to update:
+* [Mobile SDK Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/kotlin-example/src/main/java/com/devcycle/example/KotlinApplication.kt#L27)
+* [Variable Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/kotlin-example/src/main/java/com/devcycle/example/KotlinApplication.kt#L33)
