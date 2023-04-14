@@ -119,7 +119,7 @@ class DVCClient private constructor(
                     eventSource?.close()
                     DVCLogger.d("Attempting to restart Realtime Updates connection")
                     initEventSource()
-                    refetchConfig(false, null)
+                    refetchConfig(false, null, null)
                 }
             }
         }
