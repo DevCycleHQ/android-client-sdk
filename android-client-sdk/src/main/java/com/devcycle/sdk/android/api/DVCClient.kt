@@ -119,7 +119,7 @@ class DVCClient private constructor(
                     eventSource?.close()
                     DVCLogger.d("Attempting to restart Realtime Updates connection")
                     initEventSource()
-                    refetchConfig(false, null)
+                    refetchConfig(false, null, null)
                 }
             }
         }
@@ -141,13 +141,15 @@ class DVCClient private constructor(
             val lastModified = if (innerData.has("lastModified")) {
                 (innerData.get("lastModified") as Long)
             } else null
-
             val type = if (innerData.has("type")) {
                 (innerData.get("type") as String).toLong()
             } else ""
+            val etag = if (innerData.has("etag")) {
+                (innerData.get("etag") as String)
+            } else null
 
             if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
-                refetchConfig(true, lastModified)
+                refetchConfig(true, lastModified, etag)
             }
         }), URI(config?.sse?.url)).build()
         eventSource?.start()
@@ -431,8 +433,13 @@ class DVCClient private constructor(
             dvcSharedPrefs.saveString(user.userId, DVCSharedPrefs.AnonUserIdKey)
     }
 
-    private suspend fun fetchConfig(user: PopulatedUser, sse: Boolean? = false, lastModified: Long? = null) {
-        val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified)
+    private suspend fun fetchConfig(
+        user: PopulatedUser,
+        sse: Boolean? = false,
+        lastModified: Long? = null,
+        etag: String? = null
+    ) {
+        val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified, etag)
         config = result
         observable.configUpdated(config)
         dvcSharedPrefs.saveConfig(config!!, user)
@@ -453,7 +460,12 @@ class DVCClient private constructor(
         }
     }
 
-    private fun refetchConfig(sse: Boolean = false, lastModified: Long? = null, callback: DVCCallback<Map<String, BaseConfigVariable>>? = null) {
+    private fun refetchConfig(
+        sse: Boolean = false,
+        lastModified: Long? = null,
+        etag: String? = null,
+        callback: DVCCallback<Map<String, BaseConfigVariable>>? = null
+    ) {
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
             DVCLogger.d("Queued refetchConfig request")
@@ -464,7 +476,7 @@ class DVCClient private constructor(
         coroutineScope.launch {
             withContext(coroutineContext) {
                 try {
-                    fetchConfig(latestIdentifiedUser, sse, lastModified)
+                    fetchConfig(latestIdentifiedUser, sse, lastModified, etag)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
                     callback?.onError(t)

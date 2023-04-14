@@ -49,11 +49,13 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
         user: PopulatedUser,
         enableEdgeDB: Boolean,
         sse: Boolean? = false,
-        lastModified: Long? = null
+        lastModified: Long? = null,
+        etag: String? = null
     ): BucketedUserConfig {
         val map = (
-                JSONMapper.mapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
-                ) as MutableMap<String, String>
+            JSONMapper.mapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
+        ) as MutableMap<String, String>
+
         if (map.contains("customData")) {
             map["customData"] = JSONMapper.mapper.writeValueAsString(map["customData"])
         }
@@ -63,11 +65,14 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
         if (enableEdgeDB) {
             map["enableEdgeDB"] = "true"
         }
-        if(sse == true) {
+        if (sse == true) {
             map["sse"] = "true"
         }
-        if(lastModified != null) {
+        if (lastModified != null) {
             map["sseLastModified"] = "$lastModified"
+        }
+        if (etag != null) {
+            map["sseEtag"] = etag
         }
 
         lateinit var config: BucketedUserConfig

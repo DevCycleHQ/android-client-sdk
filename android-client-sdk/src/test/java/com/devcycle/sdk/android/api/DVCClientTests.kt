@@ -364,11 +364,17 @@ class DVCClientTests {
         client.identifyUser(DVCUser.builder().withUserId("last_userId").build())
 
         // make private refetchConfig callable
-        val refetchConfigMethod: Method = DVCClient::class.java.getDeclaredMethod("refetchConfig", Boolean::class.java, 1L::class.javaObjectType, DVCCallback::class.java)
+        val refetchConfigMethod: Method = DVCClient::class.java.getDeclaredMethod(
+            "refetchConfig",
+            Boolean::class.java,
+            1L::class.javaObjectType,
+            String::class.java,
+            DVCCallback::class.java
+        )
         refetchConfigMethod.isAccessible = true
 
         // call refetchConfig -> the callback will assert that the config request triggered by this refetch config had the last seen user_id
-        refetchConfigMethod.invoke(client, true, 1000L, refetchConfigCallback)
+        refetchConfigMethod.invoke(client, true, 1000L, "etag", refetchConfigCallback)
 
         countDownLatch.await(2000, TimeUnit.MILLISECONDS)
         // only the init and refetchConfig requests should have been sent bc the identifyUser requests should have been skipped in the queue
