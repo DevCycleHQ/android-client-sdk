@@ -19,6 +19,8 @@ import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.net.URI
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -42,6 +44,7 @@ class DVCClient private constructor(
 ) {
     private var config: BucketedUserConfig? = null
     private var eventSource: EventSource? = null
+    private var executorService: ExecutorService? = null
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
@@ -151,8 +154,15 @@ class DVCClient private constructor(
             if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
                 refetchConfig(true, lastModified, etag)
             }
-        }), URI(config?.sse?.url)).build()
+        }), URI(config?.sse?.url)).executor(this.getValidExecutorService()).build()
         eventSource?.start()
+    }
+
+    private fun getValidExecutorService(): ExecutorService? {
+        if (executorService == null || executorService?.isTerminated == true) {
+            executorService = Executors.newSingleThreadExecutor()
+        }
+        return executorService
     }
 
     fun onInitialized(callback: DVCCallback<String>) {

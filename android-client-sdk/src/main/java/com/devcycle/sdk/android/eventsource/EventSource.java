@@ -570,6 +570,7 @@ public class EventSource implements Closeable {
     private int maxEventTasksInFlight = 0;
     private boolean streamEventData;
     private Set<String> expectFields = null;
+    private ExecutorService streamExecutor;
 
     /**
      * Creates a new builder.
@@ -1009,6 +1010,11 @@ public class EventSource implements Closeable {
           }
         }
       }
+      return this;
+    }
+
+    public Builder executor(ExecutorService streamExecutor) {
+      this.streamExecutor = streamExecutor;
       return this;
     }
 
