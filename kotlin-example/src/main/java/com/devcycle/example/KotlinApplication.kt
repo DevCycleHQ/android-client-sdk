@@ -9,10 +9,11 @@ import com.devcycle.sdk.android.model.DVCUser
 import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.DVCLogger
 import com.devcycle.sdk.android.util.LogLevel
-
+import java.util.Objects
 
 class KotlinApplication: Application() {
     var variable: Variable<String>? = null
+    var variableValue: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -24,13 +25,15 @@ class KotlinApplication: Application() {
                     .withCustomData(mapOf("custom_value" to "test"))
                     .build()
             )
-            .withSDKKey("<YOUR_MOBILE_SDK_KEY>")
+            .withSDKKey("<DVC_MOBILE_SDK_KEY>")
             .withLogLevel(LogLevel.DEBUG)
             .withLogger(DVCLogger.DebugLogger())
             .build()
 
         // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
         variable = client.variable("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
+        variableValue = client.variableValue("<YOUR_VARIABLE_KEY>", "default value")
+        Toast.makeText(applicationContext, Objects.requireNonNull(variableValue), Toast.LENGTH_SHORT).show()
 
         client.onInitialized(object : DVCCallback<String> {
             override fun onSuccess(result: String) {

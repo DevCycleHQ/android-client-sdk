@@ -18,6 +18,7 @@ import java.util.Objects;
 
 public class JavaApplication extends Application {
     Variable<String> variable = null;
+    String variableValue = null;
 
     @Override
     public void onCreate() {
@@ -30,13 +31,14 @@ public class JavaApplication extends Application {
                                 .withUserId("test_user")
                                 .build()
                 )
-                .withSDKKey("<YOUR_MOBILE_SDK_KEY>")
+                .withSDKKey("<DVC_MOBILE_SDK_KEY>")
                 .withLogLevel(LogLevel.DEBUG)
                 .build();
 
         // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
         variable = client.variable("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
-        Toast.makeText(getApplicationContext(), Objects.requireNonNull(variable.getValue()), Toast.LENGTH_SHORT).show();
+        variableValue = client.variableValue("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
+        Toast.makeText(getApplicationContext(), Objects.requireNonNull(variableValue), Toast.LENGTH_SHORT).show();
 
         client.onInitialized(new DVCCallback<String>() {
             @Override

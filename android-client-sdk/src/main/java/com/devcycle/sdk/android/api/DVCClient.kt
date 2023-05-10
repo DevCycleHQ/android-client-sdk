@@ -287,7 +287,35 @@ class DVCClient private constructor(
     }
 
     /**
-     * Retrieve a Variable from the config. Update the Variable whenever the Config is updated using
+     * Retrieve a Variable Value. Update the Variable whenever the Config is updated using
+     * [java.beans.PropertyChangeListener]
+     *
+     * [key] is used to identify the Variable in the config
+     * [defaultValue] is set on the Variable and used to provide a default value if the Variable
+     * could not be fetched or does not exist
+     */
+    fun variableValue(key: String, defaultValue: String): String {
+        return this._variable(key, defaultValue).value
+    }
+
+    fun variableValue(key: String, defaultValue: Number): Number {
+        return this._variable(key,defaultValue).value
+    }
+
+    fun variableValue(key: String, defaultValue: Boolean): Boolean {
+        return this._variable(key, defaultValue).value
+    }
+
+    fun variableValue(key: String, defaultValue: JSONObject): JSONObject {
+        return this._variable(key, defaultValue).value
+    }
+
+    fun variableValue(key: String, defaultValue: JSONArray): JSONArray {
+        return this._variable(key, defaultValue).value
+    }
+
+    /**
+     * Retrieve a Variable Object. Update the Variable whenever the Config is updated using
      * [java.beans.PropertyChangeListener]
      *
      * [key] is used to identify the Variable in the config
