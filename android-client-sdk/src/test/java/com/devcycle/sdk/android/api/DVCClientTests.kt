@@ -861,12 +861,16 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         val variable = client.variable("activate-flag", "Not activated")
+        val varValue = client.variableValue("activate-flag", "Not activated")
         val variable2 = client.variable("activate-flag", "Activated")
+        val varValue2 = client.variableValue("activate-flag", "Activated")
 
         assert(variable !== variable2)
         assert(variable.value === "Not activated")
+        assert(varValue === "Not activated")
         assert(variable.isDefaulted == true)
         assert(variable2.value === "Activated")
+        assert(varValue2 === "Activated")
         assert(variable2.isDefaulted == true)
     }
 
@@ -909,9 +913,14 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
         val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
         val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
         val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
         try {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
@@ -932,17 +941,25 @@ class DVCClientTests {
 
             assert(boolVar.value)
             assert(boolVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(!boolValue)
 
             assert(numVar.value == 42)
             assert(numVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(numValue == 0)
 
             assert(strVar.value == "it works!")
             assert(strVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(strValue == "Not activated")
 
             val expectedJSON = JSONObject()
             expectedJSON.put("test", "feature")
             assert(jsonVar.value.toString() == expectedJSON.toString())
             assert(jsonVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(jsonValue.toString() !== expectedJSON.toString())
         }
     }
 
@@ -983,9 +1000,14 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
         val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
         val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
         val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
         try {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
@@ -1007,15 +1029,19 @@ class DVCClientTests {
             // Expect Client to have failed to initialize, all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
+            assert(!boolValue)
 
             assert(numVar.value == 0)
             assert(numVar.isDefaulted == true)
+            assert(numValue == 0)
 
             assert(strVar.value == "Not activated")
             assert(strVar.isDefaulted == true)
+            assert(strValue == "Not activated")
 
             assert(jsonVar.value.toString() == defaultJSON.toString())
             assert(jsonVar.isDefaulted == true)
+            assert(jsonValue.toString() == defaultJSON.toString())
         }
     }
 
@@ -1056,9 +1082,14 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
         val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
         val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
         val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
         try {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
@@ -1080,15 +1111,19 @@ class DVCClientTests {
             // Expect Client to have failed to initialize, all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
+            assert(!boolValue)
 
             assert(numVar.value == 0)
             assert(numVar.isDefaulted == true)
+            assert(numValue == 0)
 
             assert(strVar.value == "Not activated")
             assert(strVar.isDefaulted == true)
+            assert(strValue == "Not activated")
 
             assert(jsonVar.value.toString() == defaultJSON.toString())
             assert(jsonVar.isDefaulted == true)
+            assert(jsonValue.toString() == defaultJSON.toString())
         }
     }
 
@@ -1130,9 +1165,14 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
         val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
         val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
         val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
         try {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
@@ -1154,15 +1194,19 @@ class DVCClientTests {
             // Expect Client to have failed to initialize, all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
+            assert(!boolValue)
 
             assert(numVar.value == 0)
             assert(numVar.isDefaulted == true)
+            assert(numValue == 0)
 
             assert(strVar.value == "Not activated")
             assert(strVar.isDefaulted == true)
+            assert(strValue == "Not activated")
 
             assert(jsonVar.value.toString() == defaultJSON.toString())
             assert(jsonVar.isDefaulted == true)
+            assert(jsonValue.toString() == defaultJSON.toString())
         }
     }
 
@@ -1204,9 +1248,14 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
         val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
         val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
         val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
         try {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
@@ -1228,15 +1277,19 @@ class DVCClientTests {
             // Expect Client to have failed initialization, all variables should default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
+            assert(!boolValue)
 
             assert(numVar.value == 0)
             assert(numVar.isDefaulted == true)
+            assert(numValue == 0)
 
             assert(strVar.value === "Not activated")
             assert(strVar.isDefaulted == true)
+            assert(strValue === "Not activated")
 
             assert(jsonVar.value === defaultJSON)
             assert(jsonVar.isDefaulted == true)
+            assert(jsonValue === defaultJSON)
         }
     }
 
