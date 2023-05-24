@@ -88,16 +88,21 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
             }
                 .flowOn(Dispatchers.Default)
                 .retryWhen { cause, attempt ->
-                    if ((cause is DVCRequestException && !cause.isRetryable) || attempt > 4) {
-                        return@retryWhen false
+                    if (cause is DVCRequestException) {
+                        if (!cause.isRetryable || attempt > 4) {
+                            return@retryWhen false
+                        } else {
+                            delay(currentDelay)
+                            currentDelay = (currentDelay * delayFactor).coerceAtMost(maxDelay)
+                            DVCLogger.w(
+                                cause,
+                                "Request Config Failed. Retrying in %s seconds.", currentDelay / 1000
+                            )
+                            return@retryWhen true
+                        }
                     } else {
-                        delay(currentDelay)
-                        currentDelay = (currentDelay * delayFactor).coerceAtMost(maxDelay)
-                        DVCLogger.w(
-                            cause,
-                            "Request Config Failed. Retrying in %s seconds.", currentDelay / 1000
-                        )
-                        return@retryWhen true
+                        DVCLogger.e(cause, cause.message)
+                        return@retryWhen false
                     }
                 }
                 .collect{
