@@ -1,10 +1,8 @@
 package com.devcycle.sdk.android.api
 
-import com.devcycle.sdk.android.helpers.TestDVCLogger
-import com.devcycle.sdk.android.model.DVCUser
+import android.content.Context
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.PopulatedUser
-import com.devcycle.sdk.android.util.DVCLogger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -12,10 +10,14 @@ import org.junit.Assert
 import org.junit.Test
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.mockito.Mock
 import org.mockito.Mockito
 import java.math.BigDecimal
 
+
 class EventQueueTests {
+
+    private val mockContext: Context = Mockito.mock(Context::class.java)
 
     @DelicateCoroutinesApi
     private val mainThreadSurrogate = newSingleThreadContext("UI thread")
@@ -37,7 +39,7 @@ class EventQueueTests {
 
     @Test
     fun `events are aggregated correctly`() {
-        val request = Request("some-key", "http://fake.com", "http://fake.com")
+        val request = Request("some-key", "http://fake.com", "http://fake.com", mockContext)
         val user = PopulatedUser("test")
         val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
 

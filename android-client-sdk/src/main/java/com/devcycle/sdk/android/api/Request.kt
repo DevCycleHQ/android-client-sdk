@@ -1,5 +1,6 @@
 package com.devcycle.sdk.android.api
 
+import android.content.Context
 import com.devcycle.sdk.android.exception.DVCRequestException
 
 import com.devcycle.sdk.android.model.*
@@ -15,10 +16,10 @@ import retrofit2.Response
 import com.devcycle.sdk.android.util.DVCLogger
 import java.io.IOException
 
-internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBaseUrl: String) {
-    private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl)
+internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBaseUrl: String, context: Context) {
+    private val api: DVCApi = DVCApiClient().initialize(apiBaseUrl, context)
     private val eventApi: DVCEventsApi = DVCEventsApiClient().initialize(sdkKey, eventsBaseUrl)
-    private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(sdkKey, apiBaseUrl)
+    private val edgeDBApi: DVCEdgeDBApi = DVCEdgeDBApiClient().initialize(sdkKey, apiBaseUrl, context)
     private val configMutex = Mutex()
 
     private fun <T> getResponseHandler(response: Response<T>): T {
