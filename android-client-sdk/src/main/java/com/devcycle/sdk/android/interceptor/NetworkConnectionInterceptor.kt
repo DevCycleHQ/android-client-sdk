@@ -17,7 +17,7 @@ class NetworkConnectionInterceptor(context: Context): Interceptor {
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
         var request = chain.request()
-        if (isNetworkAvailable()) {
+        if (!isNetworkAvailable()) {
             throw NoNetworkException("No network connection is available")
         }
         return chain.proceed(request)
