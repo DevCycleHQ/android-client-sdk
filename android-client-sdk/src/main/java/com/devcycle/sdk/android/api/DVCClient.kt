@@ -48,7 +48,7 @@ class DVCClient private constructor(
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request(sdkKey, apiUrl, eventsUrl)
+    private val request: Request = Request(sdkKey, apiUrl, eventsUrl, context)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
     private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
     private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false

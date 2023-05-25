@@ -271,6 +271,7 @@ class DVCClientTests {
         client.close()
     }
 
+    @ExperimentalCoroutinesApi
     @Test
     fun `ensure config requests are queued and executed later`() {
         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
