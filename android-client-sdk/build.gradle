@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.devcycle"
-version = "1.6.0"
+version = "1.6.1"
 
 android {
     compileSdk 31
