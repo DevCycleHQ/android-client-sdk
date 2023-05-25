@@ -29,14 +29,10 @@ class NetworkConnectionInterceptor(context: Context): Interceptor {
         if (connectivityManager is ConnectivityManager) {
             val capabilities =
                 connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork) ?: return false
-            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                return true
-            } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                return true
-            } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
-                return true
-            }
+            return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
         }
-        return false
+        return true
     }
 }
