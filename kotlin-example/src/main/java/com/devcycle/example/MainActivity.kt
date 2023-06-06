@@ -22,10 +22,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val client = DevCycleManager.dvcClient.get()
+        val client = DevCycleManager.dvcClient
 
         if (client != null) {
-            val variable = client.variable("realtime-demo", "default")
+            val variable = client.variable("string-variable", "this is a new var")
             setTextValue(variable.value)
             variable.onUpdate {
                 setTextValue(it.value)

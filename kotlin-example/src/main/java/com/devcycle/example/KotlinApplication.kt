@@ -30,15 +30,17 @@ class KotlinApplication: Application() {
             .withLogger(DVCLogger.DebugLogger())
             .build()
 
+        DevCycleManager.setClient(client)
         // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
-        variable = client.variable("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
-        variableValue = client.variableValue("<YOUR_VARIABLE_KEY>", "default value")
+        variable = DevCycleManager.variable("string-variable", "my string variable is not initialized yet");
+        variableValue = DevCycleManager.dvcClient?.variableValue("string-variable", "default value")
         Toast.makeText(applicationContext, Objects.requireNonNull(variableValue), Toast.LENGTH_SHORT).show()
 
-        client.onInitialized(object : DVCCallback<String> {
+        DevCycleManager.dvcClient?.onInitialized(object : DVCCallback<String> {
             override fun onSuccess(result: String) {
-//                Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
-                client.flushEvents(object: DVCCallback<String> {
+
+    //                Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
+                DevCycleManager.dvcClient?.flushEvents(object: DVCCallback<String> {
                     override fun onSuccess(result: String) {
                         Toast.makeText(applicationContext, result, Toast.LENGTH_SHORT).show()
                     }
@@ -48,11 +50,11 @@ class KotlinApplication: Application() {
                     }
                 })
 
-                client.track(
+                DevCycleManager.dvcClient?.track(
                     DVCEvent.builder()
-                    .withType("testEvent")
-                    .withMetaData(mapOf("test" to "value"))
-                    .build())
+                        .withType("testEvent")
+                        .withMetaData(mapOf("test" to "value"))
+                        .build())
 
 
                 // This toast onInitialized will show the value has changed
@@ -64,6 +66,5 @@ class KotlinApplication: Application() {
             }
         })
 
-        DevCycleManager.setClient(client)
     }
 }
