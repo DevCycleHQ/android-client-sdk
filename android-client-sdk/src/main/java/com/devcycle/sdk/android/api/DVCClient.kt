@@ -50,7 +50,6 @@ class DVCClient private constructor(
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
     private val request: Request = Request(sdkKey, apiUrl, eventsUrl, context)
     private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
     private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
     private val isInitialized = AtomicBoolean(false)
     private val isExecuting = AtomicBoolean(false)
@@ -63,6 +62,10 @@ class DVCClient private constructor(
     private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
     private val disableConfigCache = options?.disableConfigCache ?: false
     private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
+    private val disableEventLogging = options?.disableEventLogging ?: false
+
+    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs, disableEventLogging)
+
 
     private var latestIdentifiedUser: PopulatedUser = user
 

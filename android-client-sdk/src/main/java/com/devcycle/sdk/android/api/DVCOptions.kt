@@ -2,7 +2,7 @@ package com.devcycle.sdk.android.api
 
 class DVCOptions(
     val flushEventsIntervalMs: Long,
-    private val disableEventLogging: Boolean,
+    val disableEventLogging: Boolean,
     val enableEdgeDB: Boolean,
     val configCacheTTL: Long?,
     val disableConfigCache: Boolean,

@@ -41,7 +41,7 @@ class EventQueueTests {
     fun `events are aggregated correctly`() {
         val request = Request("some-key", "http://fake.com", "http://fake.com", mockContext)
         val user = PopulatedUser("test")
-        val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
+        val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000, disableEventLogging = false)
 
         val event1 = Event.fromInternalEvent(
             Event.variableEvent(false, "dummy_key1"),
@@ -75,5 +75,45 @@ class EventQueueTests {
 
         Assert.assertEquals(BigDecimal(2), aggregateEvaluatedEvent?.value)
         Assert.assertEquals(BigDecimal(2), aggregateDefaultedEvent?.value)
+    }
+
+    @Test
+    fun `events are not aggregated when disableEventLogging`() {
+        val request = Request("some-key", "http://fake.com", "http://fake.com", mockContext)
+        val user = PopulatedUser("test")
+        val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000, disableEventLogging = true)
+
+        val event1 = Event.fromInternalEvent(
+            Event.variableEvent(false, "dummy_key1"),
+            user,
+            null
+        )
+        val event2 = Event.fromInternalEvent(
+            Event.variableEvent(false, "dummy_key1"),
+            user,
+            null
+        )
+
+        val defaultEvent1 = Event.fromInternalEvent(
+            Event.variableEvent(true, "dummy_key1"),
+            user,
+            null
+        )
+        val defaultEvent2 = Event.fromInternalEvent(
+            Event.variableEvent(true, "dummy_key1"),
+            user,
+            null
+        )
+
+        eventQueue.queueAggregateEvent(event1)
+        eventQueue.queueAggregateEvent(event2)
+        eventQueue.queueAggregateEvent(defaultEvent1)
+        eventQueue.queueAggregateEvent(defaultEvent2)
+
+        val aggregateEvaluatedEvent = eventQueue.aggregateEventMap[Event.Companion.EventTypes.variableEvaluated]?.get("dummy_key1")
+        val aggregateDefaultedEvent = eventQueue.aggregateEventMap[Event.Companion.EventTypes.variableDefaulted]?.get("dummy_key1")
+
+        Assert.assertEquals(null, aggregateEvaluatedEvent?.value)
+        Assert.assertEquals(null, aggregateDefaultedEvent?.value)
     }
 }

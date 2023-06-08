@@ -278,7 +278,7 @@ class DVCClientTests {
         generateDispatcher(config = config)
         val initializeLatch = CountDownLatch(1)
 
-        val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
+        val client = createClient("pretend-its-real", mockWebServer.url("/").toString(), 100L, false, null, LogLevel.VERBOSE )
         client.onInitialized(object: DVCCallback<String> {
             override fun onSuccess(result: String) {
                 calledBack = true
@@ -670,6 +670,133 @@ class DVCClientTests {
 
                     Assertions.assertEquals(filteredLogs.size, 1)
                     Assertions.assertEquals(filteredLogs[0].first, LogLevel.INFO.value)
+                    Assertions.assertEquals(filteredLogs[0].second, searchString)
+
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(5000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+        client.close()
+    }
+
+    @Test
+    fun `events are not flushed when disableEventLogging`() {
+        var calledBack = false
+        var error: Throwable? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+
+
+        val flushInMs = 100L
+        val options = DVCOptions.builder()
+            .flushEventsIntervalMs(flushInMs)
+            .disableEventLogging(true)
+            .build()
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, LogLevel.DEBUG, options)
+
+        try {
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+
+                    Thread.sleep(1500L)
+
+                    client.track(DVCEvent.builder()
+                        .withType("testEvent")
+                        .withMetaData(mapOf("test" to "value"))
+                        .withDate(Date())
+                        .build())
+
+                    client.flushEvents()
+
+                    Thread.sleep(1000L)
+
+                    val logs = logger.logs
+
+
+                    val searchString = "DVC Event Logging disabled, skipping this call"
+
+                    val filteredLogs = logs.filter { it.second.contains(searchString)}
+
+                    Assertions.assertEquals(filteredLogs.size, 1)
+                    Assertions.assertEquals(filteredLogs[0].second, searchString)
+
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(5000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+        client.close()
+    }
+
+    @Test
+    fun `events are not tracked when disableEventLogging`() {
+        var calledBack = false
+        var error: Throwable? = null
+
+        val countDownLatch = CountDownLatch(1)
+
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+
+
+        val flushInMs = 100L
+        val options = DVCOptions.builder()
+            .flushEventsIntervalMs(flushInMs)
+            .disableEventLogging(true)
+            .build()
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, logLevel = LogLevel.INFO, options)
+
+        try {
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+
+                    Thread.sleep(1500L)
+
+                    client.track(DVCEvent.builder()
+                        .withType("testEvent")
+                        .withMetaData(mapOf("test" to "value"))
+                        .withDate(Date())
+                        .build())
+
+                    Thread.sleep(1000L)
+
+                    val logs = logger.logs
+
+                    val searchString = "DVC Event Logging disabled, skipping this call"
+
+                    val filteredLogs = logs.filter { it.second.contains(searchString)}
+
+                    Assertions.assertEquals(filteredLogs.size, 1)
                     Assertions.assertEquals(filteredLogs[0].second, searchString)
 
                     countDownLatch.countDown()
@@ -1311,7 +1438,12 @@ class DVCClientTests {
         mockUrl: String = mockWebServer.url("/").toString(),
         flushInMs: Long = 10000L,
         enableEdgeDB: Boolean = false,
-        user: DVCUser? = null
+        user: DVCUser? = null,
+        logLevel: LogLevel = LogLevel.DEBUG,
+        options: DVCOptions = DVCOptions.builder()
+            .flushEventsIntervalMs(flushInMs)
+            .enableEdgeDB(enableEdgeDB)
+            .build(),
     ): DVCClient {
         val builder = builder()
             .withContext(mockContext!!)
@@ -1319,12 +1451,10 @@ class DVCClientTests {
             .withUser(user ?: DVCUser.builder().withUserId("nic_test").build())
             .withSDKKey(sdkKey)
             .withLogger(logger)
+            .withLogLevel(logLevel)
             .withApiUrl(mockUrl)
             .withOptions(
-                DVCOptions.builder()
-                    .flushEventsIntervalMs(flushInMs)
-                    .enableEdgeDB(enableEdgeDB)
-                    .build()
+                options
             )
 
         return builder.build()

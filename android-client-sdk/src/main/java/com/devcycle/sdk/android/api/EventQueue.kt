@@ -19,7 +19,8 @@ internal class EventQueue constructor(
     private val request: Request,
     private val getUser: () -> PopulatedUser,
     private val coroutineScope: CoroutineScope,
-    flushInMs: Long
+    flushInMs: Long,
+    private val disableEventLogging: Boolean
 ) {
     private val eventQueue: MutableList<Event> = mutableListOf()
     private val eventPayloadsToFlush: MutableList<UserAndEvents> = mutableListOf()
@@ -35,9 +36,13 @@ internal class EventQueue constructor(
     private val queueMutex = Mutex()
     // ensures flushEvents does not get called after the sdk is closed
     val isClosed = AtomicBoolean(false)
-    val flushAgain = AtomicBoolean(true)
+    private val flushAgain = AtomicBoolean(true)
     private var closeCallback: DVCCallback<String>? = null
     suspend fun flushEvents(): DVCFlushResult {
+        if(disableEventLogging){
+            DVCLogger.d("DVC Event Logging disabled, skipping this call")
+            return DVCFlushResult(true)
+        }
         var result = DVCFlushResult(false)
         flushMutex.withLock {
             try {
@@ -132,6 +137,10 @@ internal class EventQueue constructor(
      * Queue Event for producing
      */
     fun queueEvent(event: Event) {
+        if(disableEventLogging){
+            DVCLogger.d("DVC Event Logging disabled, skipping this call")
+            return
+        }
         if (isClosed.get()) {
             DVCLogger.w("Attempting to queue event after closing DVC.")
             return
@@ -151,6 +160,10 @@ internal class EventQueue constructor(
      */
     @Throws(IllegalArgumentException::class)
     fun queueAggregateEvent(event: Event) {
+        if (disableEventLogging){
+            DVCLogger.d("DVC Event Logging disabled, skipping this call")
+            return
+        }
         if (isClosed.get()) {
             DVCLogger.w("Attempting to queue aggregate event after closing DVC.")
             return
@@ -189,6 +202,10 @@ internal class EventQueue constructor(
     }
 
     private fun run() {
+        if(disableEventLogging){
+            DVCLogger.d("DVC Event Logging disabled, skipping this call")
+            return
+        }
         if (flushMutex.isLocked) {
             DVCLogger.i("Skipping event flush due to pending flush operation")
             return
@@ -199,6 +216,10 @@ internal class EventQueue constructor(
     }
 
     suspend fun close(callback: DVCCallback<String>?) {
+        if(disableEventLogging){
+            DVCLogger.d("DVC Event Logging disabled, skipping this call")
+            return
+        }
         isClosed.set(true)
         closeCallback = callback
         flushEvents()
