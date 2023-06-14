@@ -691,7 +691,8 @@ class DVCClientTests {
     }
 
     @Test
-    fun `events are not flushed when disableEventLogging`() {
+    fun `automatic events are not tracked when disableAutomaticEventLogging used`() {
+        Thread.sleep(3000L)
         var calledBack = false
         var error: Throwable? = null
 
@@ -705,7 +706,7 @@ class DVCClientTests {
         val flushInMs = 100L
         val options = DVCOptions.builder()
             .flushEventsIntervalMs(flushInMs)
-            .disableEventLogging(true)
+            .disableAutomaticEventLogging(true)
             .build()
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, LogLevel.DEBUG, options)
@@ -715,7 +716,10 @@ class DVCClientTests {
                 override fun onSuccess(result: String) {
                     calledBack = true
 
-                    Thread.sleep(1500L)
+                    client.variable("activate-flag", "Not activated")
+                    client.variableValue("activate-flag", "Not activated")
+                    client.variable("activate-flag", "Activated")
+                    client.variableValue("activate-flag", "Activated")
 
                     client.track(DVCEvent.builder()
                         .withType("testEvent")
@@ -725,12 +729,11 @@ class DVCClientTests {
 
                     client.flushEvents()
 
-                    Thread.sleep(1000L)
+                    Thread.sleep(150L)
 
                     val logs = logger.logs
 
-
-                    val searchString = "DVC Event Logging disabled, skipping this call"
+                    val searchString = "DVC Flush 1 Events"
 
                     val filteredLogs = logs.filter { it.second.contains(searchString)}
 
@@ -756,7 +759,8 @@ class DVCClientTests {
     }
 
     @Test
-    fun `events are not tracked when disableEventLogging`() {
+    fun `custom events are not tracked when disableCustomEvents is used`() {
+        Thread.sleep(500L)
         var calledBack = false
         var error: Throwable? = null
 
@@ -770,7 +774,7 @@ class DVCClientTests {
         val flushInMs = 100L
         val options = DVCOptions.builder()
             .flushEventsIntervalMs(flushInMs)
-            .disableEventLogging(true)
+            .disableCustomEventLogging(true)
             .build()
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, logLevel = LogLevel.INFO, options)
@@ -779,20 +783,33 @@ class DVCClientTests {
             client.onInitialized(object: DVCCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
-
-                    Thread.sleep(1500L)
-
                     client.track(DVCEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .withDate(Date())
                         .build())
 
-                    Thread.sleep(1000L)
+                    client.track(DVCEvent.builder()
+                        .withType("customEvent")
+                        .withMetaData(mapOf("test" to "value"))
+                        .withDate(Date())
+                        .build())
+
+                    client.track(DVCEvent.builder()
+                        .withType("variableEvaluated")
+                        .withMetaData(mapOf("test" to "value"))
+                        .withDate(Date())
+                        .build())
+
+                    client.variable("activate-flag", "Activated")
+                    client.variableValue("activate-flag", "Activated")
+
+
+                    Thread.sleep(150L)
 
                     val logs = logger.logs
 
-                    val searchString = "DVC Event Logging disabled, skipping this call"
+                    val searchString = "DVC Flush 1 Events"
 
                     val filteredLogs = logs.filter { it.second.contains(searchString)}
 
@@ -1440,10 +1457,7 @@ class DVCClientTests {
         enableEdgeDB: Boolean = false,
         user: DVCUser? = null,
         logLevel: LogLevel = LogLevel.DEBUG,
-        options: DVCOptions = DVCOptions.builder()
-            .flushEventsIntervalMs(flushInMs)
-            .enableEdgeDB(enableEdgeDB)
-            .build(),
+        options: DVCOptions? = null,
     ): DVCClient {
         val builder = builder()
             .withContext(mockContext!!)
@@ -1454,7 +1468,10 @@ class DVCClientTests {
             .withLogLevel(logLevel)
             .withApiUrl(mockUrl)
             .withOptions(
-                options
+                options ?: DVCOptions.builder()
+                    .flushEventsIntervalMs(flushInMs)
+                    .enableEdgeDB(enableEdgeDB)
+                    .build()
             )
 
         return builder.build()

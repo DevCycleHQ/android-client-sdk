@@ -62,9 +62,10 @@ class DVCClient private constructor(
     private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
     private val disableConfigCache = options?.disableConfigCache ?: false
     private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
-    private val disableEventLogging = options?.disableEventLogging ?: false
+    private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging ?: false
+    private val disableCustomEventLogging = options?.disableCustomEventLogging ?: false
 
-    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs, disableEventLogging)
+    private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
 
 
     private var latestIdentifiedUser: PopulatedUser = user
@@ -351,18 +352,19 @@ class DVCClient private constructor(
         val variable = this.getCachedVariable(key, defaultValue)
 
         val tmpConfig = config
-        val event: Event = Event.fromInternalEvent(
-            Event.variableEvent(variable.isDefaulted, variable.key),
-            user,
-            tmpConfig?.featureVariationMap
-        )
+        if(!disableAutomaticEventLogging){
+            val event: Event = Event.fromInternalEvent(
+                Event.variableEvent(variable.isDefaulted, variable.key),
+                user,
+                tmpConfig?.featureVariationMap
+            )
 
-        try {
-            eventQueue.queueAggregateEvent(event)
-        } catch(e: IllegalArgumentException) {
-            e.message?.let { DVCLogger.e(it) }
+            try {
+                eventQueue.queueAggregateEvent(event)
+            } catch(e: IllegalArgumentException) {
+                e.message?.let { DVCLogger.e(it) }
+            }
         }
-
         return variable
     }
 
@@ -399,7 +401,9 @@ class DVCClient private constructor(
             DVCLogger.d("DVC sdk has been closed, skipping call to track")
             return
         }
-        eventQueue.queueEvent(Event.fromDVCEvent(event, user, config?.featureVariationMap))
+        if(!disableCustomEventLogging){
+            eventQueue.queueEvent(Event.fromDVCEvent(event, user, config?.featureVariationMap))
+        }
     }
 
     /**
