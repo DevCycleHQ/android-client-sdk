@@ -1,7 +1,7 @@
 # DevCycle Android SDK
 
-The DevCycle Android Client SDK. This SDK uses our Client SDK APIs to perform all user segmentation 
-and bucketing for the SDK, providing fast response times using our globally distributed edge workers 
+The DevCycle Android Client SDK. This SDK uses our Client SDK APIs to perform all user segmentation
+and bucketing for the SDK, providing fast response times using our globally distributed edge workers
 all around the world.
 
 ## Requirements
@@ -10,10 +10,10 @@ This version of the DevCycle Android Client SDK supports a minimum Android API V
 
 ## Installation
 
-The SDK can be installed into your Android project by adding the following to *build.gradle*:
+The SDK can be installed into your Android project by adding the following to _build.gradle_:
 
 ```yaml
-implementation("com.devcycle:android-client-sdk:1.6.1")
+implementation("com.devcycle:android-client-sdk:1.7.0")
 ```
 
 ## Usage
@@ -30,9 +30,10 @@ used should be a 'string' type.
 The Java Example apps consist of a simple blank screen that automatically triggers a variable evaluation
 on run and then displays a toast notification.
 
-Code locations to update: 
-* [Mobile SDK Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/java-example/src/main/java/com/devcycle/javaexample/JavaApplication.java#L33)
-* [Variable Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/java-example/src/main/java/com/devcycle/javaexample/JavaApplication.java#L38)
+Code locations to update:
+
+- [Mobile SDK Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/java-example/src/main/java/com/devcycle/javaexample/JavaApplication.java#L33)
+- [Variable Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/java-example/src/main/java/com/devcycle/javaexample/JavaApplication.java#L38)
 
 ### Kotlin Example
 
@@ -40,5 +41,6 @@ The Kotlin Example provides a simplified interface to evaluate flags manually, b
 automatically triggers a variable evaluation on run and then displays a toast notification.
 
 Code locations to update:
-* [Mobile SDK Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/kotlin-example/src/main/java/com/devcycle/example/KotlinApplication.kt#L27)
-* [Variable Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/kotlin-example/src/main/java/com/devcycle/example/KotlinApplication.kt#L33)
+
+- [Mobile SDK Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/kotlin-example/src/main/java/com/devcycle/example/KotlinApplication.kt#L27)
+- [Variable Key](https://github.com/DevCycleHQ/android-client-sdk/blob/main/kotlin-example/src/main/java/com/devcycle/example/KotlinApplication.kt#L33)
