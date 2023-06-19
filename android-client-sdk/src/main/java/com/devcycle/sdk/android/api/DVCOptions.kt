@@ -2,11 +2,13 @@ package com.devcycle.sdk.android.api
 
 class DVCOptions(
     val flushEventsIntervalMs: Long,
-    private val disableEventLogging: Boolean,
+    val disableEventLogging: Boolean,
     val enableEdgeDB: Boolean,
     val configCacheTTL: Long?,
     val disableConfigCache: Boolean,
-    val disableRealtimeUpdates: Boolean
+    val disableRealtimeUpdates: Boolean,
+    val disableAutomaticEventLogging : Boolean,
+    val disableCustomEventLogging : Boolean
 ) {
     class DVCOptionsBuilder internal constructor() {
         private var flushEventsIntervalMs = 0L
@@ -15,14 +17,27 @@ class DVCOptions(
         private var configCacheTTL: Long? = null
         private var disableConfigCache = false
         private var disableRealtimeUpdates = false
+        private var disableAutomaticEventLogging = false
+        private var disableCustomEventLogging = false
 
         fun flushEventsIntervalMs(flushEventsIntervalMs: Long): DVCOptionsBuilder {
             this.flushEventsIntervalMs = flushEventsIntervalMs
             return this
         }
 
+        @Deprecated("Use disableAutomaticEventLogging or disableCustomEventLogging")
         fun disableEventLogging(disableEventLogging: Boolean): DVCOptionsBuilder {
             this.disableEventLogging = disableEventLogging
+            return this
+        }
+
+        fun disableAutomaticEventLogging(disableAutomaticEventLogging: Boolean): DVCOptionsBuilder{
+            this.disableAutomaticEventLogging = disableAutomaticEventLogging
+            return this
+        }
+
+        fun disableCustomEventLogging(disableCustomEventLogging: Boolean): DVCOptionsBuilder{
+            this.disableCustomEventLogging = disableCustomEventLogging
             return this
         }
 
@@ -51,7 +66,9 @@ class DVCOptions(
                 enableEdgeDB,
                 configCacheTTL,
                 disableConfigCache,
-                disableRealtimeUpdates
+                disableRealtimeUpdates,
+                disableAutomaticEventLogging,
+                disableCustomEventLogging
             )
         }
     }

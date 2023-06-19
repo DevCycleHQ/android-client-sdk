@@ -35,7 +35,7 @@ internal class EventQueue constructor(
     private val queueMutex = Mutex()
     // ensures flushEvents does not get called after the sdk is closed
     val isClosed = AtomicBoolean(false)
-    val flushAgain = AtomicBoolean(true)
+    private val flushAgain = AtomicBoolean(true)
     private var closeCallback: DVCCallback<String>? = null
     suspend fun flushEvents(): DVCFlushResult {
         var result = DVCFlushResult(false)
