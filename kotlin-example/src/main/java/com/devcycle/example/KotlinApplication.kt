@@ -50,9 +50,9 @@ class KotlinApplication: Application() {
 
                 client.track(
                     DVCEvent.builder()
-                    .withType("testEvent")
-                    .withMetaData(mapOf("test" to "value"))
-                    .build())
+                        .withType("testEvent")
+                        .withMetaData(mapOf("test" to "value"))
+                        .build())
 
 
                 // This toast onInitialized will show the value has changed

@@ -9,13 +9,11 @@ group = "com.devcycle"
 version = "1.7.0"
 
 android {
-    compileSdk 31
+    compileSdk 33
 
     defaultConfig {
         minSdk 21
-        targetSdk 31
-        versionCode 1
-        versionName version
+        targetSdk 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         testBuildType "minified"
@@ -24,7 +22,12 @@ android {
 
         //Will create field in buildconfig.java for use in code. 
         buildConfigField 'String', 'VERSION_NAME', "\"$versionName\""
+    }
 
+        namespace 'com.devcycle'
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

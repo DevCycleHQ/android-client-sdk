@@ -4,13 +4,13 @@ package com.devcycle.sdk.android.model
 import android.content.Context
 import com.fasterxml.jackson.annotation.JsonProperty
 import android.os.Build
-import com.devcycle.sdk.android.BuildConfig
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.*
 import android.content.pm.PackageInfo
+import com.devcycle.BuildConfig
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import kotlin.IllegalArgumentException
 
@@ -48,7 +48,7 @@ internal data class PopulatedUser constructor(
     @Schema(description = "DevCycle SDK type")
     val sdkType: String = "mobile",
     @Schema(description = "DevCycle SDK Version")
-    val sdkVersion: String = BuildConfig.VERSION_NAME,
+    val sdkVersion: String? = "1.5.0-victest",
     @Schema(description = "Date the user was last seen, Unix epoch timestamp format")
     val lastSeenDate: Long? = Calendar.getInstance().time.time,
 ) {
@@ -101,6 +101,7 @@ internal data class PopulatedUser constructor(
             val packageInfo: PackageInfo = packageManager.getPackageInfo(context.packageName, 0)
         
             val appVersion = packageInfo.versionName
+            val versionName = packageInfo.versionName;
             val appBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 packageInfo.longVersionCode
             } else {

@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.devcycle.kotlinexample.R
 import com.devcycle.sdk.android.api.DVCCallback
 import com.devcycle.sdk.android.api.DVCClient
 import com.devcycle.sdk.android.model.DVCEvent
