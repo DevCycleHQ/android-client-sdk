@@ -4,12 +4,13 @@ plugins {
 }
 
 android {
-    compileSdk 31
+    compileSdk 33
+    namespace 'com.devcycle.kotlinexample'
 
     defaultConfig {
         applicationId "com.devcycle.example"
-        minSdk 21
-        targetSdk 31
+        minSdk 24
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -21,8 +22,16 @@ android {
     }
 
     buildTypes {
+        debug {
+//            Enable these along with the app's full r8 mode in the gradle-wrapper.properties for max minification
+//            minifyEnabled true
+//            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

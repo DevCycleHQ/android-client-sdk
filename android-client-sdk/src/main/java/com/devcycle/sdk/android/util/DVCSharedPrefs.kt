@@ -2,7 +2,7 @@ package com.devcycle.sdk.android.util
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.devcycle.sdk.android.R
+import com.devcycle.R
 import com.devcycle.sdk.android.model.BucketedUserConfig
 import com.devcycle.sdk.android.model.PopulatedUser
 import com.fasterxml.jackson.core.JsonProcessingException
