@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.devcycle"
-version = "1.7.0"
+version = "1.7.1"
 
 android {
     compileSdk 33
@@ -21,7 +21,7 @@ android {
         consumerProguardFiles("proguard-rules.pro")
 
         //Will create field in buildconfig.java for use in code. 
-        buildConfigField 'String', 'VERSION_NAME', "\"$versionName\""
+        buildConfigField 'String', 'VERSION_NAME', "\"$version\""
     }
 
         namespace 'com.devcycle'
