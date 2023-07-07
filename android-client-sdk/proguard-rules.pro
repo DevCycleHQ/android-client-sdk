@@ -35,6 +35,16 @@
 -dontwarn retrofit2.KotlinExtensions
 -dontwarn retrofit2.KotlinExtensions$*
 
+-dontwarn org.bouncycastle.jsse.BCSSLParameters
+-dontwarn org.bouncycastle.jsse.BCSSLSocket
+-dontwarn org.bouncycastle.jsse.provider.BouncyCastleJsseProvider
+-dontwarn org.conscrypt.Conscrypt$Version
+-dontwarn org.conscrypt.Conscrypt
+-dontwarn org.conscrypt.ConscryptHostnameVerifier
+-dontwarn org.openjsse.javax.net.ssl.SSLParameters
+-dontwarn org.openjsse.javax.net.ssl.SSLSocket
+-dontwarn org.openjsse.net.ssl.OpenJSSE
+
 # Ignore annotation used for build tooling.
 #-dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
 
@@ -45,7 +55,7 @@
 
 
 # IMPORTANT: This ensures R8 Will not strip our JSONMapper and Coroutine classes
--keep,allowobfuscation,allowshrinking class com.devcycle.sdk.android.util.**
+-keep,allowobfuscation,allowshrinking class com.devcycle.sdk.android.**
 
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 
