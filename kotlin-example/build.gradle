@@ -23,9 +23,9 @@ android {
 
     buildTypes {
         debug {
-//            Enable these along with the app's full r8 mode in the gradle-wrapper.properties for max minification
-//            minifyEnabled true
-//            shrinkResources true
+            // Enable these along with the app's full r8 mode in the gradle-wrapper.properties for max minification
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
 
