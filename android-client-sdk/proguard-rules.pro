@@ -43,6 +43,8 @@
 -keep,allowobfuscation,allowshrinking class okhttp3.RequestBody
 -keep,allowobfuscation,allowshrinking class okhttp3.ResponseBody
 
+
+# IMPORTANT: This ensures R8 Will not strip our JSONMapper and Coroutine classes
 -keep,allowobfuscation,allowshrinking class com.devcycle.sdk.android.util.**
 
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation

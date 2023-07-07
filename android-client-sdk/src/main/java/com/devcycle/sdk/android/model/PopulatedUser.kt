@@ -48,7 +48,7 @@ internal data class PopulatedUser constructor(
     @Schema(description = "DevCycle SDK type")
     val sdkType: String = "mobile",
     @Schema(description = "DevCycle SDK Version")
-    val sdkVersion: String? = "1.5.0-victest",
+    val sdkVersion: String? = BuildConfig.VERSION_NAME,
     @Schema(description = "Date the user was last seen, Unix epoch timestamp format")
     val lastSeenDate: Long? = Calendar.getInstance().time.time,
 ) {
