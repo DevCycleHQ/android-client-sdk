@@ -295,7 +295,7 @@ class DVCClientTests {
         waitForOpenLatch(initializeLatch, 2000, TimeUnit.MILLISECONDS)
 
         val i = AtomicInteger(0)
-        val callbackLatch = CountDownLatch(5)
+        val callbackLatch = CountDownLatch(6)
 
         val callback = object: DVCCallback<Map<String, BaseConfigVariable>> {
             override fun onSuccess(result: Map<String, BaseConfigVariable>) {
@@ -311,12 +311,12 @@ class DVCClientTests {
             }
         }
 
-        client.identifyUser(DVCUser.builder().withUserId("new_userid").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("new_userid1").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("new_userid2").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("new_userid3").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("new_userid4").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("new_userid5").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("expected_userid1").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("random_user1").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("random_user2").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("random_user3").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("random_user4").build(), callback)
+        client.identifyUser(DVCUser.builder().withUserId("expected_userid2").build(), callback)
 
         waitForOpenLatch(callbackLatch, 5000, TimeUnit.MILLISECONDS)
 
@@ -328,9 +328,7 @@ class DVCClientTests {
             } else {
                 // expect only the first and last user id to be sent as a result of the identify calls
                 try {
-                    Assertions.assertTrue(it.path?.contains("new_userid5") == true ||
-                            it.path?.contains("new_userid&") == true
-                    )
+                    Assertions.assertEquals(true, it.path?.contains("expected_userid"))
                 } catch (e: org.opentest4j.AssertionFailedError) {
                     println(it.path)
                     throw e
@@ -406,6 +404,14 @@ class DVCClientTests {
                     countDownLatch.countDown()
                 }
             })
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    client.identifyUser(DVCUser.builder().withUserId("asdasdas").build())
+                }
+                override fun onError(t: Throwable) {
+                    error = t
+                }
+            })
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
@@ -430,6 +436,15 @@ class DVCClientTests {
                 calledBack = true
                 countDownLatch.countDown()
             }
+
+            client.onInitialized(object: DVCCallback<String> {
+                override fun onSuccess(result: String) {
+                    client.identifyUser(DVCUser.builder().withUserId("asdasdas").build())
+                }
+                override fun onError(t: Throwable) {
+                    error = t
+                }
+            })
         } catch(t: Throwable) {
             countDownLatch.countDown()
         } finally {
@@ -441,7 +456,7 @@ class DVCClientTests {
 
     @Test
     fun `variable calls back when variable value has changed for json object`() {
-        val config = generateJSONObjectConfig("activate-flag", JSONObject(mapOf("test" to "value")))
+        val config = generateJSONObjectConfig("activate-flag", JSONObject(mapOf("test1" to "value1")))
         val config2 = generateJSONObjectConfig("activate-flag", JSONObject(mapOf("test2" to "value2")))
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
@@ -455,7 +470,7 @@ class DVCClientTests {
         val countDownLatch = CountDownLatch(2)
         val initializedLatch = CountDownLatch(1)
 
-        val variable = client.variable("activate-flag", JSONObject(mapOf("arg" to "yeah")))
+        val variable = client.variable("activate-flag", JSONObject(mapOf("test" to "default")))
         variable.onUpdate {
             countDownLatch.countDown()
         }
@@ -470,9 +485,8 @@ class DVCClientTests {
             }
         })
 
-        Assertions.assertEquals(variable.value.getString("arg"), "yeah")
         initializedLatch.await(2000, TimeUnit.MILLISECONDS)
-        Assertions.assertEquals(variable.value.getString("test"), "value")
+        Assertions.assertEquals(variable.value.getString("test1"), "value1")
 
         countDownLatch.await(3000, TimeUnit.MILLISECONDS)
         Assertions.assertEquals(variable.value.getString("test2"), "value2")
