@@ -60,7 +60,7 @@ internal class EventQueue constructor(
                     return@withLock
                 }
 
-                DevCycleLogger.i("DVC Flush " + eventsToFlush.size + " Events")
+                DevCycleLogger.i("DevCycle Flush " + eventsToFlush.size + " Events")
 
                 val payload = UserAndEvents(user.copy(), eventsToFlush)
 
@@ -73,7 +73,7 @@ internal class EventQueue constructor(
                         try {
                             request.publishEvents(it)
                             emit(it)
-                            DevCycleLogger.i("DVC Flushed " + payload.events.size + " Events.")
+                            DevCycleLogger.i("DevCycle Flushed " + payload.events.size + " Events.")
                         } catch (t: DVCRequestException) {
                             if (t.isRetryable) {
                                 DevCycleLogger.e(t, "Error with event flushing, will be retried")
@@ -102,14 +102,14 @@ internal class EventQueue constructor(
                 result = DVCFlushResult(false, t)
             }
 
-            if (isClosed.get()){
-                // The DVCClient has been closed and the queue is empty, callback with success
+            if (isClosed.get()) {
+                // The DevCycleClient has been closed and the queue is empty, callback with success
                 if (eventQueue.size == 0 ) {
                     closeCallback?.onSuccess("Event queue is clear")
-                    // The DVCClient has been closed and something went wrong flushing
+                    // The DevCycleClient has been closed and something went wrong flushing
                 } else if (result.exception != null) {
                     closeCallback?.onError(result.exception as Throwable)
-                    // The DVCClient has been closed, but more events were added to the queue
+                    // The DevCycleClient has been closed, but more events were added to the queue
                     // while the queue was flushing (but before it was closed)
                 } else if (flushAgain.get()) {
                     flushAgain.set(false)

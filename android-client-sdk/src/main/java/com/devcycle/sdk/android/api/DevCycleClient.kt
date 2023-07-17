@@ -26,7 +26,7 @@ import kotlin.coroutines.CoroutineContext
 
 /**
  * Main entry point for SDK user
- * The class is constructed by calling DVCClient.builder(){builder options}.build()
+ * The class is constructed by calling DevCycleClient.builder(){builder options}.build()
  *
  * All methods that make requests to the APIs or access [config] and [user] are [Synchronized] to
  * ensure thread-safety

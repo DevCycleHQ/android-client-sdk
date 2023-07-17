@@ -25,7 +25,7 @@ class KotlinApplication: Application() {
                     .withCustomData(mapOf("custom_value" to "test"))
                     .build()
             )
-            .withSDKKey("<DVC_MOBILE_SDK_KEY>")
+            .withSDKKey("<DEVCYCLE_MOBILE_SDK_KEY>")
             .withLogLevel(LogLevel.DEBUG)
             .withLogger(DevCycleLogger.DebugLogger())
             .build()

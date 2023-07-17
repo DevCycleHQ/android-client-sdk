@@ -14,7 +14,7 @@ class DevCycleLogger private constructor() {
     throw AssertionError()
   }
 
-  /** A facade for handling logging calls. Install instances via [`DVCLogger.start()`][.start]. */
+  /** A facade for handling logging calls. Install instances via [`DevCycleLogger.start()`][.start]. */
   abstract class Logger {
     @get:JvmSynthetic // Hide from public API.
     internal val explicitTag = ThreadLocal<String>()
@@ -381,7 +381,7 @@ class DevCycleLogger private constructor() {
     }
 
     /**
-     * A view into DVCLogger's started loggers as a logger itself. This can be used for injecting a logger
+     * A view into DevCycleLogger's started loggers as a logger itself. This can be used for injecting a logger
      * instance rather than using static methods or to facilitate testing.
      */
     @Suppress(

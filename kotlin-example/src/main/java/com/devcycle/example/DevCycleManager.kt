@@ -4,9 +4,9 @@ import com.devcycle.sdk.android.api.DevCycleClient
 import java.lang.ref.WeakReference
 
 object DevCycleManager {
-    var dvcClient: WeakReference<DevCycleClient> = WeakReference(null)
+    var devCycleClient: WeakReference<DevCycleClient> = WeakReference(null)
 
     fun setClient(client: DevCycleClient) {
-        dvcClient = WeakReference(client)
+        devCycleClient = WeakReference(client)
     }
 }

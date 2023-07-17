@@ -13,7 +13,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val client = DevCycleManager.dvcClient.get()
+        val client = DevCycleManager.devCycleClient.get()
 
         if (client != null) {
             val variable = client.variable("realtime-demo", "default")

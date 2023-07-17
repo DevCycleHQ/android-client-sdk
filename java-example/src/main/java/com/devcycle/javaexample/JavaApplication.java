@@ -31,7 +31,7 @@ public class JavaApplication extends Application {
                                 .withUserId("test_user")
                                 .build()
                 )
-                .withSDKKey("<DVC_MOBILE_SDK_KEY>")
+                .withSDKKey("<DEVCYCLE_MOBILE_SDK_KEY>")
                 .withLogLevel(LogLevel.DEBUG)
                 .build();
 
