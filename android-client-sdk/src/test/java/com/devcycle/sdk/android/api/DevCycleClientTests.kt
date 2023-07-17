@@ -10,7 +10,7 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Handler
 import android.os.LocaleList
-import com.devcycle.sdk.android.api.DVCClient.Companion.builder
+import com.devcycle.sdk.android.api.DevCycleClient.Companion.builder
 import com.devcycle.sdk.android.helpers.TestDVCLogger
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.LogLevel
@@ -44,7 +44,7 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
 
-class DVCClientTests {
+class DevCycleClientTests {
 
     private lateinit var mockWebServer: MockWebServer
 
@@ -147,7 +147,7 @@ class DVCClientTests {
         val client = createClient("invalid-client-sdk", "https://sdk-api.devcycle.com/")
 
         try {
-            client.onInitialized(object : DVCCallback<String> {
+            client.onInitialized(object : DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     error = AssertionFailedError("Client initialized with invalid SDK key!")
                     calledBack = true
@@ -178,7 +178,7 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
 
         try {
-            client.onInitialized(object : DVCCallback<String> {
+            client.onInitialized(object : DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     Assertions.assertEquals("Config loaded", result)
                     Assertions.assertNotNull(client.allVariables())
@@ -226,9 +226,9 @@ class DVCClientTests {
         val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
 
         try {
-            client.onInitialized(object : DVCCallback<String> {
+            client.onInitialized(object : DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
-                    client.resetUser(object: DVCCallback<Map<String, BaseConfigVariable>> {
+                    client.resetUser(object: DevCycleCallback<Map<String, BaseConfigVariable>> {
                         override fun onSuccess(result: Map<String, BaseConfigVariable>) {
                             Assertions.assertEquals("Flag activated!", result["activate-flag"]?.value.toString())
                         }
@@ -241,7 +241,7 @@ class DVCClientTests {
 
                     })
 
-                    client.identifyUser(DVCUser.builder().withUserId("new_userid").build(), object: DVCCallback<Map<String, BaseConfigVariable>> {
+                    client.identifyUser(DevCycleUser.builder().withUserId("new_userid").build(), object: DevCycleCallback<Map<String, BaseConfigVariable>> {
                         override fun onSuccess(result: Map<String, BaseConfigVariable>) {
                             Assertions.assertEquals("Second!", result["wobble"]?.value.toString())
                             calledBack = true
@@ -279,7 +279,7 @@ class DVCClientTests {
         val initializeLatch = CountDownLatch(1)
 
         val client = createClient("pretend-its-real", mockWebServer.url("/").toString(), 100L, false, null, LogLevel.VERBOSE )
-        client.onInitialized(object: DVCCallback<String> {
+        client.onInitialized(object: DevCycleCallback<String> {
             override fun onSuccess(result: String) {
                 calledBack = true
                 val takeRequest = requests.remove()
@@ -297,7 +297,7 @@ class DVCClientTests {
         val i = AtomicInteger(0)
         val callbackLatch = CountDownLatch(6)
 
-        val callback = object: DVCCallback<Map<String, BaseConfigVariable>> {
+        val callback = object: DevCycleCallback<Map<String, BaseConfigVariable>> {
             override fun onSuccess(result: Map<String, BaseConfigVariable>) {
                 Assertions.assertEquals("Flag activated!", result["activate-flag"]?.value.toString())
 
@@ -311,12 +311,12 @@ class DVCClientTests {
             }
         }
 
-        client.identifyUser(DVCUser.builder().withUserId("expected_userid1").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("random_user1").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("random_user2").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("random_user3").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("random_user4").build(), callback)
-        client.identifyUser(DVCUser.builder().withUserId("expected_userid2").build(), callback)
+        client.identifyUser(DevCycleUser.builder().withUserId("expected_userid1").build(), callback)
+        client.identifyUser(DevCycleUser.builder().withUserId("random_user1").build(), callback)
+        client.identifyUser(DevCycleUser.builder().withUserId("random_user2").build(), callback)
+        client.identifyUser(DevCycleUser.builder().withUserId("random_user3").build(), callback)
+        client.identifyUser(DevCycleUser.builder().withUserId("random_user4").build(), callback)
+        client.identifyUser(DevCycleUser.builder().withUserId("expected_userid2").build(), callback)
 
         waitForOpenLatch(callbackLatch, 5000, TimeUnit.MILLISECONDS)
 
@@ -348,7 +348,7 @@ class DVCClientTests {
         generateDispatcher(config = config)
         val client = createClient("pretend-its-real", mockWebServer.url("/").toString())
 
-        val refetchConfigCallback = object: DVCCallback<Map<String, Variable<Any>>> {
+        val refetchConfigCallback = object: DevCycleCallback<Map<String, Variable<Any>>> {
             override fun onSuccess(result: Map<String, Variable<Any>>) {
                 val takeRequest = requests.remove()
                 takeRequest.path?.contains("last_userId")?.let { Assertions.assertTrue(it) }
@@ -358,17 +358,17 @@ class DVCClientTests {
                 error = t
             }
         }
-        client.identifyUser(DVCUser.builder().withUserId("new_userid").build())
-        client.identifyUser(DVCUser.builder().withUserId("new_userid2").build())
-        client.identifyUser(DVCUser.builder().withUserId("last_userId").build())
+        client.identifyUser(DevCycleUser.builder().withUserId("new_userid").build())
+        client.identifyUser(DevCycleUser.builder().withUserId("new_userid2").build())
+        client.identifyUser(DevCycleUser.builder().withUserId("last_userId").build())
 
         // make private refetchConfig callable
-        val refetchConfigMethod: Method = DVCClient::class.java.getDeclaredMethod(
+        val refetchConfigMethod: Method = DevCycleClient::class.java.getDeclaredMethod(
             "refetchConfig",
             Boolean::class.java,
             1L::class.javaObjectType,
             String::class.java,
-            DVCCallback::class.java
+            DevCycleCallback::class.java
         )
         refetchConfigMethod.isAccessible = true
 
@@ -391,7 +391,7 @@ class DVCClientTests {
 
         try {
             val variable = client.variable("activate-flag", "Not activated")
-            variable.onUpdate(object: DVCCallback<Variable<String>> {
+            variable.onUpdate(object: DevCycleCallback<Variable<String>> {
                 override fun onSuccess(result: Variable<String>) {
                     Assertions.assertEquals("Flag activated!", result.value)
                     calledBack = true
@@ -404,9 +404,9 @@ class DVCClientTests {
                     countDownLatch.countDown()
                 }
             })
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
-                    client.identifyUser(DVCUser.builder().withUserId("asdasdas").build())
+                    client.identifyUser(DevCycleUser.builder().withUserId("asdasdas").build())
                 }
                 override fun onError(t: Throwable) {
                     error = t
@@ -437,9 +437,9 @@ class DVCClientTests {
                 countDownLatch.countDown()
             }
 
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
-                    client.identifyUser(DVCUser.builder().withUserId("asdasdas").build())
+                    client.identifyUser(DevCycleUser.builder().withUserId("asdasdas").build())
                 }
                 override fun onError(t: Throwable) {
                     error = t
@@ -475,9 +475,9 @@ class DVCClientTests {
             countDownLatch.countDown()
         }
 
-        client.onInitialized(object: DVCCallback<String> {
+        client.onInitialized(object: DevCycleCallback<String> {
             override fun onSuccess(result: String) {
-                client.identifyUser(DVCUser.builder().withUserId("asdasdas").build())
+                client.identifyUser(DevCycleUser.builder().withUserId("asdasdas").build())
                 initializedLatch.countDown()
             }
             override fun onError(t: Throwable) {
@@ -512,9 +512,9 @@ class DVCClientTests {
             countDownLatch.countDown()
         }
 
-        client.onInitialized(object: DVCCallback<String> {
+        client.onInitialized(object: DevCycleCallback<String> {
             override fun onSuccess(result: String) {
-                client.identifyUser(DVCUser.builder().withUserId("test_2").build())
+                client.identifyUser(DevCycleUser.builder().withUserId("test_2").build())
                 initializedLatch.countDown()
             }
             override fun onError(t: Throwable) {
@@ -545,9 +545,9 @@ class DVCClientTests {
             countDownLatch.countDown()
         }
 
-        client.onInitialized(object: DVCCallback<String> {
+        client.onInitialized(object: DevCycleCallback<String> {
             override fun onSuccess(result: String) {
-                client.identifyUser(DVCUser.builder().withUserId("test_2").build())
+                client.identifyUser(DevCycleUser.builder().withUserId("test_2").build())
                 initializedLatch.countDown()
             }
             override fun onError(t: Throwable) {
@@ -588,10 +588,10 @@ class DVCClientTests {
     fun `client uses stored anonymous id if it exists`() {
         `when`(sharedPreferences?.getString(eq("ANONYMOUS_USER_ID"), eq(null))).thenReturn("some-anon-id")
 
-        val user = DVCClient::class.java.getDeclaredField("user")
+        val user = DevCycleClient::class.java.getDeclaredField("user")
         user.setAccessible(true)
 
-        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
+        val client = createClient(user=DevCycleUser.builder().withIsAnonymous(true).build())
         var anonUser: PopulatedUser = user.get(client) as PopulatedUser
 
         Assertions.assertEquals("some-anon-id", anonUser.userId)
@@ -600,10 +600,10 @@ class DVCClientTests {
 
     @Test
     fun `client writes anonymous id to store if it doesn't exist`() {
-        val user = DVCClient::class.java.getDeclaredField("user")
+        val user = DevCycleClient::class.java.getDeclaredField("user")
         user.setAccessible(true)
 
-        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
+        val client = createClient(user=DevCycleUser.builder().withIsAnonymous(true).build())
         var anonUser: PopulatedUser = user.get(client) as PopulatedUser
 
         verify(editor, times(1))?.putString(eq("ANONYMOUS_USER_ID"), eq(anonUser.userId))
@@ -614,9 +614,9 @@ class DVCClientTests {
     fun `identifying a user clears the stored anonymous id`() {
         `when`(sharedPreferences?.getString(anyString(), eq(null))).thenReturn("some-anon-id")
 
-        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
-        val newUser = DVCUser.builder().withUserId("123").withIsAnonymous(false).build()
-        val callback = object: DVCCallback<Map<String, BaseConfigVariable>> {
+        val client = createClient(user=DevCycleUser.builder().withIsAnonymous(true).build())
+        val newUser = DevCycleUser.builder().withUserId("123").withIsAnonymous(false).build()
+        val callback = object: DevCycleCallback<Map<String, BaseConfigVariable>> {
             override fun onSuccess(result: Map<String, BaseConfigVariable>) {
                 verify(editor, times(1))?.remove(eq("ANONYMOUS_USER_ID"))
             }
@@ -629,11 +629,11 @@ class DVCClientTests {
     @Test
     fun `resetting the user updates the stored anonymous id`() {
         `when`(sharedPreferences?.getString(anyString(), eq(null))).thenReturn("some-anon-id")
-        val user = DVCClient::class.java.getDeclaredField("latestIdentifiedUser")
+        val user = DevCycleClient::class.java.getDeclaredField("latestIdentifiedUser")
         user.setAccessible(true)
 
-        val client = createClient(user=DVCUser.builder().withIsAnonymous(true).build())
-        val callback = object: DVCCallback<Map<String, BaseConfigVariable>> {
+        val client = createClient(user=DevCycleUser.builder().withIsAnonymous(true).build())
+        val callback = object: DevCycleCallback<Map<String, BaseConfigVariable>> {
             override fun onSuccess(result: Map<String, BaseConfigVariable>) {
                 var anonUser: PopulatedUser = user.get(client) as PopulatedUser
                 verify(editor, times(1))?.putString(eq("ANONYMOUS_USER_ID"), eq(anonUser.userId))
@@ -662,13 +662,13 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs)
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
 
                     Thread.sleep(1500L)
 
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .withDate(Date())
@@ -718,7 +718,7 @@ class DVCClientTests {
 
 
         val flushInMs = 100L
-        val options = DVCOptions.builder()
+        val options = DevCycleOptions.builder()
             .flushEventsIntervalMs(flushInMs)
             .disableAutomaticEventLogging(true)
             .build()
@@ -726,7 +726,7 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, LogLevel.DEBUG, options)
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
 
@@ -735,7 +735,7 @@ class DVCClientTests {
                     client.variable("activate-flag", "Activated")
                     client.variableValue("activate-flag", "Activated")
 
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .withDate(Date())
@@ -786,7 +786,7 @@ class DVCClientTests {
 
 
         val flushInMs = 100L
-        val options = DVCOptions.builder()
+        val options = DevCycleOptions.builder()
             .flushEventsIntervalMs(flushInMs)
             .disableCustomEventLogging(true)
             .build()
@@ -794,22 +794,22 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, logLevel = LogLevel.INFO, options)
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .withDate(Date())
                         .build())
 
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("customEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .withDate(Date())
                         .build())
 
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("variableEvaluated")
                         .withMetaData(mapOf("test" to "value"))
                         .withDate(Date())
@@ -857,16 +857,16 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs)
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
 
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .build())
 
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("newTestEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .build())
@@ -922,7 +922,7 @@ class DVCClientTests {
         }
 
         try {
-            client.onInitialized(object : DVCCallback<String> {
+            client.onInitialized(object : DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
                     countDownLatch.countDown()
@@ -960,19 +960,19 @@ class DVCClientTests {
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs)
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
 
 
-                    client.track(DVCEvent.builder()
+                    client.track(DevCycleEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .build())
 
-                    client.close(object: DVCCallback<String>{
+                    client.close(object: DevCycleCallback<String>{
                         override fun onSuccess(result: String) {
-                            client.track(DVCEvent.builder()
+                            client.track(DevCycleEvent.builder()
                                 .withType("newTestEvent")
                                 .withMetaData(mapOf("test2" to "value"))
                                 .build())
@@ -1081,7 +1081,7 @@ class DVCClientTests {
         val strValue = client.variableValue("test-feature-string", "Not activated")
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
                     countDownLatch.countDown()
@@ -1168,7 +1168,7 @@ class DVCClientTests {
         val strValue = client.variableValue("test-feature-string", "Not activated")
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
                     countDownLatch.countDown()
@@ -1250,7 +1250,7 @@ class DVCClientTests {
         val strValue = client.variableValue("test-feature-string", "Not activated")
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
                     countDownLatch.countDown()
@@ -1333,7 +1333,7 @@ class DVCClientTests {
         val strValue = client.variableValue("test-feature-string", "Not activated")
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
                     countDownLatch.countDown()
@@ -1416,7 +1416,7 @@ class DVCClientTests {
         val strValue = client.variableValue("test-feature-string", "Not activated")
 
         try {
-            client.onInitialized(object: DVCCallback<String> {
+            client.onInitialized(object: DevCycleCallback<String> {
                 override fun onSuccess(result: String) {
                     calledBack = true
                     countDownLatch.countDown()
@@ -1469,20 +1469,20 @@ class DVCClientTests {
         mockUrl: String = mockWebServer.url("/").toString(),
         flushInMs: Long = 10000L,
         enableEdgeDB: Boolean = false,
-        user: DVCUser? = null,
+        user: DevCycleUser? = null,
         logLevel: LogLevel = LogLevel.DEBUG,
-        options: DVCOptions? = null,
-    ): DVCClient {
+        options: DevCycleOptions? = null,
+    ): DevCycleClient {
         val builder = builder()
             .withContext(mockContext!!)
             .withHandler(mockHandler)
-            .withUser(user ?: DVCUser.builder().withUserId("nic_test").build())
+            .withUser(user ?: DevCycleUser.builder().withUserId("nic_test").build())
             .withSDKKey(sdkKey)
             .withLogger(logger)
             .withLogLevel(logLevel)
             .withApiUrl(mockUrl)
             .withOptions(
-                options ?: DVCOptions.builder()
+                options ?: DevCycleOptions.builder()
                     .flushEventsIntervalMs(flushInMs)
                     .enableEdgeDB(enableEdgeDB)
                     .build()

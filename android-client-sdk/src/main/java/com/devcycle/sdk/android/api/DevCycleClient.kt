@@ -7,7 +7,7 @@ import com.devcycle.sdk.android.eventsource.*
 import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.model.*
-import com.devcycle.sdk.android.util.DVCLogger
+import com.devcycle.sdk.android.util.DevCycleLogger
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
 import kotlinx.coroutines.*
@@ -31,11 +31,11 @@ import kotlin.coroutines.CoroutineContext
  * All methods that make requests to the APIs or access [config] and [user] are [Synchronized] to
  * ensure thread-safety
  */
-class DVCClient private constructor(
+class DevCycleClient private constructor(
     private val context: Context,
     private val sdkKey: String,
     private var user: PopulatedUser,
-    options: DVCOptions?,
+    options: DevCycleOptions?,
     apiUrl: String,
     eventsUrl: String,
     private val customLifecycleHandler: Handler? = null,
@@ -77,7 +77,7 @@ class DVCClient private constructor(
         if (cachedConfig != null) {
             config = cachedConfig
             isConfigCached.set(true)
-            DVCLogger.d("Loaded config from cache")
+            DevCycleLogger.d("Loaded config from cache")
             observable.configUpdated(config)
         }
 
@@ -97,7 +97,7 @@ class DVCClient private constructor(
                 }
 
             } catch (t: Throwable) {
-                DVCLogger.e(t, "DevCycle SDK Failed to Initialize!")
+                DevCycleLogger.e(t, "DevCycle SDK Failed to Initialize!")
                 throw t
             }
         }
@@ -113,7 +113,7 @@ class DVCClient private constructor(
     private val onPauseApplication = fun () {
         coroutineScope.launch {
             withContext(Dispatchers.IO) {
-                DVCLogger.d("Closing Realtime Updates connection")
+                DevCycleLogger.d("Closing Realtime Updates connection")
                 eventSource?.close()
             }
         }
@@ -124,7 +124,7 @@ class DVCClient private constructor(
             coroutineScope.launch {
                 withContext(Dispatchers.IO) {
                     eventSource?.close()
-                    DVCLogger.d("Attempting to restart Realtime Updates connection")
+                    DevCycleLogger.d("Attempting to restart Realtime Updates connection")
                     initEventSource()
                     refetchConfig(false, null, null)
                 }
@@ -134,7 +134,7 @@ class DVCClient private constructor(
 
     private fun initEventSource () {
         if (disableRealtimeUpdates) {
-            DVCLogger.i("Realtime Updates disabled via initialization parameter")
+            DevCycleLogger.i("Realtime Updates disabled via initialization parameter")
             return
         }
         if (config?.sse?.url == null) { return }
@@ -169,7 +169,7 @@ class DVCClient private constructor(
         return executorService
     }
 
-    fun onInitialized(callback: DVCCallback<String>) {
+    fun onInitialized(callback: DevCycleCallback<String>) {
         if (isInitialized.get()) {
             callback.onSuccess("Config loaded")
             return
@@ -195,11 +195,11 @@ class DVCClient private constructor(
      */
     @JvmOverloads
     @Synchronized
-    fun identifyUser(user: DVCUser, callback: DVCCallback<Map<String, BaseConfigVariable>>? = null) {
+    fun identifyUser(user: DevCycleUser, callback: DevCycleCallback<Map<String, BaseConfigVariable>>? = null) {
         flushEvents()
 
-        val updatedUser: PopulatedUser = if (this@DVCClient.user.userId == user.userId) {
-            this@DVCClient.user.copyUserAndUpdateFromDVCUser(user)
+        val updatedUser: PopulatedUser = if (this@DevCycleClient.user.userId == user.userId) {
+            this@DevCycleClient.user.copyUserAndUpdateFromDVCUser(user)
         } else {
             val anonId: String? = dvcSharedPrefs.getString(DVCSharedPrefs.AnonUserIdKey);
             PopulatedUser.fromUserParam(user, context, anonId)
@@ -208,7 +208,7 @@ class DVCClient private constructor(
 
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(updatedUser, callback))
-            DVCLogger.d("Queued identifyUser request for user_id %s", updatedUser.userId)
+            DevCycleLogger.d("Queued identifyUser request for user_id %s", updatedUser.userId)
             return
         }
 
@@ -236,13 +236,13 @@ class DVCClient private constructor(
      */
     @JvmOverloads
     @Synchronized
-    fun resetUser(callback: DVCCallback<Map<String, BaseConfigVariable>>? = null) {
+    fun resetUser(callback: DevCycleCallback<Map<String, BaseConfigVariable>>? = null) {
         val newUser: PopulatedUser = PopulatedUser.buildAnonymous()
         latestIdentifiedUser = newUser
 
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(newUser, callback))
-            DVCLogger.d("Queued resetUser request for new anonymous user")
+            DevCycleLogger.d("Queued resetUser request for new anonymous user")
             return
         }
 
@@ -264,7 +264,7 @@ class DVCClient private constructor(
         }
     }
 
-    fun close(callback: DVCCallback<String>? = null) {
+    fun close(callback: DevCycleCallback<String>? = null) {
         coroutineScope.launch {
             withContext(Dispatchers.IO) {
                 eventSource?.close()
@@ -362,7 +362,7 @@ class DVCClient private constructor(
             try {
                 eventQueue.queueAggregateEvent(event)
             } catch(e: IllegalArgumentException) {
-                e.message?.let { DVCLogger.e(it) }
+                e.message?.let { DevCycleLogger.e(it) }
             }
         }
         return variable
@@ -396,9 +396,9 @@ class DVCClient private constructor(
      *
      * [event] instance of an event object to submit
      */
-    fun track(event: DVCEvent) {
+    fun track(event: DevCycleEvent) {
         if (eventQueue.isClosed.get()) {
-            DVCLogger.d("DVC sdk has been closed, skipping call to track")
+            DevCycleLogger.d("DevCycle SDK has been closed, skipping call to track")
             return
         }
         if(!disableCustomEventLogging){
@@ -412,7 +412,7 @@ class DVCClient private constructor(
      * [callback] optional callback to be notified on success or failure
      */
     @JvmOverloads
-    fun flushEvents(callback: DVCCallback<String>? = null) {
+    fun flushEvents(callback: DevCycleCallback<String>? = null) {
         coroutineScope.launch {
             withContext(coroutineContext) {
                 val result = eventQueue.flushEvents()
@@ -434,7 +434,7 @@ class DVCClient private constructor(
              */
             while (!configRequestQueue.isEmpty()) {
                 var latestUserAndCallback: UserAndCallback = configRequestQueue.remove()
-                val callbacks: MutableList<DVCCallback<Map<String, BaseConfigVariable>>> =
+                val callbacks: MutableList<DevCycleCallback<Map<String, BaseConfigVariable>>> =
                     mutableListOf()
 
                 if (latestUserAndCallback.callback != null) {
@@ -489,9 +489,9 @@ class DVCClient private constructor(
         observable.configUpdated(config)
         dvcSharedPrefs.saveConfig(config!!, user)
         isConfigCached.set(false)
-        DVCLogger.d("A new config has been fetched for $user")
+        DevCycleLogger.d("A new config has been fetched for $user")
 
-        this@DVCClient.user = user
+        this@DevCycleClient.user = user
         saveUser()
 
         if (checkIfEdgeDBEnabled(config!!, enableEdgeDB)) {
@@ -499,7 +499,7 @@ class DVCClient private constructor(
                 try {
                     request.saveEntity(user)
                 } catch (exception: DVCRequestException) {
-                    DVCLogger.e("Error saving user entity for $user. Error: $exception")
+                    DevCycleLogger.e("Error saving user entity for $user. Error: $exception")
                 }
             }
         }
@@ -509,11 +509,11 @@ class DVCClient private constructor(
         sse: Boolean = false,
         lastModified: Long? = null,
         etag: String? = null,
-        callback: DVCCallback<Map<String, BaseConfigVariable>>? = null
+        callback: DevCycleCallback<Map<String, BaseConfigVariable>>? = null
     ) {
         if (isExecuting.get()) {
             configRequestQueue.add(UserAndCallback(latestIdentifiedUser, callback))
-            DVCLogger.d("Queued refetchConfig request")
+            DevCycleLogger.d("Queued refetchConfig request")
             return
         }
 
@@ -531,88 +531,87 @@ class DVCClient private constructor(
                 }
             }
         }
-
     }
 
     private fun checkIfEdgeDBEnabled(config: BucketedUserConfig, enableEdgeDB: Boolean): Boolean {
         return if (config.project?.settings?.edgeDB?.enabled == true) {
             enableEdgeDB
         } else {
-            DVCLogger.d("EdgeDB is not enabled for this project. Only using local user data.")
+            DevCycleLogger.d("EdgeDB is not enabled for this project. Only using local user data.")
             return false
         }
     }
 
-    class DVCClientBuilder {
+    class DevCycleClientBuilder {
         private var context: Context? = null
         private var customLifecycleHandler: Handler? = null
         private var sdkKey: String? = null
         private var user: PopulatedUser? = null
-        private var options: DVCOptions? = null
+        private var options: DevCycleOptions? = null
         private var logLevel: LogLevel = LogLevel.ERROR
-        private var logger: DVCLogger.Logger = DVCLogger.DebugLogger()
+        private var logger: DevCycleLogger.Logger = DevCycleLogger.DebugLogger()
         private var apiUrl: String = DVCApiClient.BASE_URL
         private var eventsUrl: String = DVCEventsApiClient.BASE_URL
 
-        private var dvcUser: DVCUser? = null
+        private var dvcUser: DevCycleUser? = null
 
         private var dvcSharedPrefs: DVCSharedPrefs? = null
 
-        fun withContext(context: Context): DVCClientBuilder {
+        fun withContext(context: Context): DevCycleClientBuilder {
             this.context = context
             return this
         }
 
-        internal fun withHandler(handler: Handler): DVCClientBuilder {
+        internal fun withHandler(handler: Handler): DevCycleClientBuilder {
             this.customLifecycleHandler = handler
             return this
         }
 
-        fun withSDKKey(sdkKey: String): DVCClientBuilder {
+        fun withSDKKey(sdkKey: String): DevCycleClientBuilder {
             this.sdkKey = sdkKey
             return this
         }
 
         @Deprecated("Use withSDKKey() instead")
-        fun withEnvironmentKey(environmentKey: String): DVCClientBuilder {
+        fun withEnvironmentKey(environmentKey: String): DevCycleClientBuilder {
             this.sdkKey = environmentKey
             return this
         }
 
-        fun withUser(user: DVCUser): DVCClientBuilder {
+        fun withUser(user: DevCycleUser): DevCycleClientBuilder {
             this.dvcUser = user
             return this
         }
 
-        fun withOptions(options: DVCOptions): DVCClientBuilder {
+        fun withOptions(options: DevCycleOptions): DevCycleClientBuilder {
             this.options = options
             return this
         }
 
-        fun withLogLevel(logLevel: LogLevel): DVCClientBuilder {
+        fun withLogLevel(logLevel: LogLevel): DevCycleClientBuilder {
             this.logLevel = logLevel
             return this
         }
 
-        fun withLogger(logger: DVCLogger.Logger): DVCClientBuilder {
+        fun withLogger(logger: DevCycleLogger.Logger): DevCycleClientBuilder {
             this.logger = logger
             return this
         }
 
         @TestOnly
-        @JvmSynthetic internal fun withApiUrl(apiUrl: String): DVCClientBuilder {
+        @JvmSynthetic internal fun withApiUrl(apiUrl: String): DevCycleClientBuilder {
             this.apiUrl = apiUrl
             this.eventsUrl = apiUrl
             return this
         }
 
-        fun build(): DVCClient {
+        fun build(): DevCycleClient {
             requireNotNull(context) { "Context must be set" }
             require(!(sdkKey == null || sdkKey == "")) { "SDK key must be set" }
             requireNotNull(dvcUser) { "User must be set" }
 
             if (logLevel.value > 0) {
-                DVCLogger.start(logger)
+                DevCycleLogger.start(logger)
             }
 
             dvcSharedPrefs = DVCSharedPrefs(context!!);
@@ -621,14 +620,14 @@ class DVCClient private constructor(
 
             this.user = PopulatedUser.fromUserParam(dvcUser!!, context!!, anonId)
 
-            return DVCClient(context!!, sdkKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
+            return DevCycleClient(context!!, sdkKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
         }
     }
 
     companion object {
         @JvmStatic
-        fun builder(): DVCClientBuilder {
-            return DVCClientBuilder()
+        fun builder(): DevCycleClientBuilder {
+            return DevCycleClientBuilder()
         }
     }
 
@@ -636,3 +635,6 @@ class DVCClient private constructor(
         saveUser()
     }
 }
+
+@Deprecated("DVCClient is deprecated, use DevCycleClient instead")
+typealias DVCClient = DevCycleClient

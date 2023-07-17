@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 import static com.devcycle.sdk.android.eventsource.Helpers.UTF8;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.devcycle.sdk.android.util.DVCLogger;
+import com.devcycle.sdk.android.util.DevCycleLogger;
 
 /**
  * All of the SSE parsing logic is implemented in this class (except for the detection of line
@@ -255,7 +255,7 @@ final class EventParser {
     try {
       handler.onComment(comment);
     } catch (Exception e) {
-      DVCLogger.w("Message handler threw an exception: " + e.toString());
+      DevCycleLogger.w("Message handler threw an exception: " + e.toString());
       handler.onError(e);
     }
   }
@@ -289,11 +289,11 @@ final class EventParser {
 
   private void dispatchMessage(MessageEvent message) {
     try {
-      DVCLogger.d("Dispatching message: %s", message);
+      DevCycleLogger.d("Dispatching message: %s", message);
       handler.onMessage(message.getEventName(), message);
     } catch (Exception e) {
-      DVCLogger.w("Message handler threw an exception: " + e.toString());
-      DVCLogger.d("Stack trace: %s", new LazyStackTrace(e));
+      DevCycleLogger.w("Message handler threw an exception: " + e.toString());
+      DevCycleLogger.d("Stack trace: %s", new LazyStackTrace(e));
       handler.onError(e);
     }
   }

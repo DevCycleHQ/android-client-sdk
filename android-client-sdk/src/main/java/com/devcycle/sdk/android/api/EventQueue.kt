@@ -4,7 +4,7 @@ import com.devcycle.sdk.android.exception.DVCRequestException
 import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.UserAndEvents
-import com.devcycle.sdk.android.util.DVCLogger
+import com.devcycle.sdk.android.util.DevCycleLogger
 import com.devcycle.sdk.android.util.Scheduler
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flow
@@ -36,7 +36,7 @@ internal class EventQueue constructor(
     // ensures flushEvents does not get called after the sdk is closed
     val isClosed = AtomicBoolean(false)
     private val flushAgain = AtomicBoolean(true)
-    private var closeCallback: DVCCallback<String>? = null
+    private var closeCallback: DevCycleCallback<String>? = null
     suspend fun flushEvents(): DVCFlushResult {
         var result = DVCFlushResult(false)
         flushMutex.withLock {
@@ -56,11 +56,11 @@ internal class EventQueue constructor(
                 }
 
                 if (eventsToFlush.size == 0) {
-                    DVCLogger.d("No events to flush.")
+                    DevCycleLogger.d("No events to flush.")
                     return@withLock
                 }
 
-                DVCLogger.i("DVC Flush " + eventsToFlush.size + " Events")
+                DevCycleLogger.i("DVC Flush " + eventsToFlush.size + " Events")
 
                 val payload = UserAndEvents(user.copy(), eventsToFlush)
 
@@ -73,15 +73,15 @@ internal class EventQueue constructor(
                         try {
                             request.publishEvents(it)
                             emit(it)
-                            DVCLogger.i("DVC Flushed " + payload.events.size + " Events.")
+                            DevCycleLogger.i("DVC Flushed " + payload.events.size + " Events.")
                         } catch (t: DVCRequestException) {
                             if (t.isRetryable) {
-                                DVCLogger.e(t, "Error with event flushing, will be retried")
+                                DevCycleLogger.e(t, "Error with event flushing, will be retried")
                                 // Don't raise the error but keep the payload in the queue, it will be
                                 // retried on the next flush
                                 firstError = firstError ?: t
                             } else {
-                                DVCLogger.e(t, "Non-retryable error with event flushing.")
+                                DevCycleLogger.e(t, "Non-retryable error with event flushing.")
                                 emit(it)
                             }
                         }
@@ -98,7 +98,7 @@ internal class EventQueue constructor(
                     DVCFlushResult(true)
                 }
             } catch(t: Throwable) {
-                DVCLogger.e(t, "Error flushing events")
+                DevCycleLogger.e(t, "Error flushing events")
                 result = DVCFlushResult(false, t)
             }
 
@@ -133,13 +133,13 @@ internal class EventQueue constructor(
      */
     fun queueEvent(event: Event) {
         if (isClosed.get()) {
-            DVCLogger.w("Attempting to queue event after closing DVC.")
+            DevCycleLogger.w("Attempting to queue event after closing DVC.")
             return
         }
         runBlocking {
             queueMutex.withLock {
                 eventQueue.add(event)
-                DVCLogger.i("Event queued successfully %s", event)
+                DevCycleLogger.i("Event queued successfully %s", event)
                 scheduleJob = scheduler.scheduleWithDelay { run() }
             }
         }
@@ -152,7 +152,7 @@ internal class EventQueue constructor(
     @Throws(IllegalArgumentException::class)
     fun queueAggregateEvent(event: Event) {
         if (isClosed.get()) {
-            DVCLogger.w("Attempting to queue aggregate event after closing DVC.")
+            DevCycleLogger.w("Attempting to queue aggregate event after closing DVC.")
             return
         }
         runBlocking {
@@ -190,7 +190,7 @@ internal class EventQueue constructor(
 
     private fun run() {
         if (flushMutex.isLocked) {
-            DVCLogger.i("Skipping event flush due to pending flush operation")
+            DevCycleLogger.i("Skipping event flush due to pending flush operation")
             return
         }
         coroutineScope.launch {
@@ -198,7 +198,7 @@ internal class EventQueue constructor(
         }
     }
 
-    suspend fun close(callback: DVCCallback<String>?) {
+    suspend fun close(callback: DevCycleCallback<String>?) {
         isClosed.set(true)
         closeCallback = callback
         flushEvents()

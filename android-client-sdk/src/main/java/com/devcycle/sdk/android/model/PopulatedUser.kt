@@ -5,13 +5,10 @@ import android.content.Context
 import com.fasterxml.jackson.annotation.JsonProperty
 import android.os.Build
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.*
 import android.content.pm.PackageInfo
 import com.devcycle.BuildConfig
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import kotlin.IllegalArgumentException
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -53,7 +50,7 @@ internal data class PopulatedUser constructor(
     val lastSeenDate: Long? = Calendar.getInstance().time.time,
 ) {
     @Throws(IllegalArgumentException::class)
-    @JvmSynthetic internal fun copyUserAndUpdateFromDVCUser(user: DVCUser): PopulatedUser {
+    @JvmSynthetic internal fun copyUserAndUpdateFromDVCUser(user: DevCycleUser): PopulatedUser {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
@@ -76,7 +73,7 @@ internal data class PopulatedUser constructor(
             return PopulatedUser(userId, isAnonymous)
         }
 
-        @JvmSynthetic internal fun fromUserParam(user: DVCUser, context: Context, anonUserId: String?): PopulatedUser {
+        @JvmSynthetic internal fun fromUserParam(user: DevCycleUser, context: Context, anonUserId: String?): PopulatedUser {
             val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 context.resources.configuration.locales[0]
             } else {

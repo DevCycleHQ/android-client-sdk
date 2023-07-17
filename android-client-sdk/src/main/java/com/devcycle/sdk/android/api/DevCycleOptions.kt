@@ -1,6 +1,6 @@
 package com.devcycle.sdk.android.api
 
-class DVCOptions(
+class DevCycleOptions(
     val flushEventsIntervalMs: Long,
     val disableEventLogging: Boolean,
     val enableEdgeDB: Boolean,
@@ -59,8 +59,8 @@ class DVCOptions(
             this.disableRealtimeUpdates = disableRealtimeUpdates
             return this
         }
-        fun build(): DVCOptions {
-            return DVCOptions(
+        fun build(): DevCycleOptions {
+            return DevCycleOptions(
                 flushEventsIntervalMs,
                 disableEventLogging,
                 enableEdgeDB,
@@ -80,3 +80,6 @@ class DVCOptions(
         }
     }
 }
+
+@Deprecated("DVCOptions is deprecated, use DevCycleOptions instead")
+typealias DVCOptions = DevCycleOptions

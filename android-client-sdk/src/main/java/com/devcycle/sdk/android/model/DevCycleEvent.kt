@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 import java.util.*
 
-class DVCEvent private constructor(
+class DevCycleEvent private constructor(
     @Schema(required = true, description = "Custom event type")
     var type: String,
 
@@ -52,8 +52,8 @@ class DVCEvent private constructor(
             return this
         }
 
-        fun build(): DVCEvent {
-            return DVCEvent(
+        fun build(): DevCycleEvent {
+            return DevCycleEvent(
                 type,
                 target,
                 value,
@@ -70,3 +70,6 @@ class DVCEvent private constructor(
         }
     }
 }
+
+@Deprecated("DVCEvent is deprecated, use DevCycleEvent instead")
+typealias DVCEvent = DevCycleEvent

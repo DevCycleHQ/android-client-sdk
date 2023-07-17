@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.Response
-import com.devcycle.sdk.android.util.DVCLogger
+import com.devcycle.sdk.android.util.DevCycleLogger
 import java.io.IOException
 
 internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBaseUrl: String, context: Context) {
@@ -95,14 +95,14 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
                         } else {
                             delay(currentDelay)
                             currentDelay = (currentDelay * delayFactor).coerceAtMost(maxDelay)
-                            DVCLogger.w(
+                            DevCycleLogger.w(
                                 cause,
                                 "Request Config Failed. Retrying in %s seconds.", currentDelay / 1000
                             )
                             return@retryWhen true
                         }
                     } else {
-                        DVCLogger.e(cause, cause.message)
+                        DevCycleLogger.e(cause, cause.message)
                         return@retryWhen false
                     }
                 }
