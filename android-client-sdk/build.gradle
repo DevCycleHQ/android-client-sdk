@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.devcycle"
-version = "1.8.0"
+version = "2.0.0"
 
 android {
     compileSdk 33
@@ -24,7 +24,7 @@ android {
         buildConfigField 'String', 'VERSION_NAME', "\"$version\""
     }
 
-        namespace 'com.devcycle'
+    namespace 'com.devcycle'
 
     buildFeatures {
         buildConfig = true

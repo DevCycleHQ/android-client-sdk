@@ -31,7 +31,7 @@ import kotlin.coroutines.CoroutineContext
  * All methods that make requests to the APIs or access [config] and [user] are [Synchronized] to
  * ensure thread-safety
  */
-class DevCycleClient private constructor(
+open class DevCycleClient protected constructor(
     private val context: Context,
     private val sdkKey: String,
     private var user: PopulatedUser,
