@@ -199,7 +199,7 @@ class DevCycleClient private constructor(
         flushEvents()
 
         val updatedUser: PopulatedUser = if (this@DevCycleClient.user.userId == user.userId) {
-            this@DevCycleClient.user.copyUserAndUpdateFromDVCUser(user)
+            this@DevCycleClient.user.copyUserAndUpdateFromDevCycleUser(user)
         } else {
             val anonId: String? = dvcSharedPrefs.getString(DVCSharedPrefs.AnonUserIdKey);
             PopulatedUser.fromUserParam(user, context, anonId)

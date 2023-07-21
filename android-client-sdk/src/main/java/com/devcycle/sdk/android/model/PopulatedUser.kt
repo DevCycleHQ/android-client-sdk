@@ -50,7 +50,7 @@ internal data class PopulatedUser constructor(
     val lastSeenDate: Long? = Calendar.getInstance().time.time,
 ) {
     @Throws(IllegalArgumentException::class)
-    @JvmSynthetic internal fun copyUserAndUpdateFromDVCUser(user: DevCycleUser): PopulatedUser {
+    @JvmSynthetic internal fun copyUserAndUpdateFromDevCycleUser(user: DevCycleUser): PopulatedUser {
         if (this.userId != user.userId) {
             throw IllegalArgumentException("Cannot update a user with a different userId")
         }
