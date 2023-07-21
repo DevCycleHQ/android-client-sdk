@@ -1,6 +1,6 @@
 package com.devcycle.sdk.android.api
 
-class DVCOptions(
+class DevCycleOptions(
     val flushEventsIntervalMs: Long,
     val disableEventLogging: Boolean,
     val enableEdgeDB: Boolean,
@@ -10,7 +10,7 @@ class DVCOptions(
     val disableAutomaticEventLogging : Boolean,
     val disableCustomEventLogging : Boolean
 ) {
-    class DVCOptionsBuilder internal constructor() {
+    class DevCycleOptionsBuilder internal constructor() {
         private var flushEventsIntervalMs = 0L
         private var disableEventLogging = false
         private var enableEdgeDB = false
@@ -20,47 +20,47 @@ class DVCOptions(
         private var disableAutomaticEventLogging = false
         private var disableCustomEventLogging = false
 
-        fun flushEventsIntervalMs(flushEventsIntervalMs: Long): DVCOptionsBuilder {
+        fun flushEventsIntervalMs(flushEventsIntervalMs: Long): DevCycleOptionsBuilder {
             this.flushEventsIntervalMs = flushEventsIntervalMs
             return this
         }
 
         @Deprecated("Use disableAutomaticEventLogging or disableCustomEventLogging")
-        fun disableEventLogging(disableEventLogging: Boolean): DVCOptionsBuilder {
+        fun disableEventLogging(disableEventLogging: Boolean): DevCycleOptionsBuilder {
             this.disableEventLogging = disableEventLogging
             return this
         }
 
-        fun disableAutomaticEventLogging(disableAutomaticEventLogging: Boolean): DVCOptionsBuilder{
+        fun disableAutomaticEventLogging(disableAutomaticEventLogging: Boolean): DevCycleOptionsBuilder{
             this.disableAutomaticEventLogging = disableAutomaticEventLogging
             return this
         }
 
-        fun disableCustomEventLogging(disableCustomEventLogging: Boolean): DVCOptionsBuilder{
+        fun disableCustomEventLogging(disableCustomEventLogging: Boolean): DevCycleOptionsBuilder{
             this.disableCustomEventLogging = disableCustomEventLogging
             return this
         }
 
-        fun enableEdgeDB(enableEdgeDB: Boolean): DVCOptionsBuilder {
+        fun enableEdgeDB(enableEdgeDB: Boolean): DevCycleOptionsBuilder {
             this.enableEdgeDB = enableEdgeDB
             return this
         }
 
-        fun configCacheTTL(configCacheTTL: Long): DVCOptionsBuilder {
+        fun configCacheTTL(configCacheTTL: Long): DevCycleOptionsBuilder {
             this.configCacheTTL = configCacheTTL
             return this
         }
 
-        fun disableConfigCache(disableConfigCache: Boolean): DVCOptionsBuilder {
+        fun disableConfigCache(disableConfigCache: Boolean): DevCycleOptionsBuilder {
             this.disableConfigCache = disableConfigCache
             return this
         }
-        fun disableRealtimeUpdates(disableRealtimeUpdates: Boolean): DVCOptionsBuilder {
+        fun disableRealtimeUpdates(disableRealtimeUpdates: Boolean): DevCycleOptionsBuilder {
             this.disableRealtimeUpdates = disableRealtimeUpdates
             return this
         }
-        fun build(): DVCOptions {
-            return DVCOptions(
+        fun build(): DevCycleOptions {
+            return DevCycleOptions(
                 flushEventsIntervalMs,
                 disableEventLogging,
                 enableEdgeDB,
@@ -75,8 +75,11 @@ class DVCOptions(
 
     companion object {
         @JvmStatic
-        fun builder(): DVCOptionsBuilder {
-            return DVCOptionsBuilder()
+        fun builder(): DevCycleOptionsBuilder {
+            return DevCycleOptionsBuilder()
         }
     }
 }
+
+@Deprecated("DVCOptions is deprecated, use DevCycleOptions instead")
+typealias DVCOptions = DevCycleOptions

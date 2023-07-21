@@ -3,7 +3,7 @@ package com.devcycle.sdk.android.model
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
-class DVCUser private constructor(
+class DevCycleUser private constructor(
     var userId: String? = null,
     var isAnonymous: Boolean? = true,
     var email: String? = null,
@@ -60,8 +60,8 @@ class DVCUser private constructor(
             return this
         }
 
-        fun build(): DVCUser {
-            return DVCUser(
+        fun build(): DevCycleUser {
+            return DevCycleUser(
                 userId,
                 isAnonymous,
                 email,
@@ -84,3 +84,6 @@ class DVCUser private constructor(
         }
     }
 }
+
+@Deprecated("DVCUser is deprecated, use DevCycleUser instead")
+typealias DVCUser = DevCycleUser

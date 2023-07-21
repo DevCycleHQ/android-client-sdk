@@ -5,10 +5,10 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.devcycle.sdk.android.api.DVCCallback;
-import com.devcycle.sdk.android.api.DVCClient;
-import com.devcycle.sdk.android.model.DVCEvent;
-import com.devcycle.sdk.android.model.DVCUser;
+import com.devcycle.sdk.android.api.DevCycleCallback;
+import com.devcycle.sdk.android.api.DevCycleClient;
+import com.devcycle.sdk.android.model.DevCycleEvent;
+import com.devcycle.sdk.android.model.DevCycleUser;
 import com.devcycle.sdk.android.model.Variable;
 import com.devcycle.sdk.android.util.LogLevel;
 
@@ -24,14 +24,14 @@ public class JavaApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
-        DVCClient client = DVCClient.builder()
+        DevCycleClient client = DevCycleClient.builder()
                 .withContext(getApplicationContext())
                 .withUser(
-                        DVCUser.builder()
+                        DevCycleUser.builder()
                                 .withUserId("test_user")
                                 .build()
                 )
-                .withSDKKey("<DVC_MOBILE_SDK_KEY>")
+                .withSDKKey("<DEVCYCLE_MOBILE_SDK_KEY>")
                 .withLogLevel(LogLevel.DEBUG)
                 .build();
 
@@ -40,12 +40,12 @@ public class JavaApplication extends Application {
         variableValue = client.variableValue("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
         Toast.makeText(getApplicationContext(), Objects.requireNonNull(variableValue), Toast.LENGTH_SHORT).show();
 
-        client.onInitialized(new DVCCallback<String>() {
+        client.onInitialized(new DevCycleCallback<String>() {
             @Override
             public void onSuccess(String result) {
                 //Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
 
-                client.flushEvents(new DVCCallback<String>() {
+                client.flushEvents(new DevCycleCallback<String>() {
                     @Override
                     public void onSuccess(String result) {
                         Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
@@ -57,7 +57,7 @@ public class JavaApplication extends Application {
                     }
                 });
 
-                DVCEvent event = DVCEvent.builder()
+                DevCycleEvent event = DevCycleEvent.builder()
                         .withType("custom_event_type")
                         .withTarget("custom_event_target")
                         .withValue(BigDecimal.valueOf(10.00))

@@ -2,12 +2,12 @@ package com.devcycle.example
 
 import android.app.Application
 import android.widget.Toast
-import com.devcycle.sdk.android.api.DVCCallback
-import com.devcycle.sdk.android.api.DVCClient
-import com.devcycle.sdk.android.model.DVCEvent
-import com.devcycle.sdk.android.model.DVCUser
+import com.devcycle.sdk.android.api.DevCycleCallback
+import com.devcycle.sdk.android.api.DevCycleClient
+import com.devcycle.sdk.android.model.DevCycleEvent
+import com.devcycle.sdk.android.model.DevCycleUser
 import com.devcycle.sdk.android.model.Variable
-import com.devcycle.sdk.android.util.DVCLogger
+import com.devcycle.sdk.android.util.DevCycleLogger
 import com.devcycle.sdk.android.util.LogLevel
 import java.util.Objects
 
@@ -17,17 +17,17 @@ class KotlinApplication: Application() {
 
     override fun onCreate() {
         super.onCreate()
-        val client: DVCClient = DVCClient.builder()
+        val client: DevCycleClient = DevCycleClient.builder()
             .withContext(applicationContext)
             .withUser(
-                DVCUser.builder()
+                DevCycleUser.builder()
                     .withUserId("test_user")
                     .withCustomData(mapOf("custom_value" to "test"))
                     .build()
             )
-            .withSDKKey("<DVC_MOBILE_SDK_KEY>")
+            .withSDKKey("<DEVCYCLE_MOBILE_SDK_KEY>")
             .withLogLevel(LogLevel.DEBUG)
-            .withLogger(DVCLogger.DebugLogger())
+            .withLogger(DevCycleLogger.DebugLogger())
             .build()
 
         // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
@@ -35,10 +35,10 @@ class KotlinApplication: Application() {
         variableValue = client.variableValue("<YOUR_VARIABLE_KEY>", "default value")
         Toast.makeText(applicationContext, Objects.requireNonNull(variableValue), Toast.LENGTH_SHORT).show()
 
-        client.onInitialized(object : DVCCallback<String> {
+        client.onInitialized(object : DevCycleCallback<String> {
             override fun onSuccess(result: String) {
 //                Toast.makeText(this@MainActivity, result, Toast.LENGTH_SHORT).show()
-                client.flushEvents(object: DVCCallback<String> {
+                client.flushEvents(object: DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
                         Toast.makeText(applicationContext, result, Toast.LENGTH_SHORT).show()
                     }
@@ -49,7 +49,7 @@ class KotlinApplication: Application() {
                 })
 
                 client.track(
-                    DVCEvent.builder()
+                    DevCycleEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .build())

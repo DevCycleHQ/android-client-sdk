@@ -6,17 +6,15 @@ import org.jetbrains.annotations.NonNls
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.ArrayList
-import java.util.Collections
-import java.util.Collections.unmodifiableList
 import java.util.regex.Pattern
 
 /** Logging for lazy people. */
-class DVCLogger private constructor() {
+class DevCycleLogger private constructor() {
   init {
     throw AssertionError()
   }
 
-  /** A facade for handling logging calls. Install instances via [`DVCLogger.start()`][.start]. */
+  /** A facade for handling logging calls. Install instances via [`DevCycleLogger.start()`][.start]. */
   abstract class Logger {
     @get:JvmSynthetic // Hide from public API.
     internal val explicitTag = ThreadLocal<String>()
@@ -195,8 +193,8 @@ class DVCLogger private constructor() {
   /** A [Logger] for debug builds. Automatically infers the tag from the calling class. */
   open class DebugLogger : Logger() {
     private val fqcnIgnore = listOf(
-      DVCLogger::class.java.name,
-      DVCLogger.Loggers::class.java.name,
+      DevCycleLogger::class.java.name,
+      DevCycleLogger.Loggers::class.java.name,
       Logger::class.java.name,
       DebugLogger::class.java.name
     )
@@ -383,7 +381,7 @@ class DVCLogger private constructor() {
     }
 
     /**
-     * A view into DVCLogger's started loggers as a logger itself. This can be used for injecting a logger
+     * A view into DevCycleLogger's started loggers as a logger itself. This can be used for injecting a logger
      * instance rather than using static methods or to facilitate testing.
      */
     @Suppress(
@@ -403,7 +401,7 @@ class DVCLogger private constructor() {
 
     /** Add a new logging logger. */
     @JvmStatic fun start(logger: Logger) {
-      require(logger !== this) { "Cannot start DVCLogger into itself." }
+      require(logger !== this) { "Cannot start DevCycleLogger into itself." }
       synchronized(loggers) {
         loggers.add(logger)
         loggerArray = loggers.toTypedArray()
@@ -426,3 +424,6 @@ class DVCLogger private constructor() {
     @Volatile private var loggerArray = emptyArray<Logger>()
   }
 }
+
+@Deprecated("DVCLogger is deprecated, use DevCycleLogger instead")
+typealias DVCLogger = DevCycleLogger

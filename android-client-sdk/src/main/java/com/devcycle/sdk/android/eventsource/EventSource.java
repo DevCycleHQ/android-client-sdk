@@ -45,7 +45,7 @@ import static com.devcycle.sdk.android.eventsource.ReadyState.RAW;
 import static com.devcycle.sdk.android.eventsource.ReadyState.SHUTDOWN;
 import static java.lang.String.format;
 
-import com.devcycle.sdk.android.util.DVCLogger;
+import com.devcycle.sdk.android.util.DevCycleLogger;
 
 /**
  * A client for the <a href="https://html.spec.whatwg.org/multipage/server-sent-events.html#server-sent-events">Server-Sent
@@ -171,11 +171,11 @@ public class EventSource implements Closeable {
    */
   public void start() {
     if (!readyState.compareAndSet(RAW, CONNECTING)) {
-      DVCLogger.i("Start method called on this already-started EventSource object. Doing nothing");
+      DevCycleLogger.i("Start method called on this already-started EventSource object. Doing nothing");
       return;
     }
-    DVCLogger.d("readyState change: %s -> %s", RAW, CONNECTING);
-    DVCLogger.i("Starting EventSource client using URI: %s", url);
+    DevCycleLogger.d("readyState change: %s -> %s", RAW, CONNECTING);
+    DevCycleLogger.i("Starting EventSource client using URI: %s", url);
     streamExecutor.execute(this::run);
   }
 
@@ -213,7 +213,7 @@ public class EventSource implements Closeable {
   @Override
   public void close() {
     ReadyState currentState = readyState.getAndSet(SHUTDOWN);
-    DVCLogger.d("readyState change: %s -> %s", currentState, SHUTDOWN);
+    DevCycleLogger.d("readyState change: %s -> %s", currentState, SHUTDOWN);
     if (currentState == SHUTDOWN) {
       return;
     }
@@ -275,7 +275,7 @@ public class EventSource implements Closeable {
       // Otherwise, an IllegalArgumentException "Unbalanced enter/exit" error is thrown by okhttp.
       // https://github.com/google/ExoPlayer/issues/1348
       call.cancel();
-      DVCLogger.d("call cancelled");
+      DevCycleLogger.d("call cancelled");
     }
   }
 
@@ -309,7 +309,7 @@ public class EventSource implements Closeable {
     } catch (RejectedExecutionException ignored) {
       // COVERAGE: there is no way to simulate this condition in unit tests
       call = null;
-      DVCLogger.d("Rejected execution exception ignored: %s", ignored);
+      DevCycleLogger.d("Rejected execution exception ignored: %s", ignored);
       // During shutdown, we tried to send a message to the event handler
       // Do not reconnect; the executor has been shut down
     }
@@ -330,7 +330,7 @@ public class EventSource implements Closeable {
 
     try {
       long sleepTime = backoffWithJitter(counter);
-      DVCLogger.i("Waiting %s milliseconds before reconnecting...", sleepTime);
+      DevCycleLogger.i("Waiting %s milliseconds before reconnecting...", sleepTime);
       Thread.sleep(sleepTime);
     } catch (InterruptedException ignored) { // COVERAGE: no way to cause this in unit tests
     }
@@ -342,7 +342,7 @@ public class EventSource implements Closeable {
     ConnectionErrorHandler.Action errorHandlerAction = ConnectionErrorHandler.Action.PROCEED;
 
     ReadyState stateBeforeConnecting = readyState.getAndSet(CONNECTING);
-    DVCLogger.d("readyState change: %s -> %s", stateBeforeConnecting, CONNECTING);
+    DevCycleLogger.d("readyState change: %s -> %s", stateBeforeConnecting, CONNECTING);
 
     connectedTime.set(0);
     call = client.newCall(buildRequest());
@@ -360,32 +360,32 @@ public class EventSource implements Closeable {
           // should check the state in case we've been deliberately closed from elsewhere.
           ReadyState state = readyState.get();
           if (state != SHUTDOWN && state != CLOSED) {
-            DVCLogger.w("Connection unexpectedly closed");
+            DevCycleLogger.w("Connection unexpectedly closed");
             errorHandlerAction = connectionErrorHandler.onConnectionError(new EOFException());
           }
         } else {
-          DVCLogger.d("Unsuccessful response: %s", response);
+          DevCycleLogger.d("Unsuccessful response: %s", response);
           errorHandlerAction = dispatchError(new UnsuccessfulResponseException(response.code()));
         }
       }
     } catch (IOException e) {
       ReadyState state = readyState.get();
       if (state != SHUTDOWN && state != CLOSED) {
-        DVCLogger.d("Connection problem: %s", e);
+        DevCycleLogger.d("Connection problem: %s", e);
         errorHandlerAction = dispatchError(e);
       }
     } finally {
       if (errorHandlerAction == ConnectionErrorHandler.Action.SHUTDOWN) {
-        DVCLogger.i("Connection has been explicitly shut down by error handler");
+        DevCycleLogger.i("Connection has been explicitly shut down by error handler");
         close();
       } else {
         boolean wasOpen = readyState.compareAndSet(OPEN, CLOSED);
         boolean wasConnecting = readyState.compareAndSet(CONNECTING, CLOSED);
         if (wasOpen) {
-          DVCLogger.d("readyState change: %s -> %s", OPEN, CLOSED);
+          DevCycleLogger.d("readyState change: %s -> %s", OPEN, CLOSED);
           handler.onClosed();
         } else if (wasConnecting) {
-          DVCLogger.d("readyState change: %s -> %s", CONNECTING, CLOSED);
+          DevCycleLogger.d("readyState change: %s -> %s", CONNECTING, CLOSED);
         }
       }
     }
@@ -411,11 +411,11 @@ public class EventSource implements Closeable {
     ReadyState previousState = readyState.getAndSet(OPEN);
     if (previousState != CONNECTING) {
       // COVERAGE: there is no way to simulate this condition in unit tests
-      DVCLogger.w("Unexpected readyState change: " + previousState + " -> " + OPEN);
+      DevCycleLogger.w("Unexpected readyState change: " + previousState + " -> " + OPEN);
     } else {
-      DVCLogger.d("readyState change: %s -> %s", previousState, OPEN);
+      DevCycleLogger.d("readyState change: %s -> %s", previousState, OPEN);
     }
-    DVCLogger.i("Connected to EventSource stream.");
+    DevCycleLogger.i("Connected to EventSource stream.");
     handler.onOpen();
 
     EventParser parser = new EventParser(

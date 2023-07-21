@@ -11,7 +11,7 @@
  */
 package com.devcycle.sdk.android.model
 
-import com.devcycle.sdk.android.api.DVCCallback
+import com.devcycle.sdk.android.api.DevCycleCallback
 import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
 import com.devcycle.sdk.android.util.JSONMapper
@@ -24,7 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import org.json.JSONArray
 import org.json.JSONObject
-import com.devcycle.sdk.android.util.DVCLogger
+import com.devcycle.sdk.android.util.DevCycleLogger
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
@@ -76,7 +76,7 @@ class Variable<T> internal constructor(
     var evalReason: String? = null
 
     @JsonIgnore
-    private var callback: DVCCallback<Variable<T>>? = null
+    private var callback: DevCycleCallback<Variable<T>>? = null
 
     @JsonIgnore
     private val coroutineScope: CoroutineScope = MainScope()
@@ -157,7 +157,7 @@ class Variable<T> internal constructor(
                 )
                 returnVariable.isDefaulted = true
                 if (readOnlyVariable != null) {
-                    DVCLogger.e("Mismatched variable type for variable: $key, using default")
+                    DevCycleLogger.e("Mismatched variable type for variable: $key, using default")
                 }
                 return returnVariable
             }
@@ -199,18 +199,18 @@ class Variable<T> internal constructor(
         if (evt.propertyName == BucketedUserConfigListener.BucketedUserConfigObserverConstants.propertyChangeConfigUpdated) {
             val config = evt.newValue as BucketedUserConfig
             val variable: BaseConfigVariable? = config.variables?.get(key)
-            DVCLogger.v("Triggering property change handler for $key")
+            DevCycleLogger.v("Triggering property change handler for $key")
             if (variable != null) {
                 try {
                     updateVariable(variable)
                 } catch (e: DVCVariableException) {
-                    DVCLogger.e("Mismatched variable type for variable: ${variable.key}, using default")
+                    DevCycleLogger.e("Mismatched variable type for variable: ${variable.key}, using default")
                 }
             } else {
                 try {
                     defaultVariable()
                 } catch (e: DVCVariableException) {
-                    DVCLogger.e("Unable to restore variable to default")
+                    DevCycleLogger.e("Unable to restore variable to default")
                 }
             }
         }
@@ -223,7 +223,7 @@ class Variable<T> internal constructor(
      * [callback] returns the updated Variable inside callback.onSuccess(..)
      */
     @Deprecated("Use the plain callback signature instead.")
-    fun onUpdate(callback: DVCCallback<Variable<T>>) {
+    fun onUpdate(callback: DevCycleCallback<Variable<T>>) {
         this.callback = callback
     }
 
@@ -234,7 +234,7 @@ class Variable<T> internal constructor(
      * [callback] called with the updated variable
      */
     fun onUpdate(callback: (Variable<T>) -> Unit) {
-        this.callback = object: DVCCallback<Variable<T>> {
+        this.callback = object: DevCycleCallback<Variable<T>> {
             override fun onSuccess(result: Variable<T>) {
                 callback(result)
             }

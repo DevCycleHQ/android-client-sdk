@@ -27,3 +27,5 @@ src/.DS_Store
 .DS_Store
 local.properties
 secret-keys.gpg
+
+build/

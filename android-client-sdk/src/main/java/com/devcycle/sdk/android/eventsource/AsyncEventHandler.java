@@ -1,6 +1,6 @@
 package com.devcycle.sdk.android.eventsource;
 
-import com.devcycle.sdk.android.util.DVCLogger;
+import com.devcycle.sdk.android.util.DevCycleLogger;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -73,8 +73,8 @@ final class AsyncEventHandler implements EventHandler {
   }
 
   private void handleUnexpectedError(Throwable error) {
-    DVCLogger.w("Caught unexpected error from EventHandler: " + error.toString());
-    DVCLogger.d("Stack trace: %s", new LazyStackTrace(error));
+    DevCycleLogger.w("Caught unexpected error from EventHandler: " + error.toString());
+    DevCycleLogger.d("Stack trace: %s", new LazyStackTrace(error));
     onErrorInternal(error);
   }
 
@@ -82,8 +82,8 @@ final class AsyncEventHandler implements EventHandler {
     try {
       eventSourceHandler.onError(error);
     } catch (Throwable errorFromErrorHandler) {
-      DVCLogger.w("Caught unexpected error from EventHandler.onError(): " + errorFromErrorHandler.toString());
-      DVCLogger.d("Stack trace: %s", new LazyStackTrace(error));
+      DevCycleLogger.w("Caught unexpected error from EventHandler.onError(): " + errorFromErrorHandler.toString());
+      DevCycleLogger.d("Stack trace: %s", new LazyStackTrace(error));
     }
   }
 
