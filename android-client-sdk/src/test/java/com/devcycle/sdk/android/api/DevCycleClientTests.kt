@@ -43,9 +43,7 @@ import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 
-
 class DevCycleClientTests {
-
     private lateinit var mockWebServer: MockWebServer
 
     private val objectMapper = jacksonObjectMapper().registerModule(JsonOrgModule())
@@ -678,7 +676,7 @@ class DevCycleClientTests {
 
                     val logs = logger.logs
 
-                    val searchString = "DVC Flushed 1 Events."
+                    val searchString = "DevCycle Flushed 1 Events."
 
                     val filteredLogs = logs.filter { it.second.contains(searchString)}
 
@@ -747,7 +745,7 @@ class DevCycleClientTests {
 
                     val logs = logger.logs
 
-                    val searchString = "DVC Flush 1 Events"
+                    val searchString = "DevCycle Flush 1 Events"
 
                     val filteredLogs = logs.filter { it.second.contains(searchString)}
 
@@ -823,7 +821,7 @@ class DevCycleClientTests {
 
                     val logs = logger.logs
 
-                    val searchString = "DVC Flush 1 Events"
+                    val searchString = "DevCycle Flush 1 Events"
 
                     val filteredLogs = logs.filter { it.second.contains(searchString)}
 
@@ -875,7 +873,7 @@ class DevCycleClientTests {
 
                     val logs = logger.logs
 
-                    val searchString = "DVC Flushed 2 Events."
+                    val searchString = "DevCycle Flushed 2 Events."
 
                     val filteredLogs = logs.filter { it.second.contains(searchString) }
 
