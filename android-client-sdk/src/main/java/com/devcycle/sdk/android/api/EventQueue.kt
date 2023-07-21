@@ -115,7 +115,7 @@ internal class EventQueue constructor(
                     flushAgain.set(false)
                     flushEvents()
                 } else {
-                    closeCallback?.onError(Throwable("Error trying to flush events after closing DVC."))
+                    closeCallback?.onError(Throwable("Error trying to flush events after closing DevCycle"))
                 }
             }
         }
@@ -133,7 +133,7 @@ internal class EventQueue constructor(
      */
     fun queueEvent(event: Event) {
         if (isClosed.get()) {
-            DevCycleLogger.w("Attempting to queue event after closing DVC.")
+            DevCycleLogger.w("Attempting to queue event after closing DevCycle.")
             return
         }
         runBlocking {

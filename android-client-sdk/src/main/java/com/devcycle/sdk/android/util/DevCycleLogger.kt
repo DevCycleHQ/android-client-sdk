@@ -401,7 +401,7 @@ class DevCycleLogger private constructor() {
 
     /** Add a new logging logger. */
     @JvmStatic fun start(logger: Logger) {
-      require(logger !== this) { "Cannot start DVCLogger into itself." }
+      require(logger !== this) { "Cannot start DevCycleLogger into itself." }
       synchronized(loggers) {
         loggers.add(logger)
         loggerArray = loggers.toTypedArray()
