@@ -1,15 +1,12 @@
 plugins {
-    id 'idea'
-    id 'signing'
     id 'com.android.library'
     id 'kotlin-android'
     id 'maven-publish'
     id 'de.mannodermaus.android-junit5'
-    id "io.github.gradle-nexus.publish-plugin" apply(false)
 }
+
 group = "com.devcycle"
 version = "2.0.0"
-
 
 android {
     compileSdk 33
@@ -23,7 +20,7 @@ android {
 
         consumerProguardFiles("proguard-rules.pro")
 
-        //Will create field in buildconfig.java for use in code. 
+        //Will create field in buildconfig.java for use in code.
         buildConfigField 'String', 'VERSION_NAME', "\"$version\""
     }
 
@@ -62,11 +59,10 @@ android {
         disable 'NewApi'
         disable 'Deprecation'
     }
-
 }
 
 ext {
-    PUBLISH_GROUP_ID = 'com.devcycle'
+    PUBLISH_GROUP_ID = group
     PUBLISH_VERSION = version
     PUBLISH_ARTIFACT_ID = 'android-client-sdk'
     PUBLISH_DESCRIPTION = 'DevCycle Android SDK'
@@ -144,76 +140,4 @@ dependencies {
 
     androidTestImplementation("androidx.test.ext:junit:$androidx_junit_version")
     androidTestImplementation("androidx.test.espresso:espresso-core:$espresso_core_version")
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            pom {
-                name = 'DevCycle Android Client SDK'
-                groupId = group
-                artifactId = 'android-client-sdk'
-                description = 'Client side SDK to interact with DevCycle.'
-                url = 'https://devcycle.com'
-
-                scm {
-                    connection = 'scm:git:git://github.com/DevCycleHQ/android-client-sdk.git'
-                    developerConnection = 'scm:git:ssh://github.com:DevCycleHQ/android-client-sdk.git'
-                    url = 'https://github.com/DevCycleHQ/android-client-sdk'
-                }
-
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'https://www.opensource.org/licenses/mit-license.php'
-                    }
-                }
-
-                developers {
-                    developer {
-                        id = 'devcycle'
-                        name = 'DevCycle Engineering'
-                        email = 'support@devcycle.com'
-                        organization = 'DevCycle'
-                    }
-                }
-            }
-            afterEvaluate {
-                from components.release
-            }
-        }
-    }
-}
-
-signing {
-    // The signing key needs to be an ascii armored key version of the binary gpg keyfile
-    // encoded in base64 to preserver formatting when used in an environment variable
-    def signingKey = base64Decode(findProperty("signingKey"))
-    def signingKeyId = findProperty("signingKeyId")
-    def signingPassword = findProperty("signingPassword")
-    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-    sign publishing.publications
-}
-
-static def base64Decode(encodedString){
-    if(encodedString != null) {
-        byte[] decoded = encodedString.decodeBase64()
-        String decode = new String(decoded)
-        return decode
-    }
-    return null;
-}
-if (project == rootProject) {
-    nexusPublishing {
-        // Utilizes the Gradle Nexus Publish Plugin: https://github.com/gradle-nexus/publish-plugin/
-        // to publish, close and release repositories to Sonatype
-        repositories {
-            sonatype {
-                nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-                snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-                username = findProperty("sonatypeUsername")
-                password = findProperty("sonatypePassword")
-            }
-        }
-    }
 }
