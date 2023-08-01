@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Prerelease"
+        required: true
+        type: boolean
+      draft:
+        description: "Draft"
+        required: true
+        type: boolean
+      version-increment-type:
+        description: 'Which part of the version to increment:'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+        default: 'patch'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Version Bump and Release
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the repo with credentials that can bypass branch protection, and fetch git history instead of just latest commit
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.AUTOMATION_USER_TOKEN }}
+          fetch-depth: 0
+
+      - uses: DevCycleHQ/release-action/prepare-release@main
+        id: prepare-release
+        with:
+          github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+          draft: ${{ github.event.inputs.draft }}
+          version-increment-type: ${{ github.event.inputs.version-increment-type }}
+
+      - name: Update Version in code
+        run: |
+          sed -i "s/^version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/version = \"${{steps.prepare-release.outputs.next-release-tag}}\"/g" build.gradle
+          sed -i "s/private String sdkVersion = \"[0-9]\+\.[0-9]\+\.[0-9]\+\";/private String sdkVersion = \"${{steps.prepare-release.outputs.next-release-tag}}\";/g" src/main/java/com/devcycle/sdk/server/common/model/PlatformData.java
+          sed -i "s/java-server-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+/java-server-sdk:${{steps.prepare-release.outputs.next-release-tag}}/g" ./example-cloud/build.gradle
+          sed -i "s/java-server-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+/java-server-sdk:${{steps.prepare-release.outputs.next-release-tag}}/g" ./example-local/build.gradle
+          sed -i "s/<java\.server\.sdk\.version>[0-9]\+\.[0-9]\+\.[0-9]\+<\/java\.server\.sdk\.version>/<java.server.sdk.version>${{steps.prepare-release.outputs.next-release-tag}}<\/java.server.sdk.version>/g" ./benchmark/pom.xml
+          sed -i "s/<version>[0-9]\+\.[0-9]\+\.[0-9]\+<\/version>/<version>${{steps.prepare-release.outputs.next-release-tag}}<\/version>/g" ./README.md
+          sed -i "s/java-server-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+/java-server-sdk:${{steps.prepare-release.outputs.next-release-tag}}/g" ./README.md
+
+      - name: Commit version change
+        run: |
+          git config --global user.email "github-tracker-bot@taplytics.com"
+          git config --global user.name "DevCycle Automation"
+          git add ./build.gradle
+          git add ./src/main/java/com/devcycle/sdk/server/common/model/PlatformData.java
+          git add ./example-cloud/build.gradle
+          git add ./example-local/build.gradle
+          git add ./benchmark/pom.xml
+          git add ./README.md
+          git commit -m "Release ${{steps.prepare-release.outputs.next-release-tag}}"
+
+      - name: Push version change
+        run: |
+          git push origin HEAD:main
+          if: inputs.draft != true
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 11
+          cache: 'gradle'
+
+      - name: Build and Publish To Sonatype
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew publishToSonatype
+
+      - name: Close Sonatype Staging Repository
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+        run: ./gradlew findSonatypeStagingRepository closeSonatypeStagingRepository
+
+      - name: Release Sonatype Staging Repository
+        if: inputs.prerelease != true && inputs.draft != true
+        env:
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+        run: ./gradlew findSonatypeStagingRepository releaseSonatypeStagingRepository
+
+      - uses: DevCycleHQ/release-action/create-release@main
+        id: create-release
+        with:
+          github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
+          tag: ${{ steps.prepare-release.outputs.next-release-tag }}
+          target: main
+          prerelease: ${{ github.event.inputs.prerelease }}
+          draft: ${{ github.event.inputs.draft }}
+          changelog: ${{ steps.prepare-release.outputs.changelog }}
+
+      - name: Display link to release
+        run: |
+          echo "::notice title=Release ID::${{ steps.create-release.outputs.release-id }}"
+          echo "::notice title=Release URL::${{ steps.create-release.outputs.release-url }}"
