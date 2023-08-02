@@ -38,7 +38,7 @@ android {
     }
 
     buildTypes {
-        release {
+        "release" {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
@@ -71,6 +71,7 @@ android {
 
 ext {
     GROUP='com.devcycle'
+    POM_VERSION=version
     POM_ARTIFACT_ID='android-client-sdk'
     POM_NAME='DevCycle Android Client SDK'
     POM_DESCRIPTION='An Android library used to access the DevCycle feature management service'
