@@ -68,28 +68,25 @@ jobs:
           java-version: 11
           cache: 'gradle'
 
-      - name: Build and Publish To Sonatype
+      - name: Build and Publish To Sonatype Staging
         env:
-          ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signing.keyId: ${{ secrets.SIGNING_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signing.password: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_sonatypeStagingProfileId: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
-        run: ./gradlew publishReleasePublicationToSonatypeRepository
-
-      - name: Close Sonatype Staging Repository
-        env:
-          ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.SONATYPE_PASSWORD }}
-        run: ./gradlew findSonatypeStagingRepository closeSonatypeStagingRepository
+        run: |
+          ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
 
       - name: Release Sonatype Staging Repository
         if: inputs.prerelease != true && inputs.draft != true
         env:
-          ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.SONATYPE_PASSWORD }}
-        run: ./gradlew findSonatypeStagingRepository releaseSonatypeStagingRepository
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_sonatypeStagingProfileId: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
+        run: ./gradlew closeAndReleaseRepository
 
       - uses: DevCycleHQ/release-action/create-release@main
         id: create-release
