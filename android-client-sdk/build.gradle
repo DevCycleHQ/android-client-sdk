@@ -74,7 +74,7 @@ ext {
     POM_VERSION=version
     POM_ARTIFACT_ID='android-client-sdk'
     POM_NAME='DevCycle Android Client SDK'
-    POM_DESCRIPTION='An Android library used to access the DevCycle feature management service'
+    POM_DESCRIPTION='The DevCycle Android Client SDK uses our Client SDK APIs to perform all user segmentation and bucketing for the SDK, providing fast response times using our globally distributed edge workers all around the world.'
     POM_INCEPTION_YEAR=2022
     POM_URL='https://github.com/DevCycleHQ/android-client-sdk'
     repo='https://github.com/DevCycleHQ/android-client-sdk'
