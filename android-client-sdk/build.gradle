@@ -1,12 +1,19 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'maven-publish'
+    id "com.vanniktech.maven.publish" version "0.25.3"
     id 'de.mannodermaus.android-junit5'
 }
+import com.vanniktech.maven.publish.SonatypeHost
+
 
 group = "com.devcycle"
 version = "2.0.0"
+
+mavenPublishing {
+    coordinates(group, "android-client-sdk", version)
+    publishToMavenCentral(SonatypeHost.S01)
+}
 
 android {
     compileSdk 33
@@ -20,7 +27,7 @@ android {
 
         consumerProguardFiles("proguard-rules.pro")
 
-        //Will create field in buildconfig.java for use in code. 
+        //Will create field in buildconfig.java for use in code.
         buildConfigField 'String', 'VERSION_NAME', "\"$version\""
     }
 
@@ -31,21 +38,22 @@ android {
     }
 
     buildTypes {
-        release {
+        "release" {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
 
-        debug {
+        "debug" {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
 
         // "minified" build type to be used for unit tests
-        minified {
+        "minified" {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -62,19 +70,26 @@ android {
 }
 
 ext {
-    PUBLISH_GROUP_ID = 'com.devcycle'
-    PUBLISH_VERSION = version
-    PUBLISH_ARTIFACT_ID = 'android-client-sdk'
-    PUBLISH_DESCRIPTION = 'DevCycle Android SDK'
-    PUBLISH_URL = 'https://github.com/DevCycleHQ/android-client-sdk'
-    PUBLISH_LICENSE_NAME = 'MIT License'
-    PUBLISH_LICENSE_URL = 'https://www.opensource.org/licenses/mit-license.php'
-    PUBLISH_DEVELOPER_ID = 'SDK'
-    PUBLISH_DEVELOPER_NAME = 'DevCycle SDK Group'
-    PUBLISH_DEVELOPER_EMAIL = 'support@devcycle.com'
-    PUBLISH_SCM_CONNECTION = 'scm:git:github.com/DevCycleHQ/android-client-sdk.git'
-    PUBLISH_SCM_DEVELOPER_CONNECTION = 'scm:git:ssh://github.com/DevCycleHQ/android-client-sdk.git'
-    PUBLISH_SCM_URL = 'https://github.com/DevCycleHQ/android-client-sdk'
+    GROUP='com.devcycle'
+    POM_VERSION=version
+    POM_ARTIFACT_ID='android-client-sdk'
+    POM_NAME='DevCycle Android Client SDK'
+    POM_DESCRIPTION='The DevCycle Android Client SDK uses our Client SDK APIs to perform all user segmentation and bucketing for the SDK, providing fast response times using our globally distributed edge workers all around the world.'
+    POM_INCEPTION_YEAR=2022
+    POM_URL='https://github.com/DevCycleHQ/android-client-sdk'
+    repo='https://github.com/DevCycleHQ/android-client-sdk'
+
+    POM_LICENSE_NAME='MIT License'
+    POM_LICENSE_URL='https://www.opensource.org/licenses/mit-license.php'
+    POM_LICENSE_DIST=repo
+
+    POM_SCM_URL='https://github.com/DevCycleHQ/android-client-sdk'
+    POM_SCM_CONNECTION='scm:git:ssh://github.com/DevCycleHQ/android-client-sdk.git'
+    POM_SCM_DEV_CONNECTION='scm:git:ssh://github.com/DevCycleHQ/android-client-sdk.git'
+
+    POM_DEVELOPER_ID='SDK'
+    POM_DEVELOPER_NAME='DevCycle SDK Group'
+    POM_DEVELOPER_URL='https://devcycle.com'
 
     androidx_version = '1.8.0'
     retrofit_version = "2.9.0"
@@ -98,8 +113,6 @@ ext {
     androidx_junit_version = "1.1.3"
     espresso_core_version = "3.4.0"
 }
-
-apply from: "${rootProject.projectDir}/scripts/publish-module.gradle"
 
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:$okhttp_version")
