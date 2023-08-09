@@ -13,6 +13,7 @@ version = "2.0.1"
 mavenPublishing {
     coordinates(group, "android-client-sdk", version)
     publishToMavenCentral(SonatypeHost.S01)
+    signAllPublications()
 }
 
 android {
