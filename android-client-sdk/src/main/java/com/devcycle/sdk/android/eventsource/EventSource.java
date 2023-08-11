@@ -174,9 +174,18 @@ public class EventSource implements Closeable {
       DevCycleLogger.i("Start method called on this already-started EventSource object. Doing nothing");
       return;
     }
-    DevCycleLogger.d("readyState change: %s -> %s", RAW, CONNECTING);
-    DevCycleLogger.i("Starting EventSource client using URI: %s", url);
-    streamExecutor.execute(this::run);
+
+    try {
+      DevCycleLogger.d("readyState change: %s -> %s", RAW, CONNECTING);
+      DevCycleLogger.i("Starting EventSource client using URI: %s", url);
+      streamExecutor.execute(this::run);
+    } catch (Exception e) {
+      if (e instanceof RejectedExecutionException) {
+        DevCycleLogger.e("Error starting EventSource: Task rejected by executor - ", e);
+      } else {
+        DevCycleLogger.e("Error in EventSource run method: %s", e);
+      }
+    }
   }
 
   /**
