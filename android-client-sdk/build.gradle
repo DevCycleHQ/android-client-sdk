@@ -105,7 +105,7 @@ ext {
 
     junit_version = "5.8.2"
     mockito_core_version = '4.6.1'
-    mockito_inline_version = '2.13.0'
+    mockito_inline_version = '5.2.0'
     mockk_version = '1.12.4'
     hamcrest_version = "2.2"
     okhttp_version = "4.9.3"
