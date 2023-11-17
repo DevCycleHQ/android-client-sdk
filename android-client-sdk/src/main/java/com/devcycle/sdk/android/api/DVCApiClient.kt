@@ -6,6 +6,8 @@ import com.devcycle.sdk.android.util.JSONMapper
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 internal class DVCApiClient {
     private val okBuilder: OkHttpClient.Builder = OkHttpClient.Builder()
@@ -14,6 +16,7 @@ internal class DVCApiClient {
 
     fun initialize(baseUrl: String, context: Context): DVCApi {
         okBuilder.addInterceptor(NetworkConnectionInterceptor(context))
+        okBuilder.connectTimeout(30, TimeUnit.SECONDS)
         return adapterBuilder
             .baseUrl(baseUrl)
             .client(okBuilder.build())
