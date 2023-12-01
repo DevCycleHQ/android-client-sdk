@@ -32,6 +32,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.jupiter.api.*
+import org.junit.Assert.assertNotNull
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
@@ -635,6 +636,10 @@ class DevCycleClientTests {
             override fun onSuccess(result: Map<String, BaseConfigVariable>) {
                 var anonUser: PopulatedUser = user.get(client) as PopulatedUser
                 verify(editor, times(1))?.putString(eq("ANONYMOUS_USER_ID"), eq(anonUser.userId))
+                // Assertions to check non-null fields
+                assertNotNull("appVersion should not be null", anonUser.appVersion)
+                assertNotNull("appBuild should not be null", anonUser.appBuild)
+                assertNotNull("language should not be null", anonUser.language)
             }
             override fun onError(t: Throwable) {}
         }
