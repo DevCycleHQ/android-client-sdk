@@ -237,7 +237,7 @@ class DevCycleClient private constructor(
     @JvmOverloads
     @Synchronized
     fun resetUser(callback: DevCycleCallback<Map<String, BaseConfigVariable>>? = null) {
-        val newUser: PopulatedUser = PopulatedUser.buildAnonymous()
+        val newUser: PopulatedUser = PopulatedUser.buildAnonymous(this.context)
         latestIdentifiedUser = newUser
 
         if (isExecuting.get()) {

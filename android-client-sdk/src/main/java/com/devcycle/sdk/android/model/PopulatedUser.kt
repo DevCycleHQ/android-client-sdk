@@ -66,11 +66,34 @@ internal data class PopulatedUser constructor(
     }
 
     internal companion object {
-        @JvmSynthetic internal fun buildAnonymous(): PopulatedUser {
+        @JvmSynthetic internal fun buildAnonymous(context: Context): PopulatedUser {
             val userId = UUID.randomUUID().toString()
             val isAnonymous = true
+            val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                context.resources.configuration.locales[0]
+            } else {
+                context.resources.configuration.locale
+            }
+            val packageManager = context.packageManager
+            val packageInfo: PackageInfo = packageManager.getPackageInfo(context.packageName, 0)
 
-            return PopulatedUser(userId, isAnonymous)
+            val appVersion = packageInfo.versionName
+            val appBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.longVersionCode
+            } else {
+                packageInfo.versionCode.toLong()
+            }
+            val language = locale.language
+            return PopulatedUser(
+                userId,
+                isAnonymous,
+                email = null,
+                name = null,
+                language,
+                country = null,
+                appVersion,
+                appBuild
+            )
         }
 
         @JvmSynthetic internal fun fromUserParam(user: DevCycleUser, context: Context, anonUserId: String?): PopulatedUser {
