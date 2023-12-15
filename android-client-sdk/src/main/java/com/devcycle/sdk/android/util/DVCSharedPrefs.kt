@@ -57,7 +57,6 @@ internal class DVCSharedPrefs(context: Context) {
     fun saveString(value: String, key: String) {
         try {
             preferences.edit().putString(key, value).apply()
-            preferences.edit().commit()
         } catch (e: JsonProcessingException) {
             DevCycleLogger.e(e, e.message)
         }
