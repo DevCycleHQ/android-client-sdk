@@ -585,6 +585,18 @@ class DevCycleClient private constructor(
 
         fun withOptions(options: DevCycleOptions): DevCycleClientBuilder {
             this.options = options
+            options.apiProxyUrl?.let {
+                if (it.isNotEmpty()) {
+                    // Override the apiUrl with the apiProxyUrl from options
+                    apiUrl = it
+                }
+            }
+            options.eventsApiProxyUrl?.let {
+                if (it.isNotEmpty()) {
+                    // Override the eventsUrl with the eventsApiProxyUrl from options
+                    eventsUrl = it
+                }
+            }
             return this
         }
 
@@ -595,13 +607,6 @@ class DevCycleClient private constructor(
 
         fun withLogger(logger: DevCycleLogger.Logger): DevCycleClientBuilder {
             this.logger = logger
-            return this
-        }
-
-        @TestOnly
-        @JvmSynthetic internal fun withApiUrl(apiUrl: String): DevCycleClientBuilder {
-            this.apiUrl = apiUrl
-            this.eventsUrl = apiUrl
             return this
         }
 

@@ -327,6 +327,8 @@ class DevCycleClientTests {
             } else {
                 // expect only the first and last user id to be sent as a result of the identify calls
                 try {
+                    println("printing the path")
+                    println(it.path)
                     Assertions.assertEquals(true, it.path?.contains("expected_userid"))
                 } catch (e: org.opentest4j.AssertionFailedError) {
                     println(it.path)
@@ -724,6 +726,8 @@ class DevCycleClientTests {
         val options = DevCycleOptions.builder()
             .flushEventsIntervalMs(flushInMs)
             .disableAutomaticEventLogging(true)
+            .apiProxyUrl(mockWebServer.url("/").toString())
+            .eventsApiProxyUrl(mockWebServer.url("/").toString())
             .build()
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, LogLevel.DEBUG, options)
@@ -792,6 +796,8 @@ class DevCycleClientTests {
         val options = DevCycleOptions.builder()
             .flushEventsIntervalMs(flushInMs)
             .disableCustomEventLogging(true)
+            .apiProxyUrl(mockWebServer.url("/").toString())
+            .eventsApiProxyUrl(mockWebServer.url("/").toString())
             .build()
 
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString(), flushInMs, false ,null, logLevel = LogLevel.INFO, options)
@@ -1483,11 +1489,12 @@ class DevCycleClientTests {
             .withSDKKey(sdkKey)
             .withLogger(logger)
             .withLogLevel(logLevel)
-            .withApiUrl(mockUrl)
             .withOptions(
                 options ?: DevCycleOptions.builder()
                     .flushEventsIntervalMs(flushInMs)
                     .enableEdgeDB(enableEdgeDB)
+                    .apiProxyUrl(mockUrl)
+                    .eventsApiProxyUrl(mockUrl)
                     .build()
             )
 
