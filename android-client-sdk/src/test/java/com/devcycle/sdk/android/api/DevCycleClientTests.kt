@@ -277,7 +277,7 @@ class DevCycleClientTests {
         generateDispatcher(config = config)
         val initializeLatch = CountDownLatch(1)
 
-        val client = createClient("pretend-its-real", mockWebServer.url("/").toString(), 100L, false, null, LogLevel.VERBOSE )
+        val client = createClient("pretend-its-real", mockWebServer.url("/").toString(), 100L, false, null, LogLevel.VERBOSE)
         client.onInitialized(object: DevCycleCallback<String> {
             override fun onSuccess(result: String) {
                 calledBack = true
@@ -329,9 +329,9 @@ class DevCycleClientTests {
                 try {
                     println("printing the path")
                     println(it.path)
+
                     Assertions.assertEquals(true, it.path?.contains("expected_userid"))
                 } catch (e: org.opentest4j.AssertionFailedError) {
-                    println(it.path)
                     throw e
                 }
 
