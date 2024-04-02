@@ -8,7 +8,9 @@ class DevCycleOptions(
     val disableConfigCache: Boolean,
     val disableRealtimeUpdates: Boolean,
     val disableAutomaticEventLogging : Boolean,
-    val disableCustomEventLogging : Boolean
+    val disableCustomEventLogging : Boolean,
+    val apiProxyUrl: String?,
+    val eventsApiProxyUrl: String?
 ) {
     class DevCycleOptionsBuilder internal constructor() {
         private var flushEventsIntervalMs = 0L
@@ -19,6 +21,8 @@ class DevCycleOptions(
         private var disableRealtimeUpdates = false
         private var disableAutomaticEventLogging = false
         private var disableCustomEventLogging = false
+        private var apiProxyUrl: String? = null
+        private var eventsApiProxyUrl: String? = null
 
         fun flushEventsIntervalMs(flushEventsIntervalMs: Long): DevCycleOptionsBuilder {
             this.flushEventsIntervalMs = flushEventsIntervalMs
@@ -59,6 +63,16 @@ class DevCycleOptions(
             this.disableRealtimeUpdates = disableRealtimeUpdates
             return this
         }
+
+        fun apiProxyUrl(apiProxyUrl: String): DevCycleOptionsBuilder {
+            this.apiProxyUrl = apiProxyUrl
+            return this
+        }
+
+        fun eventsApiProxyUrl(eventsApiProxyUrl: String): DevCycleOptionsBuilder {
+            this.eventsApiProxyUrl = eventsApiProxyUrl
+            return this
+        }
         fun build(): DevCycleOptions {
             return DevCycleOptions(
                 flushEventsIntervalMs,
@@ -68,7 +82,9 @@ class DevCycleOptions(
                 disableConfigCache,
                 disableRealtimeUpdates,
                 disableAutomaticEventLogging,
-                disableCustomEventLogging
+                disableCustomEventLogging,
+                apiProxyUrl,
+                eventsApiProxyUrl
             )
         }
     }
