@@ -329,7 +329,7 @@ class DevCycleClientTests {
                 // expect only the first and last user id to be sent as a result of the identify calls
                 try {
                     // TODO: Figure out why this is inconsistently failing
-                    // Assertions.assertEquals(true, it.path?.contains("expected_userid"))
+//                     Assertions.assertEquals(true, it.path?.contains("expected_userid"))
                 } catch (e: org.opentest4j.AssertionFailedError) {
                     throw e
                 }
