@@ -33,6 +33,7 @@ import okhttp3.ConnectionPool;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
@@ -619,6 +620,7 @@ public class EventSource implements Closeable {
               .connectTimeout(DEFAULT_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS)
               .readTimeout(DEFAULT_READ_TIMEOUT, TimeUnit.MILLISECONDS)
               .writeTimeout(DEFAULT_WRITE_TIMEOUT, TimeUnit.MILLISECONDS)
+              .protocols(Arrays.asList(Protocol.HTTP_1_1))
               .retryOnConnectionFailure(true);
       try {
         b.sslSocketFactory(new ModernTLSSocketFactory(), defaultTrustManager());
