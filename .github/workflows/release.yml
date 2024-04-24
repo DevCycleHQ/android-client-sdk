@@ -35,7 +35,7 @@ jobs:
           token: ${{ secrets.AUTOMATION_USER_TOKEN }}
           fetch-depth: 0
 
-      - uses: DevCycleHQ/release-action/prepare-release@v2
+      - uses: DevCycleHQ/release-action/prepare-release@v2.3.0
         id: prepare-release
         with:
           github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
