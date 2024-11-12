@@ -277,7 +277,12 @@ public class EventSource implements Closeable {
 
   private void closeCurrentStream(ReadyState previousState) {
     if (previousState == ReadyState.OPEN) {
-      handler.onClosed();
+      try {
+        handler.onClosed();
+      } catch (Exception e) {
+        DevCycleLogger.w("Message handler threw an exception: " + e.toString());
+        handler.onError(e);
+      }
     }
 
     if (call != null) {
