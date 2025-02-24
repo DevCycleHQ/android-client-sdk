@@ -12,14 +12,14 @@ on:
         required: true
         type: boolean
       version-increment-type:
-        description: 'Which part of the version to increment:'
+        description: "Which part of the version to increment:"
         required: true
         type: choice
         options:
           - major
           - minor
           - patch
-        default: 'patch'
+        default: "patch"
 
 permissions:
   contents: write
@@ -66,7 +66,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 18
-          cache: 'gradle'
+          cache: "gradle"
 
       - name: Build and Publish To Sonatype Staging
         env:
@@ -76,15 +76,6 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
-
-      - name: Release Sonatype Staging Repository
-        if: inputs.prerelease != true && inputs.draft != true
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew closeAndReleaseRepository
 
       - uses: DevCycleHQ/release-action/create-release@v2.3.0
         id: create-release
