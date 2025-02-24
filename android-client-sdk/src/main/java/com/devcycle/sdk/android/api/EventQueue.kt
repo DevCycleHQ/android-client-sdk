@@ -26,7 +26,7 @@ internal class EventQueue constructor(
     internal val aggregateEventMap: HashMap<String, HashMap<String, Event>> = HashMap()
 
     private val scheduler = Scheduler(coroutineScope, flushInMs)
-    private lateinit var scheduleJob: Job
+    private var scheduleJob: Job? = null
     // mutex to control flushing events, ensuring only one operation at a time
     private val flushMutex = Mutex()
     // mutex to gate modifications to the aggregateEventMap
@@ -202,6 +202,6 @@ internal class EventQueue constructor(
         isClosed.set(true)
         closeCallback = callback
         flushEvents()
-        scheduleJob.cancelAndJoin()
+        scheduleJob?.cancelAndJoin()
     }
 }
