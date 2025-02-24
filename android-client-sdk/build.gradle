@@ -8,7 +8,7 @@ import com.vanniktech.maven.publish.SonatypeHost
 
 
 group = "com.devcycle"
-version = "2.1.1"
+version = "2.1.2"
 
 mavenPublishing {
     coordinates(group, "android-client-sdk", version)
