@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
+private const val EVENT_SOURCE_RETRY_DELAY_MIN: Long = 5
+
 /**
  * Main entry point for SDK user
  * The class is constructed by calling DevCycleClient.builder(){builder options}.build()
@@ -172,7 +174,7 @@ class DevCycleClient private constructor(
         })
         val builder = EventSource.Builder(
             ConnectStrategy.http(URI(config?.sse?.url))
-                .readTimeout(5, TimeUnit.MINUTES)
+                .readTimeout(EVENT_SOURCE_RETRY_DELAY_MIN, TimeUnit.MINUTES)
         )
 
         backgroundEventSource = BackgroundEventSource.Builder(handler, builder).build()
