@@ -4,7 +4,7 @@ import com.devcycle.sdk.android.util.DevCycleLogger
 import com.launchdarkly.eventsource.MessageEvent
 import com.launchdarkly.eventsource.background.BackgroundEventHandler
 
-class Handler(
+class SSEEventHandler(
     private var onMessageHandler: (messageEvent: MessageEvent?) -> Any
 ): BackgroundEventHandler {
     fun init() {}

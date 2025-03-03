@@ -10,6 +10,7 @@ import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DevCycleLogger
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
+import com.launchdarkly.eventsource.ConnectStrategy
 import com.launchdarkly.eventsource.EventSource
 import com.launchdarkly.eventsource.background.BackgroundEventSource
 import com.launchdarkly.eventsource.MessageEvent
@@ -22,6 +23,7 @@ import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.net.URI
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -90,8 +92,11 @@ class DevCycleClient private constructor(
                     initEventSource()
                     val application : Application = context.applicationContext as Application
 
-                    val lifecycleCallbacks = DVCLifecycleCallbacks(onPauseApplication, onResumeApplication,
-                        config?.sse?.inactivityDelay?.toLong(), customLifecycleHandler
+                    val lifecycleCallbacks = DVCLifecycleCallbacks(
+                        onPauseApplication,
+                        onResumeApplication,
+                        config?.sse?.inactivityDelay?.toLong(),
+                        customLifecycleHandler
                     )
                     application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
                 }
@@ -139,11 +144,15 @@ class DevCycleClient private constructor(
         }
         if (config?.sse?.url == null) { return }
 
-        backgroundEventSource = BackgroundEventSource.Builder(Handler(fun(messageEvent: MessageEvent?) {
-            if (messageEvent == null) { return }
+        val handler = SSEEventHandler(fun(messageEvent: MessageEvent?) {
+            if (messageEvent == null) {
+                return
+            }
 
             val data = JSONObject(messageEvent.data)
-            if (!data.has("data")) { return }
+            if (!data.has("data")) {
+                return
+            }
 
             val innerData = JSONObject(data.get("data") as String)
             val lastModified = if (innerData.has("lastModified")) {
@@ -157,9 +166,16 @@ class DevCycleClient private constructor(
             } else null
 
             if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
+                DevCycleLogger.d("SSE Message: Refetching config")
                 refetchConfig(true, lastModified, etag)
             }
-        }), EventSource.Builder(URI(config?.sse?.url))).build()
+        })
+        val builder = EventSource.Builder(
+            ConnectStrategy.http(URI(config?.sse?.url))
+                .readTimeout(5, TimeUnit.MINUTES)
+        )
+
+        backgroundEventSource = BackgroundEventSource.Builder(handler, builder).build()
         backgroundEventSource?.start()
     }
 
