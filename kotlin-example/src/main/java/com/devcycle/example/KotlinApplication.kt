@@ -31,8 +31,8 @@ class KotlinApplication: Application() {
             .build()
 
         // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
-        variable = client.variable("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
-        variableValue = client.variableValue("<YOUR_VARIABLE_KEY>", "default value")
+        variable = client.variable("example-text", "my string variable is not initialized yet");
+        variableValue = client.variableValue("example-text", "default value")
         Toast.makeText(applicationContext, Objects.requireNonNull(variableValue), Toast.LENGTH_SHORT).show()
 
         client.onInitialized(object : DevCycleCallback<String> {

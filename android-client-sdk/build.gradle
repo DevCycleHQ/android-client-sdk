@@ -109,6 +109,7 @@ ext {
     mockk_version = '1.13.10'
     hamcrest_version = "2.2"
     okhttp_version = "4.9.3"
+    okhttp_eventsource_version = "4.1.1"
     kotlin_version = '1.9.0'
 
     android_core_version = "2.2.0"
@@ -118,6 +119,7 @@ ext {
 
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:$okhttp_version")
+    implementation("com.launchdarkly:okhttp-eventsource:$okhttp_eventsource_version")
 
     implementation("com.squareup.retrofit2:retrofit:$retrofit_version") {
         exclude group: 'com.squareup.okhttp3', module: 'okhttp'
@@ -155,4 +157,5 @@ dependencies {
 
     androidTestImplementation("androidx.test.ext:junit:$androidx_junit_version")
     androidTestImplementation("androidx.test.espresso:espresso-core:$espresso_core_version")
+
 }
