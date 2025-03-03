@@ -1,10 +1,12 @@
 package com.devcycle.sdk.android.eventsource
 
 import com.devcycle.sdk.android.util.DevCycleLogger
+import com.launchdarkly.eventsource.MessageEvent
+import com.launchdarkly.eventsource.background.BackgroundEventHandler
 
 class Handler(
     private var onMessageHandler: (messageEvent: MessageEvent?) -> Any
-): EventHandler {
+): BackgroundEventHandler {
     fun init() {}
 
     /**

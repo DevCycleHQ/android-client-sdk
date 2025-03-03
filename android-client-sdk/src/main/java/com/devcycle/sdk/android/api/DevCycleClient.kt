@@ -10,17 +10,18 @@ import com.devcycle.sdk.android.model.*
 import com.devcycle.sdk.android.util.DevCycleLogger
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
+import com.launchdarkly.eventsource.EventSource
+import com.launchdarkly.eventsource.background.BackgroundEventSource
+import com.launchdarkly.eventsource.MessageEvent
+import com.launchdarkly.eventsource.ReadyState
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.jetbrains.annotations.TestOnly
 import org.json.JSONArray
 import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.net.URI
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -43,8 +44,7 @@ class DevCycleClient private constructor(
     private val coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private var config: BucketedUserConfig? = null
-    private var eventSource: EventSource? = null
-    private var executorService: ExecutorService? = null
+    private var backgroundEventSource: BackgroundEventSource? = null
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
@@ -114,16 +114,16 @@ class DevCycleClient private constructor(
         coroutineScope.launch {
             withContext(Dispatchers.IO) {
                 DevCycleLogger.d("Closing Realtime Updates connection")
-                eventSource?.close()
+                backgroundEventSource?.close()
             }
         }
     }
 
     private val onResumeApplication = fun () {
-        if (eventSource?.state != ReadyState.OPEN) {
+        if (backgroundEventSource?.eventSource?.state != ReadyState.OPEN) {
             coroutineScope.launch {
                 withContext(Dispatchers.IO) {
-                    eventSource?.close()
+                    backgroundEventSource?.close()
                     DevCycleLogger.d("Attempting to restart Realtime Updates connection")
                     initEventSource()
                     refetchConfig(false, null, null)
@@ -138,7 +138,8 @@ class DevCycleClient private constructor(
             return
         }
         if (config?.sse?.url == null) { return }
-        eventSource = EventSource.Builder(Handler(fun(messageEvent: MessageEvent?) {
+
+        backgroundEventSource = BackgroundEventSource.Builder(Handler(fun(messageEvent: MessageEvent?) {
             if (messageEvent == null) { return }
 
             val data = JSONObject(messageEvent.data)
@@ -158,15 +159,8 @@ class DevCycleClient private constructor(
             if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
                 refetchConfig(true, lastModified, etag)
             }
-        }), URI(config?.sse?.url)).executor(this.getValidExecutorService()).build()
-        eventSource?.start()
-    }
-
-    private fun getValidExecutorService(): ExecutorService? {
-        if (executorService == null || executorService?.isTerminated == true) {
-            executorService = Executors.newSingleThreadExecutor()
-        }
-        return executorService
+        }), EventSource.Builder(URI(config?.sse?.url))).build()
+        backgroundEventSource?.start()
     }
 
     fun onInitialized(callback: DevCycleCallback<String>) {
@@ -267,7 +261,7 @@ class DevCycleClient private constructor(
     fun close(callback: DevCycleCallback<String>? = null) {
         coroutineScope.launch {
             withContext(Dispatchers.IO) {
-                eventSource?.close()
+                backgroundEventSource?.close()
             }
             withContext(coroutineContext) {
                 eventQueue.close(callback)
