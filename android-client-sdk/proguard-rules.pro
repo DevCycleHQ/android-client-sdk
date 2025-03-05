@@ -91,3 +91,12 @@
 # R8 full mode strips generic signatures from return types if not kept.
 -if interface * { @retrofit2.http.* public *** *(...); }
 -keep,allowoptimization,allowshrinking,allowobfuscation class <3>
+
+# SLF4J Logger rules
+-dontwarn org.slf4j.**
+-keep class org.slf4j.** { *; }
+-keep interface org.slf4j.** { *; }
+
+# com.launchdarkly:okhttp-eventsource rules
+-keep class com.launchdarkly.eventsource.** { *; }
+-dontwarn com.launchdarkly.eventsource.**
