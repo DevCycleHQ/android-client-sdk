@@ -98,5 +98,5 @@
 -keep interface org.slf4j.** { *; }
 
 # com.launchdarkly:okhttp-eventsource rules
--keep class com.launchdarkly.** { *; }
--dontwarn com.launchdarkly.**
+-keep class com.launchdarkly.eventsource.** { *; }
+-dontwarn com.launchdarkly.eventsource.**
