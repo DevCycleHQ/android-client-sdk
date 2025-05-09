@@ -1131,6 +1131,198 @@ class DevCycleClientTests {
     }
 
     @Test
+    fun `client initializes successfully, config is still parsed correctly with an extra field in the variables that is ignored`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{\n" +
+                "  \"variables\": {\n" +
+                "    \"test-feature\": {\n" +
+                "      \"_id\": \"1\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +      // Extra ignored field
+                "      \"key\": \"test-feature\",\n" +
+                "      \"type\": \"Boolean\",\n" +
+                "      \"value\": true\n" +
+                "    },\n" +
+                "    \"test-feature-number\": {\n" +
+                "      \"_id\": \"2\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +      // Extra ignored field
+                "      \"key\": \"test-feature-number\",\n" +
+                "      \"type\": \"Number\",\n" +
+                "      \"value\": 42\n" +
+                "    },\n" +
+                "    \"test-feature-string\": {\n" +
+                "      \"_id\": \"3\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +      // Extra ignored field
+                "      \"key\": \"test-feature-string\",\n" +
+                "      \"type\": \"String\",\n" +
+                "      \"value\": \"it works!\"\n" +
+                "    },\n" +
+                "    \"test-feature-json\": {\n" +
+                "      \"_id\": \"4\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +      // Extra ignored field
+                "      \"key\": \"test-feature-json\",\n" +
+                "      \"type\": \"JSON\",\n" +
+                "      \"value\": { \"test\": \"feature\"}\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
+        try {
+            client.onInitialized(object: DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            assert(boolVar.value)
+            assert(boolVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(!boolValue)
+
+            assert(numVar.value == 42)
+            assert(numVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(numValue == 0)
+
+            assert(strVar.value == "it works!")
+            assert(strVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(strValue == "Not activated")
+
+            val expectedJSON = JSONObject()
+            expectedJSON.put("test", "feature")
+            assert(jsonVar.value.toString() == expectedJSON.toString())
+            assert(jsonVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(jsonValue.toString() !== expectedJSON.toString())
+        }
+    }
+
+    @Test
+    fun `client initializes successfully, config is still parsed correctly with an extra root field and extra field in the environments that is ignored`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{\n" +
+                "  \"variables\": {\n" +
+                "    \"test-feature\": {\n" +
+                "      \"_id\": \"1\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +
+                "      \"key\": \"test-feature\",\n" +
+                "      \"type\": \"Boolean\",\n" +
+                "      \"value\": true\n" +
+                "    },\n" +
+                "    \"test-feature-number\": {\n" +
+                "      \"_id\": \"2\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +
+                "      \"key\": \"test-feature-number\",\n" +
+                "      \"type\": \"Number\",\n" +
+                "      \"value\": 42\n" +
+                "    },\n" +
+                "    \"test-feature-string\": {\n" +
+                "      \"_id\": \"3\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +
+                "      \"key\": \"test-feature-string\",\n" +
+                "      \"type\": \"String\",\n" +
+                "      \"value\": \"it works!\"\n" +
+                "    },\n" +
+                "    \"test-feature-json\": {\n" +
+                "      \"_id\": \"4\",\n" +
+                "      \"_feature\": \"test_feature_id_999\",\n" +
+                "      \"key\": \"test-feature-json\",\n" +
+                "      \"type\": \"JSON\",\n" +
+                "      \"value\": { \"test\": \"feature\"}\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"feature_ids\": {\n" +                                      // Extra ignored field
+                "    \"test_feature_id_999\": \"test_feature_id_999\"\n" +
+                "  },\n" +
+                "  \"environments\": {\n" +
+                "    \"_id\": \"test_environment_id_999\",\n" +
+                "    \"key\": \"test_environment_key_999\",\n" +
+                "    \"name\": \"test_environment_name_999\"\n" +               // Extra ignored field
+                "  }\n" +
+                "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
+        try {
+            client.onInitialized(object: DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            assert(boolVar.value)
+            assert(boolVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(!boolValue)
+
+            assert(numVar.value == 42)
+            assert(numVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(numValue == 0)
+
+            assert(strVar.value == "it works!")
+            assert(strVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(strValue == "Not activated")
+
+            val expectedJSON = JSONObject()
+            expectedJSON.put("test", "feature")
+            assert(jsonVar.value.toString() == expectedJSON.toString())
+            assert(jsonVar.isDefaulted == false)
+            // value doesn't get updated
+            assert(jsonValue.toString() !== expectedJSON.toString())
+        }
+    }
+
+    @Test
     fun `client fails to initialize, all variables default with an undefined variable key for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
