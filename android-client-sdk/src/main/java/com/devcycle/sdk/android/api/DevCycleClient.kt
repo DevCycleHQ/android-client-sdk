@@ -62,7 +62,7 @@ class DevCycleClient private constructor(
 
     private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
     private val configRequestMutex = Mutex()
-    private val defaultCacheTTL = 7 * 24 * 3600000L // 7 days
+    private val defaultCacheTTL = 30 * 24 * 3600000L // 30 days
     private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
     private val disableConfigCache = options?.disableConfigCache ?: false
     private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
@@ -77,6 +77,11 @@ class DevCycleClient private constructor(
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
 
     init {
+        // Clean up old configs that may have exceeded TTL
+        if (!disableConfigCache) {
+            dvcSharedPrefs.cleanupOldConfigs(configCacheTTL)
+        }
+        
         val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user, configCacheTTL)
         if (cachedConfig != null) {
             config = cachedConfig
