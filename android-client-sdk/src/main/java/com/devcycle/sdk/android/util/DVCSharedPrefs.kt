@@ -37,6 +37,7 @@ internal class DVCSharedPrefs(context: Context) {
         return "${generateUserConfigKey(userId, isAnonymous)}.$FetchDateSuffix"
     }
 
+    @Synchronized
     private fun migrateLegacyConfigs() {
         try {
             val legacyKeys = listOf(IdentifiedConfigKey, AnonymousConfigKey)
