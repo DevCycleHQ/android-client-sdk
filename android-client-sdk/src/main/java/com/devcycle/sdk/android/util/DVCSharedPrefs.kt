@@ -16,13 +16,69 @@ internal class DVCSharedPrefs(context: Context) {
         Context.MODE_PRIVATE
     )
 
+    init {
+        migrateLegacyConfigs()
+    }
+
     companion object {
         const val UserKey = "USER"
         const val AnonUserIdKey = "ANONYMOUS_USER_ID"
         const val IdentifiedConfigKey = "IDENTIFIED_CONFIG"
         const val AnonymousConfigKey = "ANONYMOUS_CONFIG"
-        const val ConfigKeyPrefix = "USER_CONFIG_"
-        const val FetchDateSuffix = "_FETCH_DATE"
+        const val FetchDateSuffix = "FETCH_DATE"
+    }
+
+    private fun generateUserConfigKey(userId: String, isAnonymous: Boolean): String {
+        val prefix = if (isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
+        return "$prefix.$userId"
+    }
+
+    private fun generateUserFetchDateKey(userId: String, isAnonymous: Boolean): String {
+        return "${generateUserConfigKey(userId, isAnonymous)}.$FetchDateSuffix"
+    }
+
+    private fun migrateLegacyConfigs() {
+        try {
+            val legacyKeys = listOf(IdentifiedConfigKey, AnonymousConfigKey)
+            val editor = preferences.edit()
+            var migrationOccurred = false
+
+            for (legacyKey in legacyKeys) {
+                val legacyUserIdKey = "$legacyKey.USER_ID"
+                val legacyFetchDateKey = "$legacyKey.FETCH_DATE"
+                
+                val userId = preferences.getString(legacyUserIdKey, null)
+                val fetchDateMs = preferences.getLong(legacyFetchDateKey, 0)
+                val configString = preferences.getString(legacyKey, null)
+
+                if (userId != null && configString != null && fetchDateMs > 0) {
+                    val isAnonymous = legacyKey == AnonymousConfigKey
+                    val userKey = generateUserConfigKey(userId, isAnonymous)
+                    val userFetchDateKey = generateUserFetchDateKey(userId, isAnonymous)
+                    
+                    // Only migrate if new format doesn't already exist
+                    if (!preferences.contains(userKey)) {
+                        editor.putString(userKey, configString)
+                        editor.putLong(userFetchDateKey, fetchDateMs)
+                        migrationOccurred = true
+                        DevCycleLogger.d("Migrated legacy config for user ID $userId from key $legacyKey")
+                    }
+                    
+                    // Remove legacy data
+                    editor.remove(legacyKey)
+                    editor.remove(legacyUserIdKey)
+                    editor.remove(legacyFetchDateKey)
+                    migrationOccurred = true
+                }
+            }
+
+            if (migrationOccurred) {
+                editor.apply()
+                DevCycleLogger.d("Legacy config migration completed")
+            }
+        } catch (e: Exception) {
+            DevCycleLogger.e(e, "Error during legacy config migration: ${e.message}")
+        }
     }
 
     @Synchronized
@@ -67,19 +123,13 @@ internal class DVCSharedPrefs(context: Context) {
     @Synchronized
     fun saveConfig(configToSave: BucketedUserConfig, user: PopulatedUser) {
         try {
-            // Generate the user-specific key
-            val userKey = ConfigKeyPrefix + user.userId
+            val userKey = generateUserConfigKey(user.userId, user.isAnonymous)
+            val userFetchDateKey = generateUserFetchDateKey(user.userId, user.isAnonymous)
+
             val editor = preferences.edit()
             val jsonString = JSONMapper.mapper.writeValueAsString(configToSave)
             editor.putString(userKey, jsonString)
-            editor.putLong(userKey + FetchDateSuffix, Calendar.getInstance().timeInMillis)
-            
-            // For backward compatibility, also save in the old format
-            val legacyKey = if (user.isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
-            editor.putString(legacyKey, jsonString)
-            editor.putString("$legacyKey.USER_ID", user.userId)
-            editor.putLong("$legacyKey.FETCH_DATE", Calendar.getInstance().timeInMillis)
-            
+            editor.putLong(userFetchDateKey, Calendar.getInstance().timeInMillis)
             editor.apply()
         } catch (e: JsonProcessingException) {
             DevCycleLogger.e(e, e.message)
@@ -89,88 +139,32 @@ internal class DVCSharedPrefs(context: Context) {
     @Synchronized
     fun getConfig(user: PopulatedUser, ttlMs: Long): BucketedUserConfig? {
         try {
-            // Try to fetch config using the user-specific key first
-            val userKey = ConfigKeyPrefix + user.userId
+            val userKey = generateUserConfigKey(user.userId, user.isAnonymous)
             val userConfigString = preferences.getString(userKey, null)
-            val userFetchDateMs = preferences.getLong(userKey + FetchDateSuffix, 0)
+            val userFetchDateKey = generateUserFetchDateKey(user.userId, user.isAnonymous)
+            val userFetchDateMs = preferences.getLong(userFetchDateKey, 0)
             
             val oldestValidDateMs = Calendar.getInstance().timeInMillis - ttlMs
             
-            // If we found a valid user-specific config, use it
-            if (userConfigString != null && userFetchDateMs >= oldestValidDateMs) {
-                DevCycleLogger.d("Loaded config from cache for user ID ${user.userId}")
-                return JSONMapper.mapper.readValue(userConfigString)
+            if (userConfigString != null) {
+                if (userFetchDateMs >= oldestValidDateMs) {
+                    DevCycleLogger.d("Loaded config from cache for user ID ${user.userId}")
+                    return JSONMapper.mapper.readValue(userConfigString)
+                } else {
+                    // Config exists but is expired, remove it
+                    val editor = preferences.edit()
+                    editor.remove(userKey)
+                    editor.remove(userFetchDateKey)
+                    editor.apply()
+                    DevCycleLogger.d("Removed expired config for user ID ${user.userId}")
+                }
             }
             
-            // Fall back to the legacy approach for backward compatibility
-            val legacyKey = if (user.isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
-            val userId = preferences.getString("$legacyKey.USER_ID", null)
-            val fetchDateMs = preferences.getLong("$legacyKey.FETCH_DATE", 0)
-
-            if (userId != user.userId) {
-                DevCycleLogger.d("Skipping cached config: no config for user ID ${user.userId}")
-                return null
-            }
-
-            if (fetchDateMs < oldestValidDateMs) {
-                DevCycleLogger.d("Skipping cached config: last fetched date is too old")
-                return null
-            }
-
-            val configString = preferences.getString(legacyKey, null)
-            if (configString == null) {
-                DevCycleLogger.d("Skipping cached config: no config found")
-                return null
-            }
-            
-            DevCycleLogger.d("Loaded legacy config from cache for user ID ${user.userId}")
-            return JSONMapper.mapper.readValue(configString)
+            DevCycleLogger.d("No valid config found for user ID ${user.userId}")
+            return null
         } catch (e: JsonProcessingException) {
             DevCycleLogger.e(e, e.message)
             return null
-        }
-    }
-
-    /**
-     * Cleans up old configs that exceed the TTL
-     * This is an internal method that can be called periodically
-     */
-    @Synchronized
-    fun cleanupOldConfigs(ttlMs: Long) {
-        try {
-            val allPrefs = preferences.all
-            val currentTime = Calendar.getInstance().timeInMillis
-            val oldestValidDateMs = currentTime - ttlMs
-            val editor = preferences.edit()
-            
-            // Find and remove expired user-specific configs
-            allPrefs.keys
-                .filter { it.startsWith(ConfigKeyPrefix) && !it.endsWith(FetchDateSuffix) }
-                .forEach { key ->
-                    val fetchDateKey = key + FetchDateSuffix
-                    val fetchDate = preferences.getLong(fetchDateKey, 0)
-                    if (fetchDate < oldestValidDateMs) {
-                        editor.remove(key)
-                        editor.remove(fetchDateKey)
-                        DevCycleLogger.d("Removed expired config for key: $key")
-                    }
-                }
-            
-            // Check legacy keys as well
-            val legacyKeys = listOf(IdentifiedConfigKey, AnonymousConfigKey)
-            for (key in legacyKeys) {
-                val fetchDateMs = preferences.getLong("$key.FETCH_DATE", 0)
-                if (fetchDateMs < oldestValidDateMs) {
-                    editor.remove(key)
-                    editor.remove("$key.USER_ID")
-                    editor.remove("$key.FETCH_DATE")
-                    DevCycleLogger.d("Removed expired legacy config for key: $key")
-                }
-            }
-            
-            editor.apply()
-        } catch (e: Exception) {
-            DevCycleLogger.e(e, "Error cleaning up old configs: ${e.message}")
         }
     }
 }

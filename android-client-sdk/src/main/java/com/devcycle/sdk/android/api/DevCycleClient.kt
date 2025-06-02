@@ -77,11 +77,6 @@ class DevCycleClient private constructor(
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
 
     init {
-        // Clean up old configs that may have exceeded TTL
-        if (!disableConfigCache) {
-            dvcSharedPrefs.cleanupOldConfigs(configCacheTTL)
-        }
-        
         val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user, configCacheTTL)
         if (cachedConfig != null) {
             config = cachedConfig
