@@ -26,6 +26,7 @@ internal class DVCSharedPrefs(context: Context) {
         const val IdentifiedConfigKey = "IDENTIFIED_CONFIG"
         const val AnonymousConfigKey = "ANONYMOUS_CONFIG"
         const val FetchDateSuffix = "FETCH_DATE"
+        const val MigrationCompletedKey = "MIGRATION_COMPLETED"
     }
 
     private fun generateUserConfigKey(userId: String, isAnonymous: Boolean): String {
@@ -39,6 +40,11 @@ internal class DVCSharedPrefs(context: Context) {
 
     @Synchronized
     private fun migrateLegacyConfigs() {
+        // Check if migration has already been completed
+        if (preferences.getBoolean(MigrationCompletedKey, false)) {
+            return
+        }
+        
         try {
             val legacyKeys = listOf(IdentifiedConfigKey, AnonymousConfigKey)
             val editor = preferences.edit()
@@ -73,9 +79,15 @@ internal class DVCSharedPrefs(context: Context) {
                 }
             }
 
+            // Mark migration as completed, regardless of whether data was migrated
+            editor.putBoolean(MigrationCompletedKey, true)
+            
             if (migrationOccurred) {
                 editor.apply()
                 DevCycleLogger.d("Legacy config migration completed")
+            } else {
+                editor.apply()
+                DevCycleLogger.d("Migration check completed - no legacy data found")
             }
         } catch (e: Exception) {
             DevCycleLogger.e(e, "Error during legacy config migration: ${e.message}")

@@ -36,6 +36,7 @@ class DVCSharedPrefsTests {
         `when`(mockSharedPreferences.edit()).thenReturn(mockEditor)
         `when`(mockEditor.putString(anyString(), anyString())).thenReturn(mockEditor)
         `when`(mockEditor.putLong(anyString(), anyLong())).thenReturn(mockEditor)
+        `when`(mockEditor.putBoolean(anyString(), anyBoolean())).thenReturn(mockEditor)
         `when`(mockEditor.remove(anyString())).thenReturn(mockEditor)
         
         // Mock empty preferences initially
@@ -43,8 +44,16 @@ class DVCSharedPrefsTests {
         `when`(mockSharedPreferences.contains(anyString())).thenReturn(false)
         `when`(mockSharedPreferences.getString(anyString(), any())).thenReturn(null)
         `when`(mockSharedPreferences.getLong(anyString(), eq(0L))).thenReturn(0L)
+        `when`(mockSharedPreferences.getBoolean(eq("MIGRATION_COMPLETED"), eq(false))).thenReturn(false)
         
         dvcSharedPrefs = DVCSharedPrefs(mockContext)
+        
+        // Reset mock to clear calls from initialization
+        reset(mockEditor)
+        `when`(mockEditor.putString(anyString(), anyString())).thenReturn(mockEditor)
+        `when`(mockEditor.putLong(anyString(), anyLong())).thenReturn(mockEditor)
+        `when`(mockEditor.putBoolean(anyString(), anyBoolean())).thenReturn(mockEditor)
+        `when`(mockEditor.remove(anyString())).thenReturn(mockEditor)
     }
     
     @Test
@@ -140,11 +149,12 @@ class DVCSharedPrefsTests {
         dvcSharedPrefs = DVCSharedPrefs(mockContext)
         
         // Verify migration occurred
-        verify(mockEditor).putString("IDENTIFIED_CONFIG.$testUserId", testConfigString)
-        verify(mockEditor).putLong("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE", currentTime)
-        verify(mockEditor).remove("IDENTIFIED_CONFIG")
-        verify(mockEditor).remove("IDENTIFIED_CONFIG.USER_ID")
-        verify(mockEditor).remove("IDENTIFIED_CONFIG.FETCH_DATE")
+        verify(mockEditor).putString(eq("IDENTIFIED_CONFIG.$testUserId"), eq(testConfigString))
+        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE"), eq(currentTime))
+        verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG"))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.FETCH_DATE"))
         verify(mockEditor).apply()
     }
     
@@ -168,11 +178,12 @@ class DVCSharedPrefsTests {
         dvcSharedPrefs = DVCSharedPrefs(mockContext)
         
         // Verify migration occurred
-        verify(mockEditor).putString("ANONYMOUS_CONFIG.$testAnonUserId", testConfigString)
-        verify(mockEditor).putLong("ANONYMOUS_CONFIG.$testAnonUserId.FETCH_DATE", currentTime)
-        verify(mockEditor).remove("ANONYMOUS_CONFIG")
-        verify(mockEditor).remove("ANONYMOUS_CONFIG.USER_ID")
-        verify(mockEditor).remove("ANONYMOUS_CONFIG.FETCH_DATE")
+        verify(mockEditor).putString(eq("ANONYMOUS_CONFIG.$testAnonUserId"), eq(testConfigString))
+        verify(mockEditor).putLong(eq("ANONYMOUS_CONFIG.$testAnonUserId.FETCH_DATE"), eq(currentTime))
+        verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
+        verify(mockEditor).remove(eq("ANONYMOUS_CONFIG"))
+        verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.USER_ID"))
+        verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.FETCH_DATE"))
         verify(mockEditor).apply()
     }
     
@@ -195,12 +206,13 @@ class DVCSharedPrefsTests {
         // Create new instance to trigger migration
         dvcSharedPrefs = DVCSharedPrefs(mockContext)
         
-        // Verify data was removed but not re-migrated
-        verify(mockEditor, never()).putString("IDENTIFIED_CONFIG.$testUserId", testConfigString)
-        verify(mockEditor, never()).putLong("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE", currentTime)
-        verify(mockEditor).remove("IDENTIFIED_CONFIG")
-        verify(mockEditor).remove("IDENTIFIED_CONFIG.USER_ID")
-        verify(mockEditor).remove("IDENTIFIED_CONFIG.FETCH_DATE")
+        // Verify data was removed but not re-migrated, but migration flag still set
+        verify(mockEditor, never()).putString(eq("IDENTIFIED_CONFIG.$testUserId"), eq(testConfigString))
+        verify(mockEditor, never()).putLong(eq("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE"), eq(currentTime))
+        verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG"))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.FETCH_DATE"))
         verify(mockEditor).apply()
     }
     
@@ -276,6 +288,34 @@ class DVCSharedPrefsTests {
         
         val retrievedConfig = dvcSharedPrefs.getConfig(user, ttl)
         assertNull(retrievedConfig)
+    }
+    
+    @Test
+    fun `should set migration flag even when no legacy data exists`() {
+        `when`(mockSharedPreferences.getBoolean(eq("MIGRATION_COMPLETED"), eq(false))).thenReturn(false)
+        `when`(mockSharedPreferences.all).thenReturn(emptyMap<String, Any>())
+        
+        // Create new instance to trigger migration check
+        dvcSharedPrefs = DVCSharedPrefs(mockContext)
+        
+        // Verify migration flag was set even with no legacy data
+        verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
+        verify(mockEditor).apply()
+    }
+    
+    @Test
+    fun `should skip migration if already completed`() {
+        `when`(mockSharedPreferences.getBoolean(eq("MIGRATION_COMPLETED"), eq(false))).thenReturn(true)
+        
+        // Create new instance - should skip migration entirely
+        dvcSharedPrefs = DVCSharedPrefs(mockContext)
+        
+        // Verify no migration operations occurred
+        verify(mockEditor, never()).putString(anyString(), anyString())
+        verify(mockEditor, never()).putLong(anyString(), anyLong())
+        verify(mockEditor, never()).putBoolean(anyString(), anyBoolean())
+        verify(mockEditor, never()).remove(anyString())
+        verify(mockEditor, never()).apply()
     }
     
     private fun createPopulatedUser(userId: String, isAnonymous: Boolean): PopulatedUser {
