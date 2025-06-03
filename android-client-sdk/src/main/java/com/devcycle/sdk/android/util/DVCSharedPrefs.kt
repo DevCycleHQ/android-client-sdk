@@ -18,6 +18,7 @@ internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long
 
     init {
         migrateLegacyConfigs()
+        cleanupExpiredConfigs()
     }
 
     companion object {
@@ -103,6 +104,42 @@ internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long
             }
         } catch (e: Exception) {
             DevCycleLogger.e(e, "Error during legacy config migration: ${e.message}")
+        }
+    }
+
+    @Synchronized
+    private fun cleanupExpiredConfigs() {
+        try {
+            val allPrefs = preferences.all
+            val currentTimeMs = Calendar.getInstance().timeInMillis
+            val editor = preferences.edit()
+            var cleanupOccurred = false
+
+            // Find all config keys (both identified and anonymous)
+            val configKeys = allPrefs.keys.filter { key ->
+                (key.startsWith("$IdentifiedConfigKey.") || key.startsWith("$AnonymousConfigKey.")) &&
+                !key.endsWith(".$ExpiryDateSuffix")
+            }
+
+            for (configKey in configKeys) {
+                val expiryDateKey = "$configKey.$ExpiryDateSuffix"
+                val expiryDateMs = preferences.getLong(expiryDateKey, 0)
+                
+                // If expiry date exists and is in the past, remove both config and expiry date
+                if (expiryDateMs > 0 && expiryDateMs <= currentTimeMs) {
+                    editor.remove(configKey)
+                    editor.remove(expiryDateKey)
+                    cleanupOccurred = true
+                    DevCycleLogger.d("Cleaned up expired config: $configKey")
+                }
+            }
+
+            if (cleanupOccurred) {
+                editor.apply()
+                DevCycleLogger.d("Expired config cleanup completed")
+            }
+        } catch (e: Exception) {
+            DevCycleLogger.e(e, "Error during expired config cleanup: ${e.message}")
         }
     }
 

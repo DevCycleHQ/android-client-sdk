@@ -364,6 +364,38 @@ class DVCSharedPrefsTests {
         verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), anyLong())
         verify(mockEditor).apply()
     }
+
+    @Test
+    fun `should cleanup expired configs on initialization`() {
+        val expiredTime = currentTime - 3600000 // 1 hour ago
+        val validTime = currentTime + 3600000 // 1 hour from now
+        val config = createTestConfig()
+        val testConfigString = jacksonObjectMapper().writeValueAsString(config)
+        
+        // Mock preferences with both expired and valid configs
+        val prefsMap = mutableMapOf<String, Any>(
+            "IDENTIFIED_CONFIG.$testUserId" to testConfigString,
+            "IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE" to expiredTime,
+            "ANONYMOUS_CONFIG.$testAnonUserId" to testConfigString,
+            "ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE" to validTime,
+            "MIGRATION_COMPLETED" to true
+        )
+        
+        `when`(mockSharedPreferences.all).thenReturn(prefsMap)
+        `when`(mockSharedPreferences.getBoolean(eq("MIGRATION_COMPLETED"), eq(false))).thenReturn(true)
+        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE", 0)).thenReturn(expiredTime)
+        `when`(mockSharedPreferences.getLong("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE", 0)).thenReturn(validTime)
+        
+        // Create new instance to trigger cleanup
+        dvcSharedPrefs = DVCSharedPrefs(mockContext, ttl)
+        
+        // Verify expired config was removed but valid one was not
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.$testUserId"))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"))
+        verify(mockEditor, never()).remove(eq("ANONYMOUS_CONFIG.$testAnonUserId"))
+        verify(mockEditor, never()).remove(eq("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE"))
+        verify(mockEditor).apply()
+    }
     
     @Test
     fun `should clean up partial legacy data even when migration is not possible`() {
