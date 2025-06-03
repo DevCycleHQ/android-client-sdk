@@ -58,6 +58,7 @@ internal class DVCSharedPrefs(context: Context) {
                 val fetchDateMs = preferences.getLong(legacyFetchDateKey, 0)
                 val configString = preferences.getString(legacyKey, null)
 
+                // Attempt migration if we have complete data
                 if (userId != null && configString != null && fetchDateMs > 0) {
                     val isAnonymous = legacyKey == AnonymousConfigKey
                     val userKey = generateUserConfigKey(userId, isAnonymous)
@@ -67,14 +68,26 @@ internal class DVCSharedPrefs(context: Context) {
                     if (!preferences.contains(userKey)) {
                         editor.putString(userKey, configString)
                         editor.putLong(userFetchDateKey, fetchDateMs)
-                        migrationOccurred = true
                         DevCycleLogger.d("Migrated legacy config for user ID $userId from key $legacyKey")
                     }
-                    
-                    // Remove legacy data
+                }
+                
+                // Always clean up legacy keys if they exist, regardless of migration success
+                var keysRemoved = false
+                if (preferences.contains(legacyKey)) {
                     editor.remove(legacyKey)
+                    keysRemoved = true
+                }
+                if (preferences.contains(legacyUserIdKey)) {
                     editor.remove(legacyUserIdKey)
+                    keysRemoved = true
+                }
+                if (preferences.contains(legacyFetchDateKey)) {
                     editor.remove(legacyFetchDateKey)
+                    keysRemoved = true
+                }
+                
+                if (keysRemoved) {
                     migrationOccurred = true
                 }
             }

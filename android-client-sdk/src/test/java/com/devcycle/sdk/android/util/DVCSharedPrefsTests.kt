@@ -318,6 +318,43 @@ class DVCSharedPrefsTests {
         verify(mockEditor, never()).apply()
     }
     
+    @Test
+    fun `should clean up partial legacy data even when migration is not possible`() {
+        // Setup partial legacy data - only USER_ID exists, no config or fetch date
+        val legacyPrefs = mutableMapOf<String, Any>(
+            "IDENTIFIED_CONFIG.USER_ID" to testUserId,
+            "ANONYMOUS_CONFIG.FETCH_DATE" to currentTime
+            // Note: No actual config strings, so migration can't happen
+        )
+        
+        `when`(mockSharedPreferences.all).thenReturn(legacyPrefs)
+        `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG.USER_ID", null)).thenReturn(testUserId)
+        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.FETCH_DATE", 0)).thenReturn(0L) // Missing
+        `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG", null)).thenReturn(null) // Missing
+        `when`(mockSharedPreferences.getString("ANONYMOUS_CONFIG.USER_ID", null)).thenReturn(null) // Missing
+        `when`(mockSharedPreferences.getLong("ANONYMOUS_CONFIG.FETCH_DATE", 0)).thenReturn(currentTime)
+        `when`(mockSharedPreferences.getString("ANONYMOUS_CONFIG", null)).thenReturn(null) // Missing
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.USER_ID")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG.FETCH_DATE")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG")).thenReturn(false)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.FETCH_DATE")).thenReturn(false)
+        `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG")).thenReturn(false)
+        `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG.USER_ID")).thenReturn(false)
+        
+        // Create new instance to trigger migration
+        dvcSharedPrefs = DVCSharedPrefs(mockContext)
+        
+        // Verify no successful migrations occurred (no new format data was written)
+        verify(mockEditor, never()).putString(matches(".*CONFIG\\..*"), anyString())
+        verify(mockEditor, never()).putLong(matches(".*CONFIG\\..*\\.FETCH_DATE"), anyLong())
+        
+        // But verify partial legacy data was still cleaned up
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
+        verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.FETCH_DATE"))
+        verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
+        verify(mockEditor).apply()
+    }
+    
     private fun createPopulatedUser(userId: String, isAnonymous: Boolean): PopulatedUser {
         return PopulatedUser(
             userId = userId,
