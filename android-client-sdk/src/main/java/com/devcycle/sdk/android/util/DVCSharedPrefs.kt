@@ -25,7 +25,7 @@ internal class DVCSharedPrefs(context: Context) {
         const val AnonUserIdKey = "ANONYMOUS_USER_ID"
         const val IdentifiedConfigKey = "IDENTIFIED_CONFIG"
         const val AnonymousConfigKey = "ANONYMOUS_CONFIG"
-        const val FetchDateSuffix = "FETCH_DATE"
+        const val ExpiryDateSuffix = "EXPIRY_DATE"
         const val MigrationCompletedKey = "MIGRATION_COMPLETED"
     }
 
@@ -34,8 +34,8 @@ internal class DVCSharedPrefs(context: Context) {
         return "$prefix.$userId"
     }
 
-    private fun generateUserFetchDateKey(userId: String, isAnonymous: Boolean): String {
-        return "${generateUserConfigKey(userId, isAnonymous)}.$FetchDateSuffix"
+    private fun generateUserExpiryDateKey(userId: String, isAnonymous: Boolean): String {
+        return "${generateUserConfigKey(userId, isAnonymous)}.$ExpiryDateSuffix"
     }
 
     @Synchronized
@@ -62,12 +62,11 @@ internal class DVCSharedPrefs(context: Context) {
                 if (userId != null && configString != null && fetchDateMs > 0) {
                     val isAnonymous = legacyKey == AnonymousConfigKey
                     val userKey = generateUserConfigKey(userId, isAnonymous)
-                    val userFetchDateKey = generateUserFetchDateKey(userId, isAnonymous)
+                    val userExpiryDateKey = generateUserExpiryDateKey(userId, isAnonymous)
                     
                     // Only migrate if new format doesn't already exist
                     if (!preferences.contains(userKey)) {
                         editor.putString(userKey, configString)
-                        editor.putLong(userFetchDateKey, fetchDateMs)
                         DevCycleLogger.d("Migrated legacy config for user ID $userId from key $legacyKey")
                     }
                 }
@@ -147,15 +146,15 @@ internal class DVCSharedPrefs(context: Context) {
     }
 
     @Synchronized
-    fun saveConfig(configToSave: BucketedUserConfig, user: PopulatedUser) {
+    fun saveConfig(configToSave: BucketedUserConfig, user: PopulatedUser, ttlMs: Long) {
         try {
             val userKey = generateUserConfigKey(user.userId, user.isAnonymous)
-            val userFetchDateKey = generateUserFetchDateKey(user.userId, user.isAnonymous)
+            val userExpiryDateKey = generateUserExpiryDateKey(user.userId, user.isAnonymous)
 
             val editor = preferences.edit()
             val jsonString = JSONMapper.mapper.writeValueAsString(configToSave)
             editor.putString(userKey, jsonString)
-            editor.putLong(userFetchDateKey, Calendar.getInstance().timeInMillis)
+            editor.putLong(userExpiryDateKey, Calendar.getInstance().timeInMillis + ttlMs)
             editor.apply()
         } catch (e: JsonProcessingException) {
             DevCycleLogger.e(e, e.message)
@@ -167,20 +166,20 @@ internal class DVCSharedPrefs(context: Context) {
         try {
             val userKey = generateUserConfigKey(user.userId, user.isAnonymous)
             val userConfigString = preferences.getString(userKey, null)
-            val userFetchDateKey = generateUserFetchDateKey(user.userId, user.isAnonymous)
-            val userFetchDateMs = preferences.getLong(userFetchDateKey, 0)
+            val userExpiryDateKey = generateUserExpiryDateKey(user.userId, user.isAnonymous)
+            val userExpiryDateMs = preferences.getLong(userExpiryDateKey, 0)
             
-            val oldestValidDateMs = Calendar.getInstance().timeInMillis - ttlMs
+            val currentTimeMs = Calendar.getInstance().timeInMillis
             
             if (userConfigString != null) {
-                if (userFetchDateMs >= oldestValidDateMs) {
+                if (userExpiryDateMs > currentTimeMs) {
                     DevCycleLogger.d("Loaded config from cache for user ID ${user.userId}")
                     return JSONMapper.mapper.readValue(userConfigString)
                 } else {
                     // Config exists but is expired, remove it
                     val editor = preferences.edit()
                     editor.remove(userKey)
-                    editor.remove(userFetchDateKey)
+                    editor.remove(userExpiryDateKey)
                     editor.apply()
                     DevCycleLogger.d("Removed expired config for user ID ${user.userId}")
                 }

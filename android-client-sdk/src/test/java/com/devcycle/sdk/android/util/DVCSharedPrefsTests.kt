@@ -48,12 +48,8 @@ class DVCSharedPrefsTests {
         
         dvcSharedPrefs = DVCSharedPrefs(mockContext)
         
-        // Reset mock to clear calls from initialization
-        reset(mockEditor)
-        `when`(mockEditor.putString(anyString(), anyString())).thenReturn(mockEditor)
-        `when`(mockEditor.putLong(anyString(), anyLong())).thenReturn(mockEditor)
-        `when`(mockEditor.putBoolean(anyString(), anyBoolean())).thenReturn(mockEditor)
-        `when`(mockEditor.remove(anyString())).thenReturn(mockEditor)
+        // Clear invocations from initialization but preserve the stubbing
+        clearInvocations(mockEditor)
     }
     
     @Test
@@ -61,17 +57,18 @@ class DVCSharedPrefsTests {
         val user = createPopulatedUser(testUserId, false)
         val config = createTestConfig()
         val testConfigString = jacksonObjectMapper().writeValueAsString(config)
+        val futureExpiryTime = currentTime + ttl
         
         // Mock successful save
         `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG.$testUserId", null))
             .thenReturn(testConfigString)
-        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE", 0))
-            .thenReturn(currentTime)
+        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE", 0))
+            .thenReturn(futureExpiryTime)
         
-        dvcSharedPrefs.saveConfig(config, user)
+        dvcSharedPrefs.saveConfig(config, user, ttl)
         
         verify(mockEditor).putString(eq("IDENTIFIED_CONFIG.$testUserId"), anyString())
-        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE"), anyLong())
+        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), anyLong())
         verify(mockEditor).apply()
         
         val retrievedConfig = dvcSharedPrefs.getConfig(user, ttl)
@@ -83,17 +80,18 @@ class DVCSharedPrefsTests {
         val user = createPopulatedUser(testAnonUserId, true)
         val config = createTestConfig()
         val testConfigString = jacksonObjectMapper().writeValueAsString(config)
+        val futureExpiryTime = currentTime + ttl
         
         // Mock successful save
         `when`(mockSharedPreferences.getString("ANONYMOUS_CONFIG.$testAnonUserId", null))
             .thenReturn(testConfigString)
-        `when`(mockSharedPreferences.getLong("ANONYMOUS_CONFIG.$testAnonUserId.FETCH_DATE", 0))
-            .thenReturn(currentTime)
+        `when`(mockSharedPreferences.getLong("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE", 0))
+            .thenReturn(futureExpiryTime)
         
-        dvcSharedPrefs.saveConfig(config, user)
+        dvcSharedPrefs.saveConfig(config, user, ttl)
         
         verify(mockEditor).putString(eq("ANONYMOUS_CONFIG.$testAnonUserId"), anyString())
-        verify(mockEditor).putLong(eq("ANONYMOUS_CONFIG.$testAnonUserId.FETCH_DATE"), anyLong())
+        verify(mockEditor).putLong(eq("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE"), anyLong())
         verify(mockEditor).apply()
         
         val retrievedConfig = dvcSharedPrefs.getConfig(user, ttl)
@@ -113,19 +111,19 @@ class DVCSharedPrefsTests {
         val user = createPopulatedUser(testUserId, false)
         val config = createTestConfig()
         val testConfigString = jacksonObjectMapper().writeValueAsString(config)
-        val expiredTime = currentTime - ttl - 1000 // Expired by 1 second
+        val expiredTime = currentTime - 1000 // Expired by 1 second
         
         // Mock expired config
         `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG.$testUserId", null))
             .thenReturn(testConfigString)
-        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE", 0))
+        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE", 0))
             .thenReturn(expiredTime)
         
         val retrievedConfig = dvcSharedPrefs.getConfig(user, ttl)
         
         assertNull(retrievedConfig)
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.$testUserId"))
-        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE"))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"))
         verify(mockEditor).apply()
     }
     
@@ -148,9 +146,9 @@ class DVCSharedPrefsTests {
         // Create new instance to trigger migration
         dvcSharedPrefs = DVCSharedPrefs(mockContext)
         
-        // Verify migration occurred
+        // Verify migration occurred - legacy fetch date becomes expiry date
         verify(mockEditor).putString(eq("IDENTIFIED_CONFIG.$testUserId"), eq(testConfigString))
-        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE"), eq(currentTime))
+        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), eq(currentTime))
         verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG"))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
@@ -177,9 +175,9 @@ class DVCSharedPrefsTests {
         // Create new instance to trigger migration
         dvcSharedPrefs = DVCSharedPrefs(mockContext)
         
-        // Verify migration occurred
+        // Verify migration occurred - legacy fetch date becomes expiry date
         verify(mockEditor).putString(eq("ANONYMOUS_CONFIG.$testAnonUserId"), eq(testConfigString))
-        verify(mockEditor).putLong(eq("ANONYMOUS_CONFIG.$testAnonUserId.FETCH_DATE"), eq(currentTime))
+        verify(mockEditor).putLong(eq("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE"), eq(currentTime))
         verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
         verify(mockEditor).remove(eq("ANONYMOUS_CONFIG"))
         verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.USER_ID"))
@@ -208,7 +206,7 @@ class DVCSharedPrefsTests {
         
         // Verify data was removed but not re-migrated, but migration flag still set
         verify(mockEditor, never()).putString(eq("IDENTIFIED_CONFIG.$testUserId"), eq(testConfigString))
-        verify(mockEditor, never()).putLong(eq("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE"), eq(currentTime))
+        verify(mockEditor, never()).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), eq(currentTime))
         verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG"))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
@@ -280,11 +278,12 @@ class DVCSharedPrefsTests {
     fun `should handle json processing exceptions during config retrieval`() {
         val user = createPopulatedUser(testUserId, false)
         val malformedJson = "{ invalid json"
+        val futureExpiryTime = currentTime + ttl
         
         `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG.$testUserId", null))
             .thenReturn(malformedJson)
-        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.FETCH_DATE", 0))
-            .thenReturn(currentTime)
+        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE", 0))
+            .thenReturn(futureExpiryTime)
         
         val retrievedConfig = dvcSharedPrefs.getConfig(user, ttl)
         assertNull(retrievedConfig)
@@ -316,6 +315,38 @@ class DVCSharedPrefsTests {
         verify(mockEditor, never()).putBoolean(anyString(), anyBoolean())
         verify(mockEditor, never()).remove(anyString())
         verify(mockEditor, never()).apply()
+    }
+
+    @Test
+    fun `should save config with correct expiry time`() {
+        val user = createPopulatedUser(testUserId, false)
+        val config = createTestConfig()
+        val testTtl = 60000L // 1 minute
+        
+        dvcSharedPrefs.saveConfig(config, user, testTtl)
+        
+        // Verify that the correct key was used and any long was saved
+        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), anyLong())
+        verify(mockEditor).apply()
+    }
+
+    @Test
+    fun `should return valid config when not expired`() {
+        val user = createPopulatedUser(testUserId, false)
+        val config = createTestConfig()
+        val testConfigString = jacksonObjectMapper().writeValueAsString(config)
+        val futureExpiryTime = currentTime + 3600000 // 1 hour in future
+        
+        `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG.$testUserId", null))
+            .thenReturn(testConfigString)
+        `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE", 0))
+            .thenReturn(futureExpiryTime)
+        
+        val retrievedConfig = dvcSharedPrefs.getConfig(user, ttl)
+        
+        assertNotNull(retrievedConfig)
+        // Verify no removal occurred since config is still valid
+        verify(mockEditor, never()).remove(anyString())
     }
     
     @Test

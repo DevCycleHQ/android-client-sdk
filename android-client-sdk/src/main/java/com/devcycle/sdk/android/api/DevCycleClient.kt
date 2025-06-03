@@ -499,7 +499,7 @@ class DevCycleClient private constructor(
         val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified, etag)
         config = result
         observable.configUpdated(config)
-        dvcSharedPrefs.saveConfig(config!!, user)
+        dvcSharedPrefs.saveConfig(config!!, user, configCacheTTL)
         isConfigCached.set(false)
         DevCycleLogger.d("A new config has been fetched for $user")
 
