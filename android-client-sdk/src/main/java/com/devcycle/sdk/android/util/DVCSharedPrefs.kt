@@ -10,7 +10,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import java.util.*
 
 // TODO: access disk on background thread
-internal class DVCSharedPrefs(context: Context) {
+internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long) {
     private var preferences: SharedPreferences = context.getSharedPreferences(
         context.getString(R.string.cached_data),
         Context.MODE_PRIVATE
@@ -146,7 +146,7 @@ internal class DVCSharedPrefs(context: Context) {
     }
 
     @Synchronized
-    fun saveConfig(configToSave: BucketedUserConfig, user: PopulatedUser, ttlMs: Long) {
+    fun saveConfig(configToSave: BucketedUserConfig, user: PopulatedUser) {
         try {
             val userKey = generateUserConfigKey(user.userId, user.isAnonymous)
             val userExpiryDateKey = generateUserExpiryDateKey(user.userId, user.isAnonymous)
@@ -154,7 +154,7 @@ internal class DVCSharedPrefs(context: Context) {
             val editor = preferences.edit()
             val jsonString = JSONMapper.mapper.writeValueAsString(configToSave)
             editor.putString(userKey, jsonString)
-            editor.putLong(userExpiryDateKey, Calendar.getInstance().timeInMillis + ttlMs)
+            editor.putLong(userExpiryDateKey, Calendar.getInstance().timeInMillis + configCacheTTL)
             editor.apply()
         } catch (e: JsonProcessingException) {
             DevCycleLogger.e(e, e.message)
@@ -162,7 +162,7 @@ internal class DVCSharedPrefs(context: Context) {
     }
 
     @Synchronized
-    fun getConfig(user: PopulatedUser, ttlMs: Long): BucketedUserConfig? {
+    fun getConfig(user: PopulatedUser): BucketedUserConfig? {
         try {
             val userKey = generateUserConfigKey(user.userId, user.isAnonymous)
             val userConfigString = preferences.getString(userKey, null)

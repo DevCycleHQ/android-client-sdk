@@ -51,15 +51,7 @@ class DevCycleClient private constructor(
     private var backgroundEventSource: BackgroundEventSource? = null
     private val defaultIntervalInMs: Long = 10000
     private val flushInMs: Long = options?.flushEventsIntervalMs ?: defaultIntervalInMs
-    private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context)
-    private val request: Request = Request(sdkKey, apiUrl, eventsUrl, context)
-    private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
-    private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
-    private val isInitialized = AtomicBoolean(false)
-    private val isExecuting = AtomicBoolean(false)
-    private val isConfigCached = AtomicBoolean(false)
-    private val initializeJob: Deferred<Any>
-
+    
     private val configRequestQueue = ConcurrentLinkedQueue<UserAndCallback>()
     private val configRequestMutex = Mutex()
     private val defaultCacheTTL = 30 * 24 * 3600000L // 30 days
@@ -68,6 +60,15 @@ class DevCycleClient private constructor(
     private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
     private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging ?: false
     private val disableCustomEventLogging = options?.disableCustomEventLogging ?: false
+    
+    private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context, configCacheTTL)
+    private val request: Request = Request(sdkKey, apiUrl, eventsUrl, context)
+    private val observable: BucketedUserConfigListener = BucketedUserConfigListener()
+    private val enableEdgeDB: Boolean = options?.enableEdgeDB ?: false
+    private val isInitialized = AtomicBoolean(false)
+    private val isExecuting = AtomicBoolean(false)
+    private val isConfigCached = AtomicBoolean(false)
+    private val initializeJob: Deferred<Any>
 
     private val eventQueue: EventQueue = EventQueue(request, ::user, CoroutineScope(coroutineContext), flushInMs)
 
@@ -77,7 +78,7 @@ class DevCycleClient private constructor(
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
 
     init {
-        val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user, configCacheTTL)
+        val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
         if (cachedConfig != null) {
             config = cachedConfig
             isConfigCached.set(true)
@@ -499,7 +500,7 @@ class DevCycleClient private constructor(
         val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified, etag)
         config = result
         observable.configUpdated(config)
-        dvcSharedPrefs.saveConfig(config!!, user, configCacheTTL)
+        dvcSharedPrefs.saveConfig(config!!, user)
         isConfigCached.set(false)
         DevCycleLogger.d("A new config has been fetched for $user")
 
@@ -631,7 +632,9 @@ class DevCycleClient private constructor(
                 DevCycleLogger.start(logger)
             }
 
-            dvcSharedPrefs = DVCSharedPrefs(context!!);
+            val defaultCacheTTL = 30 * 24 * 3600000L // 30 days
+            val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
+            dvcSharedPrefs = DVCSharedPrefs(context!!, configCacheTTL);
 
             val anonId: String? = dvcSharedPrefs!!.getString(DVCSharedPrefs.AnonUserIdKey)
 
