@@ -68,6 +68,7 @@ internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long
                     // Only migrate if new format doesn't already exist
                     if (!preferences.contains(userKey)) {
                         editor.putString(userKey, configString)
+                        editor.putLong(userExpiryDateKey, Calendar.getInstance().timeInMillis + configCacheTTL)
                         DevCycleLogger.d("Migrated legacy config for user ID $userId from key $legacyKey")
                     }
                 }

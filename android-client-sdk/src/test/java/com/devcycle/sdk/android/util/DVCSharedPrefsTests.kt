@@ -142,13 +142,16 @@ class DVCSharedPrefsTests {
         `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.FETCH_DATE", 0)).thenReturn(currentTime)
         `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG", null)).thenReturn(testConfigString)
         `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.$testUserId")).thenReturn(false)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.USER_ID")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.FETCH_DATE")).thenReturn(true)
         
         // Create new instance to trigger migration
         dvcSharedPrefs = DVCSharedPrefs(mockContext, ttl)
         
         // Verify migration occurred - legacy fetch date becomes expiry date
         verify(mockEditor).putString(eq("IDENTIFIED_CONFIG.$testUserId"), eq(testConfigString))
-        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), eq(currentTime))
+        verify(mockEditor).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), anyLong())
         verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG"))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
@@ -171,13 +174,16 @@ class DVCSharedPrefsTests {
         `when`(mockSharedPreferences.getLong("ANONYMOUS_CONFIG.FETCH_DATE", 0)).thenReturn(currentTime)
         `when`(mockSharedPreferences.getString("ANONYMOUS_CONFIG", null)).thenReturn(testConfigString)
         `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG.$testAnonUserId")).thenReturn(false)
+        `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG.USER_ID")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG.FETCH_DATE")).thenReturn(true)
         
         // Create new instance to trigger migration
         dvcSharedPrefs = DVCSharedPrefs(mockContext, ttl)
         
         // Verify migration occurred - legacy fetch date becomes expiry date
         verify(mockEditor).putString(eq("ANONYMOUS_CONFIG.$testAnonUserId"), eq(testConfigString))
-        verify(mockEditor).putLong(eq("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE"), eq(currentTime))
+        verify(mockEditor).putLong(eq("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE"), anyLong())
         verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
         verify(mockEditor).remove(eq("ANONYMOUS_CONFIG"))
         verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.USER_ID"))
@@ -200,13 +206,16 @@ class DVCSharedPrefsTests {
         `when`(mockSharedPreferences.getLong("IDENTIFIED_CONFIG.FETCH_DATE", 0)).thenReturn(currentTime)
         `when`(mockSharedPreferences.getString("IDENTIFIED_CONFIG", null)).thenReturn(testConfigString)
         `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.$testUserId")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.USER_ID")).thenReturn(true)
+        `when`(mockSharedPreferences.contains("IDENTIFIED_CONFIG.FETCH_DATE")).thenReturn(true)
         
         // Create new instance to trigger migration
         dvcSharedPrefs = DVCSharedPrefs(mockContext, ttl)
         
         // Verify data was removed but not re-migrated, but migration flag still set
         verify(mockEditor, never()).putString(eq("IDENTIFIED_CONFIG.$testUserId"), eq(testConfigString))
-        verify(mockEditor, never()).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), eq(currentTime))
+        verify(mockEditor, never()).putLong(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"), anyLong())
         verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG"))
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
@@ -421,11 +430,11 @@ class DVCSharedPrefsTests {
         `when`(mockSharedPreferences.contains("ANONYMOUS_CONFIG.USER_ID")).thenReturn(false)
         
         // Create new instance to trigger migration
-        dvcSharedPrefs = DVCSharedPrefs(mockContext)
+        dvcSharedPrefs = DVCSharedPrefs(mockContext, ttl)
         
         // Verify no successful migrations occurred (no new format data was written)
-        verify(mockEditor, never()).putString(matches(".*CONFIG\\..*"), anyString())
-        verify(mockEditor, never()).putLong(matches(".*CONFIG\\..*\\.FETCH_DATE"), anyLong())
+        verify(mockEditor, never()).putString(matches(".*CONFIG\\..*[^.]$"), anyString())
+        verify(mockEditor, never()).putLong(matches(".*CONFIG\\..*\\.EXPIRY_DATE"), anyLong())
         
         // But verify partial legacy data was still cleaned up
         verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.USER_ID"))
