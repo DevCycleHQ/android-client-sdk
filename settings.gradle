@@ -11,3 +11,4 @@ rootProject.name = "Android Client SDK"
 include ':android-client-sdk'
 include ':kotlin-example'
 include ':java-example'
+include ':openfeature-example'
