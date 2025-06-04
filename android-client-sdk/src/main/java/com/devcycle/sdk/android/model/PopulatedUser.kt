@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import java.util.*
 import android.content.pm.PackageInfo
 import com.devcycle.BuildConfig
+import com.devcycle.sdk.android.util.DevCycleLogger
 import kotlin.IllegalArgumentException
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -96,12 +97,41 @@ internal data class PopulatedUser constructor(
             )
         }
 
-        @JvmSynthetic internal fun fromUserParam(user: DevCycleUser, context: Context, anonUserId: String?): PopulatedUser {
-            val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                context.resources.configuration.locales[0]
-            } else {
-                context.resources.configuration.locale
+        @JvmSynthetic internal fun getLanguage(context: Context): String {
+            return try {
+                val locale: Locale
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    locale = context.resources.configuration.locales[0]
+                } else {
+                    locale = context.resources.configuration.locale
+                }
+                locale.language
+            } catch (e: Exception) {
+                DevCycleLogger.e(e, "Error getting language")
+                "en"
             }
+        }
+
+        @JvmSynthetic internal fun getAppBuildAndVersion(context: Context): Pair<String, Long> {
+            return try {
+                val packageManager = context.packageManager
+                val packageInfo: PackageInfo = packageManager.getPackageInfo(context.packageName, 0)
+
+                val version = packageInfo.versionName ?: "unknown"
+                val build = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    packageInfo.longVersionCode
+                } else {
+                    packageInfo.versionCode.toLong()
+                }
+                version to build
+            } catch (e: Exception) {
+                DevCycleLogger.e(e, "Error getting appVersion or appBuild")
+                "unknown" to 0L
+            }
+        }
+
+        @JvmSynthetic internal fun fromUserParam(user: DevCycleUser, context: Context, anonUserId: String?): PopulatedUser {
+            val language = getLanguage(context)
 
             val isAnonymous = user.isAnonymous ?: false
             val userId = if (isAnonymous) {
@@ -114,19 +144,9 @@ internal data class PopulatedUser constructor(
             val country = user.country
             val customData = user.customData
             val privateCustomData = user.privateCustomData
-        
-            val lastSeenDate = Calendar.getInstance().time.time
 
-            val packageManager = context.packageManager
-            val packageInfo: PackageInfo = packageManager.getPackageInfo(context.packageName, 0)
-        
-            val appVersion = packageInfo.versionName
-            val appBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                packageInfo.longVersionCode
-            } else {
-                packageInfo.versionCode.toLong()
-            }
-            val language = locale.language
+            // Get package info safely
+            val (appVersion, appBuild) = getAppBuildAndVersion(context)
 
             if (userId == null && !isAnonymous) {
                 throw IllegalArgumentException("Missing userId and isAnonymous is not true")

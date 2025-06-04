@@ -1,5 +1,6 @@
 package com.devcycle.sdk.android.model
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
@@ -35,6 +36,7 @@ class VariableDeserializer : JsonDeserializer<BaseConfigVariable>() {
 }
 
 @JsonDeserialize(using = VariableDeserializer::class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 abstract class BaseConfigVariable {
     abstract val id: String
     abstract val value: Any
@@ -44,6 +46,7 @@ abstract class BaseConfigVariable {
 }
 
 @JsonDeserialize(`as` = StringConfigVariable::class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 class StringConfigVariable(
     @JsonProperty("_id")
     override val id: String,
@@ -54,6 +57,7 @@ class StringConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = BooleanConfigVariable::class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 class BooleanConfigVariable(
     @JsonProperty("_id")
     override val id: String,
@@ -64,6 +68,7 @@ class BooleanConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = NumberConfigVariable::class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 class NumberConfigVariable(
     @JsonProperty("_id")
     override val id: String,
@@ -74,6 +79,7 @@ class NumberConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONObjectConfigVariable::class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 class JSONObjectConfigVariable(
     @JsonProperty("_id")
     override val id: String,
@@ -84,6 +90,7 @@ class JSONObjectConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONArrayConfigVariable::class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 class JSONArrayConfigVariable(
     @JsonProperty("_id")
     override val id: String,
