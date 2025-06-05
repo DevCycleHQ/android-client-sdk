@@ -46,7 +46,7 @@ class OpenFeatureApplication: Application() {
                     options = options
                 )
                 
-                // Set provider and wait for initialization
+                // Set provider and wait for initialization to complete
                 OpenFeatureAPI.setProviderAndWait(provider)
                 
                 // Get OpenFeature client directly from API
