@@ -64,6 +64,6 @@ class SSEEventHandler(
      * @param t  a `Throwable` object
      */
     override fun onError(t: Throwable?) {
-        DevCycleLogger.e(t)
+        DevCycleLogger.d(t, "SSE Error")
     }
 }

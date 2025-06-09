@@ -28,6 +28,8 @@ jobs:
   release:
     name: Version Bump and Release
     runs-on: ubuntu-latest
+    outputs:
+      next-release-tag: ${{ steps.prepare-release.outputs.next-release-tag }}
     steps:
       # Check out the repo with credentials that can bypass branch protection, and fetch git history instead of just latest commit
       - uses: actions/checkout@v4
@@ -91,3 +93,15 @@ jobs:
         run: |
           echo "::notice title=Release ID::${{ steps.create-release.outputs.release-id }}"
           echo "::notice title=Release URL::${{ steps.create-release.outputs.release-url }}"
+
+  # TODO: update this workflow with the appropriate permissions
+  # update-flutter-sdk:
+  #   uses: DevCycleHQ/flutter-client-sdk/.github/workflows/update-android-sdk-version.yaml@main
+  #   needs: release
+  #   if: inputs.draft != 'true'
+  #   with:
+  #     target-version: ${{ needs.release.outputs.next-release-tag }}
+  #   secrets: inherit
+  #   permissions:
+  #     contents: write
+  #     pull-requests: write
