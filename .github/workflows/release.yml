@@ -101,3 +101,5 @@ jobs:
     with:
       target-version: ${{ needs.release.outputs.next-release-tag }}
     secrets: inherit
+    permissions:
+      pull-requests: write
