@@ -78,13 +78,7 @@ class DevCycleClient private constructor(
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
 
     init {
-        val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
-        if (cachedConfig != null) {
-            config = cachedConfig
-            isConfigCached.set(true)
-            DevCycleLogger.d("Loaded config from cache")
-            observable.configUpdated(config)
-        }
+        useCachedConfigForUser(user)
 
         initializeJob = coroutineScope.async(coroutineContext) {
             isExecuting.set(true)
@@ -232,6 +226,10 @@ class DevCycleClient private constructor(
                     fetchConfig(updatedUser)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
+                    DevCycleLogger.d("Error fetching config for user_id %s", updatedUser.userId)
+                    // In the event that the config request fails (i.e. the device is offline)
+                    // Fallback to using a Cached Configuration for the User if available
+                    useCachedConfigForUser(updatedUser)
                     callback?.onError(t)
                 } finally {
                     handleQueuedConfigRequests()
@@ -552,6 +550,16 @@ class DevCycleClient private constructor(
         } else {
             DevCycleLogger.d("EdgeDB is not enabled for this project. Only using local user data.")
             return false
+        }
+    }
+
+    private fun useCachedConfigForUser(user: PopulatedUser) {
+        val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
+        if (cachedConfig != null) {
+            config = cachedConfig
+            isConfigCached.set(true)
+            DevCycleLogger.d("Loaded config from cache for user_id %s", user.userId)
+            observable.configUpdated(config)
         }
     }
 
