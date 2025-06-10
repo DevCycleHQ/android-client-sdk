@@ -1323,7 +1323,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client has invalid config, all variables default with an undefined variable key for any variable in config`() {
+    fun `client receives invalid config, all variables default with an undefined variable key for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1385,7 +1385,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed to initialize, all variables default
+            // Expect Client to have all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1405,7 +1405,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client has invalid config, all variables default with an undefined variable type for any variable in config`() {
+    fun `client receives invalid config all variables default with an undefined variable type for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1467,7 +1467,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed to initialize, all variables default
+            // Expect Client to have all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1487,7 +1487,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client has invalid config, all variables default with a null variable key for any variable in config`() {
+    fun `client receives invalid config, all variables default with a null variable key for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1550,7 +1550,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed to initialize, all variables default
+            // Expect Client to have all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1570,7 +1570,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client has invalid config, all variables default with a null variable type for any variable in config`() {
+    fun `client receives invalid config, all variables default with a null variable type for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1633,7 +1633,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed initialization, all variables should default
+            // Expect Client to have all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1653,7 +1653,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client initializes with invalid config`() {
+    fun `client receives invalid config, client uses default`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1689,7 +1689,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed to initialize, all variables default
+            // Expect Client to have failed initialization, all variables should default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1698,14 +1698,15 @@ class DevCycleClientTests {
             assert(numVar.isDefaulted == true)
             assert(numValue == 0)
 
-            assert(strVar.value == "Not activated")
+            assert(strVar.value === "Not activated")
             assert(strVar.isDefaulted == true)
-            assert(strValue == "Not activated")
+            assert(strValue === "Not activated")
 
-            assert(jsonVar.value.toString() == defaultJSON.toString())
+            assert(jsonVar.value === defaultJSON)
             assert(jsonVar.isDefaulted == true)
-            assert(jsonValue.toString() == defaultJSON.toString())
+            assert(jsonValue === defaultJSON)
         }
+    }
 
     private fun handleFinally(
         calledBack: Boolean,
