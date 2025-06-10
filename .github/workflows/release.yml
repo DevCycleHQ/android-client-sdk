@@ -94,14 +94,13 @@ jobs:
           echo "::notice title=Release ID::${{ steps.create-release.outputs.release-id }}"
           echo "::notice title=Release URL::${{ steps.create-release.outputs.release-url }}"
 
-  # TODO: update this workflow with the appropriate permissions
-  # update-flutter-sdk:
-  #   uses: DevCycleHQ/flutter-client-sdk/.github/workflows/update-android-sdk-version.yaml@main
-  #   needs: release
-  #   if: inputs.draft != 'true'
-  #   with:
-  #     target-version: ${{ needs.release.outputs.next-release-tag }}
-  #   secrets: inherit
-  #   permissions:
-  #     contents: write
-  #     pull-requests: write
+  update-flutter-sdk:
+    uses: DevCycleHQ/flutter-client-sdk/.github/workflows/update-android-sdk-version.yaml@main
+    needs: release
+    if: inputs.draft != 'true'
+    with:
+      target-version: ${{ needs.release.outputs.next-release-tag }}
+    secrets: inherit
+    permissions:
+      contents: write
+      pull-requests: write
