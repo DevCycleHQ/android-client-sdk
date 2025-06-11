@@ -1323,7 +1323,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client fails to initialize, all variables default with an undefined variable key for any variable in config`() {
+    fun `client receives invalid config, all variables default with an undefined variable key for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1385,7 +1385,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed to initialize, all variables default
+            // Expect Client to have all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1405,7 +1405,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client fails to initialize, all variables default with an undefined variable type for any variable in config`() {
+    fun `client receives invalid config all variables default with an undefined variable type for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1467,7 +1467,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed to initialize, all variables default
+            // Expect Client to have all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1487,7 +1487,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client fails to initialize, all variables default with a null variable key for any variable in config`() {
+    fun `client receives invalid config, all variables default with a null variable key for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1550,7 +1550,7 @@ class DevCycleClientTests {
         } finally {
             countDownLatch.await(2000, TimeUnit.MILLISECONDS)
 
-            // Expect Client to have failed to initialize, all variables default
+            // Expect Client to have all variables default
             assert(!boolVar.value)
             assert(boolVar.isDefaulted == true)
             assert(!boolValue)
@@ -1570,7 +1570,7 @@ class DevCycleClientTests {
     }
 
     @Test
-    fun `client fails to initialize, all variables default with a null variable type for any variable in config`() {
+    fun `client receives invalid config, all variables default with a null variable type for any variable in config`() {
         val defaultJSON = JSONObject()
         defaultJSON.put("foo", "bar")
 
@@ -1602,6 +1602,62 @@ class DevCycleClientTests {
                 "    }\n" +
                 "  }\n" +
                 "}"
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        val jsonVar = client.variable("test-feature-json", defaultJSON)
+        val jsonValue = client.variableValue("test-feature-json", defaultJSON)
+        val boolVar = client.variable("test-feature", false)
+        val boolValue = client.variableValue("test-feature", false)
+        val numVar = client.variable("test-feature-number", 0)
+        val numValue = client.variableValue("test-feature-number", 0)
+        val strVar = client.variable("test-feature-string", "Not activated")
+        val strValue = client.variableValue("test-feature-string", "Not activated")
+
+        try {
+            client.onInitialized(object: DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+
+            // Expect Client to have all variables default
+            assert(!boolVar.value)
+            assert(boolVar.isDefaulted == true)
+            assert(!boolValue)
+
+            assert(numVar.value == 0)
+            assert(numVar.isDefaulted == true)
+            assert(numValue == 0)
+
+            assert(strVar.value === "Not activated")
+            assert(strVar.isDefaulted == true)
+            assert(strValue === "Not activated")
+
+            assert(jsonVar.value === defaultJSON)
+            assert(jsonVar.isDefaulted == true)
+            assert(jsonValue === defaultJSON)
+        }
+    }
+
+    @Test
+    fun `client receives invalid config, client uses default`() {
+        val defaultJSON = JSONObject()
+        defaultJSON.put("foo", "bar")
+
+        val configString = "{"
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(configString))
         val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
