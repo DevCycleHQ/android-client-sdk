@@ -70,7 +70,7 @@ class Variable<T> internal constructor(
     }
 
     @JsonIgnore
-    var evalReason: String? = null
+    var eval: Map<String, Any>? = null
 
     @JsonIgnore
     private var callback: DevCycleCallback<Variable<T>>? = null
@@ -90,7 +90,7 @@ class Variable<T> internal constructor(
         value = variable.value as T
 
         isDefaulted = false
-        evalReason = variable.evalReason
+        eval = variable.eval
 
         if (executeCallBack) {
             val self = this
@@ -142,7 +142,7 @@ class Variable<T> internal constructor(
                     type = type,
                     defaultValue = defaultValue as T
                 )
-                returnVariable.evalReason = readOnlyVariable.evalReason
+                returnVariable.eval = readOnlyVariable.eval
                 returnVariable.isDefaulted = false
                 return returnVariable
             } else {

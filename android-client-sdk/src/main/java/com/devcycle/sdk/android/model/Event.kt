@@ -44,13 +44,14 @@ internal data class Event private constructor(
             const val customEvent: String = "customEvent"
         }
 
-        @JvmSynthetic internal fun variableEvent(defaulted: Boolean?, key: String?): InternalEvent {
+        @JvmSynthetic internal fun variableEvent(defaulted: Boolean?, key: String?, evalReason: Map<String, Any>? = null): InternalEvent {
             val type = if (defaulted == true) EventTypes.variableDefaulted else EventTypes.variableEvaluated
 
             return InternalEvent(
                 type,
                 key,
-                value = BigDecimal.ONE
+                value = BigDecimal.ONE,
+                metaData = evalReason?.let { mapOf("eval" to it) }
             )
         }
 
