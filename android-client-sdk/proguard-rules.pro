@@ -24,6 +24,9 @@
 
 -keep class kotlin.Metadata { *; }
 -keep class com.devcycle.sdk.android.model.** { *; }
+-keep class com.devcycle.sdk.android.util.DevCycleLogger { *; }
+-keep class com.devcycle.sdk.android.util.DevCycleLogger$* { *; }
+-keep class com.devcycle.sdk.android.util.LogLevel { *; }
 -keep class java.beans.Transient.** {*;}
 -keep class java.beans.ConstructorProperties.** {*;}
 -keep class java.nio.file.Path.** {*;}
