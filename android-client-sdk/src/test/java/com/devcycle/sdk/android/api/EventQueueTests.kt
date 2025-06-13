@@ -42,13 +42,17 @@ class EventQueueTests {
         val user = PopulatedUser("test")
         val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
 
+        val overrideEval: Map<String, Any> = mapOf(
+            "reason" to "OVERRIDE",
+            "details" to "Override"
+        )
         val event1 = Event.fromInternalEvent(
-            Event.variableEvent(false, "dummy_key1"),
+            Event.variableEvent(false, "dummy_key1", overrideEval),
             user,
             null
         )
         val event2 = Event.fromInternalEvent(
-            Event.variableEvent(false, "dummy_key1"),
+            Event.variableEvent(false, "dummy_key1", overrideEval),
             user,
             null
         )
@@ -74,5 +78,6 @@ class EventQueueTests {
 
         Assert.assertEquals(BigDecimal(2), aggregateEvaluatedEvent?.value)
         Assert.assertEquals(BigDecimal(2), aggregateDefaultedEvent?.value)
+        Assert.assertSame(overrideEval, aggregateEvaluatedEvent?.metaData)
     }
 }
