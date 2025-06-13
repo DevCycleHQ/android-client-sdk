@@ -22,8 +22,27 @@
 
 # TODO: Update all retrofit rules when retrofit 5 is released.
 
+# Keep essential DevCycle SDK classes and their public APIs
 -keep class kotlin.Metadata { *; }
 -keep class com.devcycle.sdk.android.model.** { *; }
+-keep class com.devcycle.sdk.android.api.DevCycleClient { *; }
+-keep class com.devcycle.sdk.android.api.DevCycleClient$* { *; }
+-keep class com.devcycle.sdk.android.api.DevCycleOptions { *; }
+-keep class com.devcycle.sdk.android.api.** { *; }
+
+# Keep utility classes needed for SDK functionality and testing
+-keep class com.devcycle.sdk.android.util.** { *; }
+
+# Keep exception classes
+-keep class com.devcycle.sdk.android.exception.** { *; }
+
+# Keep listener interfaces
+-keep class com.devcycle.sdk.android.listener.** { *; }
+
+# Keep interceptor classes
+-keep class com.devcycle.sdk.android.interceptor.** { *; }
+
+# Jackson and JSON processing
 -keep class java.beans.Transient.** {*;}
 -keep class java.beans.ConstructorProperties.** {*;}
 -keep class java.nio.file.Path.** {*;}
@@ -35,6 +54,7 @@
 -dontwarn retrofit2.KotlinExtensions
 -dontwarn retrofit2.KotlinExtensions$*
 
+# OkHttp and networking
 -dontwarn org.bouncycastle.jsse.BCSSLParameters
 -dontwarn org.bouncycastle.jsse.BCSSLSocket
 -dontwarn org.bouncycastle.jsse.provider.BouncyCastleJsseProvider
@@ -45,18 +65,13 @@
 -dontwarn org.openjsse.javax.net.ssl.SSLSocket
 -dontwarn org.openjsse.net.ssl.OpenJSSE
 
-# Ignore annotation used for build tooling.
-#-dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
-
+# Retrofit rules
 -keep,allowobfuscation,allowshrinking interface retrofit2.Call
 -keep,allowobfuscation,allowshrinking class retrofit2.Response
 -keep,allowobfuscation,allowshrinking class okhttp3.RequestBody
 -keep,allowobfuscation,allowshrinking class okhttp3.ResponseBody
 
-
-# IMPORTANT: This ensures R8 Will not strip our JSONMapper and Coroutine classes
--keep,allowobfuscation,allowshrinking class com.devcycle.sdk.android.**
-
+# Keep coroutines
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 
 # Retrofit does reflection on generic parameters. InnerClasses is required to use Signature and
