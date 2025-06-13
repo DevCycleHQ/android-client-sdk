@@ -24,7 +24,7 @@ android {
         targetSdk 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        testBuildType "debug"
+        testBuildType "minified"
 
         consumerProguardFiles("proguard-rules.pro")
 
