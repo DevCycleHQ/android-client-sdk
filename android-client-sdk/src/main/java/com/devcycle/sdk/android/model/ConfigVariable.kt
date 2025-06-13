@@ -36,13 +36,13 @@ class VariableDeserializer : JsonDeserializer<BaseConfigVariable>() {
 }
 
 @JsonDeserialize(using = VariableDeserializer::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true) 
 abstract class BaseConfigVariable {
     abstract val id: String
     abstract val value: Any
     abstract val key: String
     abstract val type: Variable.TypeEnum
-    abstract val evalReason: String?
+    abstract val eval: Map<String, Any>?
 }
 
 @JsonDeserialize(`as` = StringConfigVariable::class)
@@ -53,7 +53,7 @@ class StringConfigVariable(
     override val value: String,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: Map<String, Any>?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = BooleanConfigVariable::class)
@@ -64,7 +64,7 @@ class BooleanConfigVariable(
     override val value: Boolean,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: Map<String, Any>?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = NumberConfigVariable::class)
@@ -75,7 +75,7 @@ class NumberConfigVariable(
     override val value: Number,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: Map<String, Any>?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONObjectConfigVariable::class)
@@ -86,7 +86,7 @@ class JSONObjectConfigVariable(
     override val value: JSONObject,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: Map<String, Any>?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONArrayConfigVariable::class)
@@ -97,5 +97,5 @@ class JSONArrayConfigVariable(
     override val value: JSONArray,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: Map<String, Any>?
 ) : BaseConfigVariable()
