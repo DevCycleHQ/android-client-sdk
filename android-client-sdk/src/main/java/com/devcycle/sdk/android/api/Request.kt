@@ -29,10 +29,10 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
             val httpResponseCode = HttpResponseCode.byCode(response.code())
             var errorResponse = ErrorResponse(listOf("Unknown Error"), null)
 
-            if (response.errorBody() != null) {
+            response.errorBody()?.let { errorBody ->
                 try {
                     errorResponse = JSONMapper.mapper.readValue(
-                        response.errorBody()!!.string(),
+                        errorBody.string(),
                         ErrorResponse::class.java
                     )
                     throw DVCRequestException(httpResponseCode, errorResponse)

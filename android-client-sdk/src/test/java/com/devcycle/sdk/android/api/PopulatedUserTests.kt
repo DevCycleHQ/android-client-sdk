@@ -33,35 +33,38 @@ class PopulatedUserTests {
 
     @BeforeEach
     fun setup() {
-        Mockito.`when`(mockContext!!.getString(ArgumentMatchers.anyInt())).thenReturn("Some value")
-        Mockito.`when`(mockContext.getSharedPreferences("Some value", Context.MODE_PRIVATE))
+        Mockito.`when`(mockContext?.getString(ArgumentMatchers.anyInt())).thenReturn("Some value")
+        Mockito.`when`(mockContext?.getSharedPreferences("Some value", Context.MODE_PRIVATE))
             .thenReturn(
                 sharedPreferences
             )
-        Mockito.`when`(sharedPreferences!!.edit()).thenReturn(editor)
+        Mockito.`when`(sharedPreferences?.edit()).thenReturn(editor)
         Mockito.`when`(
-            editor!!.putString(
+            editor?.putString(
                 ArgumentMatchers.anyString(),
                 ArgumentMatchers.anyString()
             )
         ).thenReturn(editor)
-        Mockito.`when`(mockContext.resources).thenReturn(resources)
-        Mockito.`when`(mockContext.resources.configuration).thenReturn(configuration)
-        Mockito.`when`(mockContext.resources.configuration.locales).thenReturn(locales)
-        Mockito.`when`(mockContext.resources.configuration.locales.get(0))
+        Mockito.`when`(mockContext?.resources).thenReturn(resources)
+        Mockito.`when`(mockContext?.resources?.configuration).thenReturn(configuration)
+        Mockito.`when`(mockContext?.resources?.configuration?.locales).thenReturn(locales)
+        Mockito.`when`(mockContext?.resources?.configuration?.locales?.get(0))
             .thenReturn(Locale.getDefault())
-        Mockito.`when`(mockContext.packageName).thenReturn("test")
-        Mockito.`when`(mockContext.packageManager).thenReturn(packageManager)
+        Mockito.`when`(mockContext?.packageName).thenReturn("test")
+        Mockito.`when`(mockContext?.packageManager).thenReturn(packageManager)
 
-        Mockito.`when`(mockContext.packageManager.getPackageInfo("test", 0)).thenReturn(packageInfo)
-        Mockito.`when`(mockContext.applicationContext).thenReturn(mockApplication)
+        Mockito.`when`(mockContext?.packageManager?.getPackageInfo("test", 0)).thenReturn(packageInfo)
+        Mockito.`when`(mockContext?.applicationContext).thenReturn(mockApplication)
     }
 
     @Test
     fun `should create PopulatedUser with defaults if context resources is null`() {
         Mockito.`when`(mockContext?.resources).thenReturn(null, resources)
         val dvcUser = DevCycleUser.builder().withUserId("User1").build()
-        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!)
+        val populatedUser = PopulatedUser.fromUserParam(
+            requireNotNull(dvcUser) { "dvcUser should not be null in test" },
+            requireNotNull(mockContext) { "mockContext should not be null in test" }
+        )
 
         assert(populatedUser.language == "en")
     }
@@ -72,7 +75,10 @@ class PopulatedUserTests {
         Mockito.`when`(mockContext?.resources?.configuration?.locales?.get(0))
             .thenReturn(locale)
         val dvcUser = DevCycleUser.builder().withUserId("User1").build()
-        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!)
+        val populatedUser = PopulatedUser.fromUserParam(
+            requireNotNull(dvcUser) { "dvcUser should not be null in test" },
+            requireNotNull(mockContext) { "mockContext should not be null in test" }
+        )
 
         assert(populatedUser.language == "fr")
     }
@@ -81,7 +87,10 @@ class PopulatedUserTests {
     fun `should create PopulatedUser with defaults if packageManager code is null`() {
         Mockito.`when`(mockContext?.packageManager).thenReturn(null, packageManager)
         val dvcUser = DevCycleUser.builder().withUserId("User1").build()
-        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!)
+        val populatedUser = PopulatedUser.fromUserParam(
+            requireNotNull(dvcUser) { "dvcUser should not be null in test" },
+            requireNotNull(mockContext) { "mockContext should not be null in test" }
+        )
 
         assert(populatedUser.appVersion == "unknown")
         assert(populatedUser.appBuild == 0L)
