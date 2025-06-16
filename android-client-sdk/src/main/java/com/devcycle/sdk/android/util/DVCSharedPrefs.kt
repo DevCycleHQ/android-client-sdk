@@ -60,7 +60,7 @@ internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long
     @Synchronized
     fun getOrCreateAnonUserId(): String {
         val existingId = getAnonUserId()
-        if (!existingId.isNullOrEmpty()) {
+        if (!existingId.isNullOrBlank()) {
             return existingId
         }
         
