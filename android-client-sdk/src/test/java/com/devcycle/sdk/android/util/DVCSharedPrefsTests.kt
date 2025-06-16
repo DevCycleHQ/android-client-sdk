@@ -257,33 +257,6 @@ class DVCSharedPrefsTests {
     }
     
     @Test
-    fun `should save and remove generic objects`() {
-        val testKey = "test_object_key"
-        val testObject = mapOf("key" to "value")
-        
-        dvcSharedPrefs.save(testObject, testKey)
-        verify(mockEditor).putString(eq(testKey), anyString())
-        verify(mockEditor).apply()
-        
-        dvcSharedPrefs.remove(testKey)
-        verify(mockEditor).remove(eq(testKey))
-        verify(mockEditor).commit()
-    }
-    
-    @Test
-    fun `should handle json processing exceptions during save`() {
-        val testKey = "test_key"
-        val problematicObject = object {
-            val circularRef = this // This could cause JSON processing issues
-        }
-        
-        // Should not throw exception
-        assertDoesNotThrow {
-            dvcSharedPrefs.save(problematicObject, testKey)
-        }
-    }
-    
-    @Test
     fun `should handle json processing exceptions during config retrieval`() {
         val user = createPopulatedUser(testUserId, false)
         val malformedJson = "{ invalid json"

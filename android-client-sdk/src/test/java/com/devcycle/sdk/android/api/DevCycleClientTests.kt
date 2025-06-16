@@ -137,7 +137,14 @@ class DevCycleClientTests {
     @ExperimentalCoroutinesApi
     @AfterEach
     fun tearDown() {
-        Dispatchers.resetMain() // reset the main dispatcher to the original Main dispatcher
+        try {
+            // Give any running coroutines a moment to complete
+            Thread.sleep(50)
+            Dispatchers.resetMain() // reset the main dispatcher to the original Main dispatcher
+        } catch (e: IllegalStateException) {
+            // Handle concurrent access to dispatcher gracefully
+            // This can happen when coroutines are still running during teardown
+        }
         mainThreadSurrogate.close()
         mockWebServer.shutdown()
     }

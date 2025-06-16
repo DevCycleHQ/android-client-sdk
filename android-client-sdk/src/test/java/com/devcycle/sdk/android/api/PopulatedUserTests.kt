@@ -61,7 +61,7 @@ class PopulatedUserTests {
     fun `should create PopulatedUser with defaults if context resources is null`() {
         Mockito.`when`(mockContext?.resources).thenReturn(null, resources)
         val dvcUser = DevCycleUser.builder().withUserId("User1").build()
-        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!, "anonId")
+        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!)
 
         assert(populatedUser.language == "en")
     }
@@ -72,7 +72,7 @@ class PopulatedUserTests {
         Mockito.`when`(mockContext?.resources?.configuration?.locales?.get(0))
             .thenReturn(locale)
         val dvcUser = DevCycleUser.builder().withUserId("User1").build()
-        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!, "anonId")
+        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!)
 
         assert(populatedUser.language == "fr")
     }
@@ -81,7 +81,7 @@ class PopulatedUserTests {
     fun `should create PopulatedUser with defaults if packageManager code is null`() {
         Mockito.`when`(mockContext?.packageManager).thenReturn(null, packageManager)
         val dvcUser = DevCycleUser.builder().withUserId("User1").build()
-        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!, "anonId")
+        val populatedUser = PopulatedUser.fromUserParam(dvcUser!!, mockContext!!)
 
         assert(populatedUser.appVersion == "unknown")
         assert(populatedUser.appBuild == 0L)

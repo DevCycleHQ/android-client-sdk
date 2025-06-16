@@ -208,8 +208,9 @@ class DevCycleClient private constructor(
         val updatedUser: PopulatedUser = if (this@DevCycleClient.user.userId == user.userId) {
             this@DevCycleClient.user.copyUserAndUpdateFromDevCycleUser(user)
         } else {
-            val anonId: String? = dvcSharedPrefs.getString(DVCSharedPrefs.AnonUserIdKey);
-            PopulatedUser.fromUserParam(user, context, anonId)
+            // Apply the same validation logic as in DevCycleClientBuilder
+            DevCycleClient.validateDevCycleUser(user, dvcSharedPrefs)
+            PopulatedUser.fromUserParam(user, context)
         }
         latestIdentifiedUser = updatedUser
 
@@ -290,7 +291,7 @@ class DevCycleClient private constructor(
      */
     @Synchronized
     fun allFeatures(): Map<String, Feature>? {
-        return if (config == null) emptyMap() else config!!.features
+        return config?.features ?: emptyMap()
     }
 
     /**
@@ -298,7 +299,7 @@ class DevCycleClient private constructor(
      */
     @Synchronized
     fun allVariables(): Map<String, BaseConfigVariable>? {
-        return if (config == null) emptyMap() else config!!.variables
+        return config?.variables ?: emptyMap()
     }
 
     /**
@@ -448,8 +449,8 @@ class DevCycleClient private constructor(
                 val callbacks: MutableList<DevCycleCallback<Map<String, BaseConfigVariable>>> =
                     mutableListOf()
 
-                if (latestUserAndCallback.callback != null) {
-                    callbacks.add(latestUserAndCallback.callback!!)
+                latestUserAndCallback.callback?.let { callback ->
+                    callbacks.add(callback)
                 }
                 val itr = configRequestQueue.iterator()
 
@@ -458,8 +459,8 @@ class DevCycleClient private constructor(
                     if (userAndCallback.now > latestUserAndCallback.now) {
                         latestUserAndCallback = userAndCallback
                     }
-                    if (userAndCallback.callback != null) {
-                        callbacks.add(userAndCallback.callback)
+                    userAndCallback.callback?.let { callback ->
+                        callbacks.add(callback)
                     }
                     itr.remove()
                 }
@@ -483,12 +484,6 @@ class DevCycleClient private constructor(
         }
     }
 
-    private fun saveUser() {
-        dvcSharedPrefs.save(user, DVCSharedPrefs.UserKey)
-        if (user.isAnonymous)
-            dvcSharedPrefs.saveString(user.userId, DVCSharedPrefs.AnonUserIdKey)
-    }
-
     private suspend fun fetchConfig(
         user: PopulatedUser,
         sse: Boolean? = false,
@@ -498,14 +493,13 @@ class DevCycleClient private constructor(
         val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified, etag)
         config = result
         observable.configUpdated(config)
-        dvcSharedPrefs.saveConfig(config!!, user)
+        dvcSharedPrefs.saveConfig(result, user)
         isConfigCached.set(false)
         DevCycleLogger.d("A new config has been fetched for $user")
 
         this@DevCycleClient.user = user
-        saveUser()
 
-        if (checkIfEdgeDBEnabled(config!!, enableEdgeDB)) {
+        if (checkIfEdgeDBEnabled(result, enableEdgeDB)) {
             if (!user.isAnonymous) {
                 try {
                     request.saveEntity(user)
@@ -632,9 +626,10 @@ class DevCycleClient private constructor(
         }
 
         fun build(): DevCycleClient {
-            requireNotNull(context) { "Context must be set" }
-            require(!(sdkKey == null || sdkKey == "")) { "SDK key must be set" }
-            requireNotNull(dvcUser) { "User must be set" }
+            val context = requireNotNull(context) { "Context must be set" }
+            val sdkKey = requireNotNull(sdkKey) { "SDK key must be set" }
+            require(sdkKey.isNotEmpty()) { "SDK key must be set" }
+            val dvcUser = requireNotNull(dvcUser) { "User must be set" }
 
             if (logLevel.value > 0) {
                 DevCycleLogger.start(logger)
@@ -642,13 +637,14 @@ class DevCycleClient private constructor(
 
             val defaultCacheTTL = 30 * 24 * 3600000L // 30 days
             val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
-            dvcSharedPrefs = DVCSharedPrefs(context!!, configCacheTTL);
+            val dvcSharedPrefs = DVCSharedPrefs(context, configCacheTTL)
 
-            val anonId: String? = dvcSharedPrefs!!.getString(DVCSharedPrefs.AnonUserIdKey)
+            // Apply DevCycleUser validation logic for userId and isAnonymous here because we have access to the sharedPrefs
+            DevCycleClient.validateDevCycleUser(dvcUser, dvcSharedPrefs)
 
-            this.user = PopulatedUser.fromUserParam(dvcUser!!, context!!, anonId)
+            val populatedUser = PopulatedUser.fromUserParam(dvcUser, context)
 
-            return DevCycleClient(context!!, sdkKey!!, user!!, options, apiUrl, eventsUrl, customLifecycleHandler)
+            return DevCycleClient(context, sdkKey, populatedUser, options, apiUrl, eventsUrl, customLifecycleHandler)
         }
     }
 
@@ -657,10 +653,30 @@ class DevCycleClient private constructor(
         fun builder(): DevCycleClientBuilder {
             return DevCycleClientBuilder()
         }
-    }
 
-    init {
-        saveUser()
+        /**
+         * Validates and finalizes DevCycleUser userId and isAnonymous properties
+         * Matches iOS SDK validation logic
+         */
+        @JvmSynthetic
+        internal fun validateDevCycleUser(user: DevCycleUser, sharedPrefs: DVCSharedPrefs) {
+            val hasValidUserId = !user.userId.isNullOrEmpty()
+            
+            require(!(user.isAnonymous == false && !hasValidUserId)) { "User ID is required when isAnonymous is false" }
+            
+            // Handle the different cases based on isAnonymous and userId (matching iOS SDK logic)
+            when {
+                !hasValidUserId -> {
+                    // No userId provided - generate anonymous ID (covers both explicit anonymous and default case)
+                    user.setUserId(sharedPrefs.getOrCreateAnonUserId())
+                    user.setIsAnonymous(true)
+                }
+                else -> {
+                    // Valid userId provided, use it with isAnonymous defaulting to false if not set
+                    user.setIsAnonymous(false)
+                }
+            }
+        }
     }
 }
 

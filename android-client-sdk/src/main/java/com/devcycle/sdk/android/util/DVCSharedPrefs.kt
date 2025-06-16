@@ -22,13 +22,54 @@ internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long
     }
 
     companion object {
-        const val UserKey = "USER"
         const val AnonUserIdKey = "ANONYMOUS_USER_ID"
         const val IdentifiedConfigKey = "IDENTIFIED_CONFIG"
         const val AnonymousConfigKey = "ANONYMOUS_CONFIG"
         const val ExpiryDateSuffix = "EXPIRY_DATE"
         const val MigrationCompletedKey = "MIGRATION_COMPLETED"
     }
+
+    // MARK: - Anonymous User ID Management
+    
+    /**
+     * Sets the anonymous user ID in shared preferences
+     */
+    @Synchronized
+    fun setAnonUserId(anonUserId: String) {
+        preferences.edit().putString(AnonUserIdKey, anonUserId).apply()
+    }
+
+    /**
+     * Gets the anonymous user ID from shared preferences
+     */
+    fun getAnonUserId(): String? {
+        return preferences.getString(AnonUserIdKey, null)
+    }
+
+    /**
+     * Clears the anonymous user ID from shared preferences
+     */
+    @Synchronized
+    fun clearAnonUserId() {
+        preferences.edit().remove(AnonUserIdKey).apply()
+    }
+
+    /**
+     * Gets the existing anonymous user ID or creates a new one if none exists
+     */
+    @Synchronized
+    fun getOrCreateAnonUserId(): String {
+        val existingId = getAnonUserId()
+        if (!existingId.isNullOrEmpty()) {
+            return existingId
+        }
+        
+        val newId = UUID.randomUUID().toString()
+        setAnonUserId(newId)
+        return newId
+    }
+
+    // MARK: - Config Management
 
     private fun generateUserConfigKey(userId: String, isAnonymous: Boolean): String {
         val prefix = if (isAnonymous) AnonymousConfigKey else IdentifiedConfigKey
@@ -144,15 +185,7 @@ internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long
         }
     }
 
-    @Synchronized
-    fun <T> save(objectToSave: T, key: String?) {
-        try {
-            val jsonString = JSONMapper.mapper.writeValueAsString(objectToSave)
-            preferences.edit().putString(key, jsonString).apply()
-        } catch (e: JsonProcessingException) {
-            DevCycleLogger.e(e, e.message)
-        }
-    }
+
 
     @Synchronized
     fun remove(key: String?) {

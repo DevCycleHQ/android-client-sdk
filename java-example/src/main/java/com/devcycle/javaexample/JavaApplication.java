@@ -24,18 +24,19 @@ public class JavaApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
+        DevCycleUser user = DevCycleUser.builder()
+                .withUserId("test_user")
+                .build();
+
         DevCycleClient client = DevCycleClient.builder()
                 .withContext(getApplicationContext())
-                .withUser(
-                        DevCycleUser.builder()
-                                .withUserId("test_user")
-                                .build()
-                )
+                .withUser(user)
                 .withSDKKey("<DEVCYCLE_MOBILE_SDK_KEY>")
                 .withLogLevel(LogLevel.DEBUG)
                 .build();
 
-        // Use your own demo variable here to see the value change from the defaultValue when the client is initialized
+        // Use your own demo variable here to see the value change from the defaultValue
+        // when the client is initialized
         variable = client.variable("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
         variableValue = client.variableValue("<YOUR_VARIABLE_KEY>", "my string variable is not initialized yet");
         Toast.makeText(getApplicationContext(), Objects.requireNonNull(variableValue), Toast.LENGTH_SHORT).show();
@@ -43,7 +44,7 @@ public class JavaApplication extends Application {
         client.onInitialized(new DevCycleCallback<String>() {
             @Override
             public void onSuccess(String result) {
-                //Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
+                // Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
 
                 client.flushEvents(new DevCycleCallback<String>() {
                     @Override
@@ -71,7 +72,8 @@ public class JavaApplication extends Application {
 
             @Override
             public void onError(@NonNull Throwable t) {
-                Toast.makeText(getApplicationContext(), "Client did not initialize: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Client did not initialize: " + t.getMessage(),
+                        Toast.LENGTH_SHORT).show();
             }
         });
     }
