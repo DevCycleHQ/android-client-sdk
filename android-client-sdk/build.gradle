@@ -4,8 +4,8 @@ plugins {
     id "com.vanniktech.maven.publish" version "0.30.0"
     id 'de.mannodermaus.android-junit5'
 }
-import com.vanniktech.maven.publish.SonatypeHost
 
+import com.vanniktech.maven.publish.SonatypeHost
 
 group = "com.devcycle"
 version = "2.3.2"
@@ -17,11 +17,11 @@ mavenPublishing {
 }
 
 android {
-    compileSdk 33
+    compileSdk 35
 
     defaultConfig {
         minSdk 23
-        targetSdk 33
+        targetSdk 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         testBuildType "minified"
@@ -92,29 +92,29 @@ ext {
     POM_DEVELOPER_NAME='DevCycle SDK Group'
     POM_DEVELOPER_URL='https://devcycle.com'
 
-    androidx_version = '1.8.0'
-    retrofit_version = "2.9.0"
-    swagger_annotations_version = '2.2.21'
-    jackson_version = "2.13.5"
-    jackson_kotlin_version = "2.13.5"
+    androidx_version = '1.15.0'
+    retrofit_version = "2.11.0"
+    swagger_annotations_version = '2.2.26'
+    jackson_version = "2.18.2"
+    jackson_kotlin_version = "2.18.2"
     //noinspection DuplicatePlatformClasses
-    jackson_jparser_version = "2.13.5"
+    jackson_jparser_version = "2.18.2"
     gson_mapper_version = "2.8.6"
-    coroutines_version = '1.6.2'
-    kotlin_reflect_version = '1.9.0'
+    coroutines_version = '1.10.1'
+    kotlin_reflect_version = '2.1.20'
 
-    junit_version = "5.8.2"
-    mockito_core_version = '4.6.1'
-    mockito_inline_version = '2.13.0'
-    mockk_version = '1.13.10'
-    hamcrest_version = "2.2"
-    okhttp_version = "4.9.3"
+    junit_version = "5.11.4"
+    mockito_core_version = '5.14.2'
+    mockito_inline_version = '5.2.0'
+    mockk_version = '1.13.14'
+    hamcrest_version = "3.0"
+    okhttp_version = "4.12.0"
     okhttp_eventsource_version = "4.1.1"
-    kotlin_version = '1.9.0'
+    kotlin_version = '2.1.20'
 
     android_core_version = "2.2.0"
-    androidx_junit_version = "1.1.3"
-    espresso_core_version = "3.4.0"
+    androidx_junit_version = "1.2.1"
+    espresso_core_version = "3.6.1"
 }
 
 dependencies {
@@ -153,7 +153,7 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:$okhttp_version")
     testImplementation("androidx.arch.core:core-testing:$android_core_version")
 
-    testImplementation("org.json:json:20190722")
+    testImplementation("org.json:json:20240303")
 
     androidTestImplementation("androidx.test.ext:junit:$androidx_junit_version")
     androidTestImplementation("androidx.test.espresso:espresso-core:$espresso_core_version")
