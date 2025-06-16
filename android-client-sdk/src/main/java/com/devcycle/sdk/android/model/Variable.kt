@@ -119,7 +119,7 @@ class Variable<T> internal constructor(
     }
 
     private fun hasValueChanged(oldValue: T, newValue: T): Boolean {
-        if (newValue!!::class == JSONObject::class || newValue!!::class == JSONArray::class) {
+        if (newValue?.javaClass == JSONObject::class.java || newValue?.javaClass == JSONArray::class.java) {
             val new = JSONMapper.mapper.readTree(newValue.toString())
             val existing = JSONMapper.mapper.readTree(oldValue.toString())
 

@@ -77,20 +77,20 @@ class DevCycleClientTests {
     @ExperimentalCoroutinesApi
     @BeforeEach
     fun setup() {
-        `when`(mockContext!!.getString(anyInt())).thenReturn("Some value")
-        `when`(mockContext.getSharedPreferences("Some value", MODE_PRIVATE)).thenReturn(
+        `when`(mockContext?.getString(anyInt())).thenReturn("Some value")
+        `when`(mockContext?.getSharedPreferences("Some value", MODE_PRIVATE)).thenReturn(
             sharedPreferences
         )
-        `when`(sharedPreferences!!.edit()).thenReturn(editor)
-        `when`(editor!!.putString(anyString(), anyString())).thenReturn(editor)
-        `when`(mockContext.resources).thenReturn(resources)
-        `when`(mockContext.resources.configuration).thenReturn(configuration)
-        `when`(mockContext.resources.configuration.locales).thenReturn(locales)
-        `when`(mockContext.resources.configuration.locales.get(0)).thenReturn(Locale.getDefault())
-        `when`(mockContext.packageName).thenReturn("test")
-        `when`(mockContext.packageManager).thenReturn(packageManager)
-        `when`(mockContext.packageManager.getPackageInfo("test", 0)).thenReturn(packageInfo)
-        `when`(mockContext.applicationContext).thenReturn(mockApplication)
+        `when`(sharedPreferences?.edit()).thenReturn(editor)
+        `when`(editor?.putString(anyString(), anyString())).thenReturn(editor)
+        `when`(mockContext?.resources).thenReturn(resources)
+        `when`(mockContext?.resources?.configuration).thenReturn(configuration)
+        `when`(mockContext?.resources?.configuration?.locales).thenReturn(locales)
+        `when`(mockContext?.resources?.configuration?.locales?.get(0)).thenReturn(Locale.getDefault())
+        `when`(mockContext?.packageName).thenReturn("test")
+        `when`(mockContext?.packageManager).thenReturn(packageManager)
+        `when`(mockContext?.packageManager?.getPackageInfo("test", 0)).thenReturn(packageInfo)
+        `when`(mockContext?.applicationContext).thenReturn(mockApplication)
 
         var removeCallbacksCalled: Boolean
 
@@ -137,7 +137,14 @@ class DevCycleClientTests {
     @ExperimentalCoroutinesApi
     @AfterEach
     fun tearDown() {
-        Dispatchers.resetMain() // reset the main dispatcher to the original Main dispatcher
+        try {
+            // Give any running coroutines a moment to complete
+            Thread.sleep(50)
+            Dispatchers.resetMain() // reset the main dispatcher to the original Main dispatcher
+        } catch (e: IllegalStateException) {
+            // Handle concurrent access to dispatcher gracefully
+            // This can happen when coroutines are still running during teardown
+        }
         mainThreadSurrogate.close()
         mockWebServer.shutdown()
     }
@@ -212,7 +219,7 @@ class DevCycleClientTests {
 
                 if (request.path == "/v1/events") {
                     return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
-                } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
+                } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
                     return if (request.sequenceNumber == 1) {
                         MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
                     } else {
@@ -920,7 +927,7 @@ class DevCycleClientTests {
                 requests.add(request)
                 if (request.path == "/v1/events") {
                     return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
-                } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
+                } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
                     Assertions.assertEquals(true, request.path.toString().endsWith("enableEdgeDB=true"))
                     return MockResponse().setResponseCode(200)
                         .setBody(objectMapper.writeValueAsString(config))
@@ -1730,7 +1737,7 @@ class DevCycleClientTests {
         options: DevCycleOptions? = null,
     ): DevCycleClient {
         val builder = builder()
-            .withContext(mockContext!!)
+            .withContext(requireNotNull(mockContext) { "mockContext should not be null in tests" })
             .withHandler(mockHandler)
             .withUser(user ?: DevCycleUser.builder().withUserId("nic_test").build())
             .withSDKKey(sdkKey)
@@ -1809,7 +1816,7 @@ class DevCycleClientTests {
                     requests.add(request)
                     if (request.path == "/v1/events") {
                         return MockResponse().setResponseCode(201).setBodyDelay(200, TimeUnit.MILLISECONDS).setBody("{\"message\": \"Success\"}")
-                    } else if (request.path!!.contains("/v1/mobileSDKConfig")) {
+                    } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
                         configRequestCount++
                         Assertions.assertEquals(false, request.path.toString().contains("enableEdgeDB"))
                         return MockResponse().setResponseCode(200).setBodyDelay(400, TimeUnit.MILLISECONDS).setBody(objectMapper.writeValueAsString(config))

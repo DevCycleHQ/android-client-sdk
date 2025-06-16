@@ -4,19 +4,34 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class DevCycleUser private constructor(
-    var userId: String? = null,
-    var isAnonymous: Boolean? = true,
+    private var _userId: String?,
+    private var _isAnonymous: Boolean?,
     var email: String? = null,
     var name: String? = null,
     var country: String? = null,
     var customData: Map<String, Any>? = null,
     var privateCustomData: Map<String, Any>? = null
 ) {
+    // Public read-only properties
+    val userId: String? get() = _userId
+    val isAnonymous: Boolean? get() = _isAnonymous
+    
+    // Internal setters for SDK use only
+    @JvmSynthetic
+    internal fun setUserId(value: String?) {
+        _userId = value
+    }
+    
+    @JvmSynthetic
+    internal fun setIsAnonymous(value: Boolean?) {
+        _isAnonymous = value
+    }
+
     class Builder internal constructor() {
         @JsonIgnoreProperties(ignoreUnknown = true)
-
+        
         private var userId: String? = null
-        private var isAnonymous: Boolean? = true
+        private var isAnonymous: Boolean? = null
         private var email: String? = null
         private var name: String? = null
         private var country: String? = null
@@ -26,7 +41,6 @@ class DevCycleUser private constructor(
         @JsonProperty("user_id")
         fun withUserId(userId: String): Builder {
             this.userId = userId
-            this.isAnonymous = false
             return this
         }
 
@@ -61,19 +75,20 @@ class DevCycleUser private constructor(
         }
 
         fun build(): DevCycleUser {
+            // Note: User validation (userId/isAnonymous logic) is handled in DevCycleClient.build() method
             return DevCycleUser(
-                userId,
-                isAnonymous,
-                email,
-                name,
-                country,
-                customData,
-                privateCustomData
+                _userId = userId,
+                _isAnonymous = isAnonymous,
+                email = email,
+                name = name,
+                country = country,
+                customData = customData,
+                privateCustomData = privateCustomData
             )
         }
 
         override fun toString(): String {
-            return "User.UserBuilder(userId=$userId, email=$email, name=$name, country=$country, customData=$customData, privateCustomData=$privateCustomData)"
+            return "User.UserBuilder(userId=$userId, isAnonymous=$isAnonymous, email=$email, name=$name, country=$country, customData=$customData, privateCustomData=$privateCustomData)"
         }
     }
 

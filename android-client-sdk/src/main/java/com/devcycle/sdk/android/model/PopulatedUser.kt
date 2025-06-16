@@ -130,15 +130,13 @@ internal data class PopulatedUser constructor(
             }
         }
 
-        @JvmSynthetic internal fun fromUserParam(user: DevCycleUser, context: Context, anonUserId: String?): PopulatedUser {
+        @JvmSynthetic internal fun fromUserParam(user: DevCycleUser, context: Context): PopulatedUser {
             val language = getLanguage(context)
 
+            // User validation should have been done before calling this method
+            val userId = requireNotNull(user.userId) { "User must have userId set (should be validated before calling fromUserParam)" }
             val isAnonymous = user.isAnonymous ?: false
-            val userId = if (isAnonymous) {
-                anonUserId ?: UUID.randomUUID().toString()
-            } else {
-                user.userId
-            }
+            
             val email = user.email
             val name = user.name
             val country = user.country
@@ -148,12 +146,8 @@ internal data class PopulatedUser constructor(
             // Get package info safely
             val (appVersion, appBuild) = getAppBuildAndVersion(context)
 
-            if (userId == null && !isAnonymous) {
-                throw IllegalArgumentException("Missing userId and isAnonymous is not true")
-            }
-
             return PopulatedUser(
-                userId!!,
+                userId,
                 isAnonymous,
                 email,
                 name,

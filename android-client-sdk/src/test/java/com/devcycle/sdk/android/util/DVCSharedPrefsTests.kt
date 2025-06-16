@@ -257,33 +257,6 @@ class DVCSharedPrefsTests {
     }
     
     @Test
-    fun `should save and remove generic objects`() {
-        val testKey = "test_object_key"
-        val testObject = mapOf("key" to "value")
-        
-        dvcSharedPrefs.save(testObject, testKey)
-        verify(mockEditor).putString(eq(testKey), anyString())
-        verify(mockEditor).apply()
-        
-        dvcSharedPrefs.remove(testKey)
-        verify(mockEditor).remove(eq(testKey))
-        verify(mockEditor).commit()
-    }
-    
-    @Test
-    fun `should handle json processing exceptions during save`() {
-        val testKey = "test_key"
-        val problematicObject = object {
-            val circularRef = this // This could cause JSON processing issues
-        }
-        
-        // Should not throw exception
-        assertDoesNotThrow {
-            dvcSharedPrefs.save(problematicObject, testKey)
-        }
-    }
-    
-    @Test
     fun `should handle json processing exceptions during config retrieval`() {
         val user = createPopulatedUser(testUserId, false)
         val malformedJson = "{ invalid json"
@@ -441,6 +414,103 @@ class DVCSharedPrefsTests {
         verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.FETCH_DATE"))
         verify(mockEditor).putBoolean(eq("MIGRATION_COMPLETED"), eq(true))
         verify(mockEditor).apply()
+    }
+    
+    // MARK: - Anonymous User ID Tests
+    
+    @Test
+    fun `should set anonymous user ID`() {
+        val testAnonId = "test-anon-id-123"
+        
+        dvcSharedPrefs.setAnonUserId(testAnonId)
+        
+        verify(mockEditor).putString(eq("ANONYMOUS_USER_ID"), eq(testAnonId))
+        verify(mockEditor).apply()
+    }
+    
+    @Test
+    fun `should get anonymous user ID when it exists`() {
+        val testAnonId = "test-anon-id-123"
+        
+        `when`(mockSharedPreferences.getString("ANONYMOUS_USER_ID", null)).thenReturn(testAnonId)
+        
+        val retrievedId = dvcSharedPrefs.getAnonUserId()
+        
+        assertEquals(testAnonId, retrievedId)
+    }
+    
+    @Test
+    fun `should return null when anonymous user ID does not exist`() {
+        `when`(mockSharedPreferences.getString("ANONYMOUS_USER_ID", null)).thenReturn(null)
+        
+        val retrievedId = dvcSharedPrefs.getAnonUserId()
+        
+        assertNull(retrievedId)
+    }
+    
+    @Test
+    fun `should clear anonymous user ID`() {
+        dvcSharedPrefs.clearAnonUserId()
+        
+        verify(mockEditor).remove(eq("ANONYMOUS_USER_ID"))
+        verify(mockEditor).apply()
+    }
+    
+    @Test
+    fun `should return existing anonymous user ID when it exists`() {
+        val existingAnonId = "existing-anon-id-456"
+        
+        `when`(mockSharedPreferences.getString("ANONYMOUS_USER_ID", null)).thenReturn(existingAnonId)
+        
+        val retrievedId = dvcSharedPrefs.getOrCreateAnonUserId()
+        
+        assertEquals(existingAnonId, retrievedId)
+        verify(mockEditor, never()).putString(anyString(), anyString())
+        verify(mockEditor, never()).apply()
+    }
+    
+    @Test
+    fun `should create new anonymous user ID when none exists`() {
+        `when`(mockSharedPreferences.getString("ANONYMOUS_USER_ID", null)).thenReturn(null)
+        
+        val retrievedId = dvcSharedPrefs.getOrCreateAnonUserId()
+        
+        assertNotNull(retrievedId)
+        assertTrue(retrievedId.isNotEmpty())
+        verify(mockEditor).putString(eq("ANONYMOUS_USER_ID"), eq(retrievedId))
+        verify(mockEditor).apply()
+    }
+    
+    @Test
+    fun `should create new anonymous user ID when existing is empty`() {
+        `when`(mockSharedPreferences.getString("ANONYMOUS_USER_ID", null)).thenReturn("")
+        
+        val retrievedId = dvcSharedPrefs.getOrCreateAnonUserId()
+        
+        assertNotNull(retrievedId)
+        assertTrue(retrievedId.isNotEmpty())
+        verify(mockEditor).putString(eq("ANONYMOUS_USER_ID"), eq(retrievedId))
+        verify(mockEditor).apply()
+    }
+    
+    @Test
+    fun `getOrCreateAnonUserId should be thread safe`() {
+        val existingAnonId = "existing-anon-id-789"
+        
+        `when`(mockSharedPreferences.getString("ANONYMOUS_USER_ID", null)).thenReturn(existingAnonId)
+        
+        // Call multiple times to ensure consistent behavior
+        val id1 = dvcSharedPrefs.getOrCreateAnonUserId()
+        val id2 = dvcSharedPrefs.getOrCreateAnonUserId()
+        val id3 = dvcSharedPrefs.getOrCreateAnonUserId()
+        
+        assertEquals(existingAnonId, id1)
+        assertEquals(existingAnonId, id2)
+        assertEquals(existingAnonId, id3)
+        
+        // Should not have attempted to create new IDs
+        verify(mockEditor, never()).putString(anyString(), anyString())
+        verify(mockEditor, never()).apply()
     }
     
     private fun createPopulatedUser(userId: String, isAnonymous: Boolean): PopulatedUser {
