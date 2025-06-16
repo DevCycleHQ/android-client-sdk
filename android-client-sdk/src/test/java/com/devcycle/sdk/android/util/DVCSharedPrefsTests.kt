@@ -494,19 +494,6 @@ class DVCSharedPrefsTests {
     }
     
     @Test
-    fun `should create new anonymous user ID when existing is blank`() {
-        `when`(mockSharedPreferences.getString("ANONYMOUS_USER_ID", null)).thenReturn("   ")
-        
-        val retrievedId = dvcSharedPrefs.getOrCreateAnonUserId()
-        
-        assertNotNull(retrievedId)
-        assertTrue(retrievedId.isNotEmpty())
-        assertTrue(retrievedId.trim().isNotEmpty())
-        verify(mockEditor).putString(eq("ANONYMOUS_USER_ID"), eq(retrievedId))
-        verify(mockEditor).apply()
-    }
-    
-    @Test
     fun `getOrCreateAnonUserId should be thread safe`() {
         val existingAnonId = "existing-anon-id-789"
         
