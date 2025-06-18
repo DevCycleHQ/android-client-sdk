@@ -1060,9 +1060,14 @@ class DevCycleClientTests {
         assert(variable.value === "Not activated")
         assert(varValue === "Not activated")
         assert(variable.isDefaulted == true)
+        assert(variable.eval?.get("reason") == "DEFAULT")
+        assert(variable.eval?.get("details") == "User Not Targeted")
+
         assert(variable2.value === "Activated")
         assert(varValue2 === "Activated")
         assert(variable2.isDefaulted == true)
+        assert(variable2.eval?.get("reason") == "DEFAULT")
+        assert(variable2.eval?.get("details") == "User Not Targeted")
     }
 
     @Test
@@ -1151,6 +1156,46 @@ class DevCycleClientTests {
             assert(jsonVar.isDefaulted == false)
             // value doesn't get updated
             assert(jsonValue.toString() !== expectedJSON.toString())
+        }
+    }
+
+    @Test
+    fun `properly marks a variable default due to a type mismatch`() {
+        // Config defines the variable as type String, but the SDK usage of the variable is a number
+        val config = generateConfig("flag-type-mismatch", "Flag activated!", Variable.TypeEnum.STRING)
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+
+        val client = createClient("pretend-its-a-real-sdk-key", mockWebServer.url("/").toString())
+
+        // This feature is returning a different type in the config response
+        val numVar = client.variable("flag-type-mismatch", 0)
+        val numValue = client.variableValue("flag-type-mismatch", 0)
+
+        try {
+            client.onInitialized(object: DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    // Type Mismatch default
+                    assert(numVar.value == 0)
+                    assert(numVar.isDefaulted == true)
+                    assert(numVar.eval?.get("reason") == "DEFAULT")
+                    assert(numVar.eval?.get("details") == "Variable Type Mismatch")
+                    // value doesn't get updated
+                    assert(numValue == 0)
+
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
         }
     }
 

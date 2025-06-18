@@ -146,12 +146,20 @@ class Variable<T> internal constructor(
                 returnVariable.isDefaulted = false
                 return returnVariable
             } else {
+                var eval: Map<String, Any> = mapOf("reason" to "DEFAULT")
+                eval = if (readOnlyVariable != null && getType(readOnlyVariable.value) !== type) {
+                    eval.plus(mapOf("details" to "Variable Type Mismatch"))
+                } else {
+                    eval.plus(mapOf("details" to "User Not Targeted"))
+                }
+
                 val returnVariable = Variable(
                     key = key,
                     value = defaultValue,
                     type = getAndValidateType(defaultValue),
                     defaultValue = defaultValue
                 )
+                returnVariable.eval = eval
                 returnVariable.isDefaulted = true
                 if (readOnlyVariable != null) {
                     DevCycleLogger.e("Mismatched variable type for variable: $key, using default")

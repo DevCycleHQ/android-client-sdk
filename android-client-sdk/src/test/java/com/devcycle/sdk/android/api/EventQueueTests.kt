@@ -46,6 +46,10 @@ class EventQueueTests {
             "reason" to "OVERRIDE",
             "details" to "Override"
         )
+        val defaultEval: Map<String, Any> = mapOf(
+            "reason" to "DEFAULT",
+            "details" to "User Not Targeted"
+        )
         val event1 = Event.fromInternalEvent(
             Event.variableEvent(false, "dummy_key1", overrideEval),
             user,
@@ -58,12 +62,12 @@ class EventQueueTests {
         )
 
         val defaultEvent1 = Event.fromInternalEvent(
-            Event.variableEvent(true, "dummy_key1"),
+            Event.variableEvent(true, "dummy_key1", defaultEval),
             user,
             null
         )
         val defaultEvent2 = Event.fromInternalEvent(
-            Event.variableEvent(true, "dummy_key1"),
+            Event.variableEvent(true, "dummy_key1", defaultEval),
             user,
             null
         )
@@ -76,9 +80,11 @@ class EventQueueTests {
         val aggregateEvaluatedEvent = eventQueue.aggregateEventMap[Event.Companion.EventTypes.variableEvaluated]?.get("dummy_key1")
         val aggregateDefaultedEvent = eventQueue.aggregateEventMap[Event.Companion.EventTypes.variableDefaulted]?.get("dummy_key1")
         val evalMetadata = aggregateEvaluatedEvent?.metaData?.get("eval")
+        val defaultMetadata = aggregateDefaultedEvent?.metaData?.get("eval")
 
         Assert.assertEquals(BigDecimal(2), aggregateEvaluatedEvent?.value)
         Assert.assertEquals(BigDecimal(2), aggregateDefaultedEvent?.value)
         Assert.assertEquals(overrideEval, evalMetadata)
+        Assert.assertEquals(defaultMetadata, defaultEval)
     }
 }
