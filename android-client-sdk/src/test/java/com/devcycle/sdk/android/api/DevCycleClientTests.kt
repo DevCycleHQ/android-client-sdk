@@ -77,7 +77,7 @@ class DevCycleClientTests {
     private val randomDistributionMatch: Eval = createEvalReason(
         reason = "SPLIT",
         details = "Random Distribution",
-        targetId = "test_target_id"
+        targetId = "test_random_distribution_target_id"
     )
 
     @DelicateCoroutinesApi
@@ -1911,7 +1911,7 @@ class DevCycleClientTests {
                             val evalReason = evalEventMetadata.get("eval") as JSONObject
                             Assertions.assertEquals("SPLIT", evalReason.get("reason"))
                             Assertions.assertEquals("Random Distribution", evalReason.get("details"))
-                            Assertions.assertEquals("test_target_id", evalReason.get("target_id"))
+                            Assertions.assertEquals("test_random_distribution_target_id", evalReason.get("target_id"))
                         }
                         override fun onError(t: Throwable) {
                             error = t
@@ -2031,16 +2031,7 @@ class DevCycleClientTests {
     }
 
     private fun createEvalReason(reason: String, details: String?, targetId: String?): Eval {
-        val eval: Eval = Eval().apply {
-            this.reason = reason
-            if (details != null) {
-                this.details = details
-            }
-            if(targetId != null) {
-                this.targetId = targetId
-            }
-        }
-        return eval
+        return Eval(reason, details, targetId)
     }
 
     private fun generateDispatcher(routes: List<Pair<String, MockResponse>>? = null, config: BucketedUserConfig? = null) {

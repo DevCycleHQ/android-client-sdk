@@ -43,15 +43,8 @@ class EventQueueTests {
         val user = PopulatedUser("test")
         val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
 
-        val optInEval: Eval = Eval().apply {
-            reason = "OPT_IN"
-            details = "Opt-In"
-            targetId = "test_override_target_id"
-        }
-        val defaultEval: Eval = Eval().apply {
-            reason = "DEFAULT"
-            details = "User Not Targeted"
-        }
+        val optInEval = Eval("OPT_IN", "Opt-In", "test_opt_in_target_id")
+        val defaultEval: Eval = Eval("DEFAULT", "User Not Targeted")
         val event1 = Event.fromInternalEvent(
             Event.variableEvent(false, "dummy_key1", optInEval),
             user,
