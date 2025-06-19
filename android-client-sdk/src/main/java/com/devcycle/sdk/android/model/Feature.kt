@@ -1,16 +1,13 @@
 package com.devcycle.sdk.android.model
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-
 /**
  * Feature
  */
-class Feature {
+data class Feature {
     /**
      * unique database id
      * @return _id
