@@ -44,7 +44,7 @@ internal data class Event private constructor(
             const val customEvent: String = "customEvent"
         }
 
-        @JvmSynthetic internal fun variableEvent(defaulted: Boolean?, key: String?, evalReason: Map<String, Any>? = null): InternalEvent {
+        @JvmSynthetic internal fun variableEvent(defaulted: Boolean?, key: String?, evalReason: Eval? = null): InternalEvent {
             val type = if (defaulted == true) EventTypes.variableDefaulted else EventTypes.variableEvaluated
 
             return InternalEvent(

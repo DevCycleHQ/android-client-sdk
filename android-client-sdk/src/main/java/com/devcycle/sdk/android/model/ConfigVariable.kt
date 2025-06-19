@@ -40,7 +40,7 @@ abstract class BaseConfigVariable {
     abstract val value: Any
     abstract val key: String
     abstract val type: Variable.TypeEnum
-    abstract val eval: Map<String, Any>?
+    abstract val eval: Eval?
 }
 
 @JsonDeserialize(`as` = StringConfigVariable::class)
@@ -50,7 +50,7 @@ class StringConfigVariable(
     override val value: String,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val eval: Map<String, Any>?
+    override val eval: Eval?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = BooleanConfigVariable::class)
@@ -60,7 +60,7 @@ class BooleanConfigVariable(
     override val value: Boolean,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val eval: Map<String, Any>?
+    override val eval: Eval?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = NumberConfigVariable::class)
@@ -70,7 +70,7 @@ class NumberConfigVariable(
     override val value: Number,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val eval: Map<String, Any>?
+    override val eval: Eval?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONObjectConfigVariable::class)
@@ -80,7 +80,7 @@ class JSONObjectConfigVariable(
     override val value: JSONObject,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val eval: Map<String, Any>?
+    override val eval: Eval?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONArrayConfigVariable::class)
@@ -90,5 +90,5 @@ class JSONArrayConfigVariable(
     override val value: JSONArray,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val eval: Map<String, Any>?
+    override val eval: Eval?
 ) : BaseConfigVariable()

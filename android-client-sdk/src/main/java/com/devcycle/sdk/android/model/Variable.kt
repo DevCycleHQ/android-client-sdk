@@ -70,7 +70,7 @@ class Variable<T> internal constructor(
     }
 
     @JsonIgnore
-    var eval: Map<String, Any>? = null
+    var eval: Eval? = null
 
     @JsonIgnore
     private var callback: DevCycleCallback<Variable<T>>? = null
@@ -146,11 +146,13 @@ class Variable<T> internal constructor(
                 returnVariable.isDefaulted = false
                 return returnVariable
             } else {
-                var eval: Map<String, Any> = mapOf("reason" to "DEFAULT")
-                eval = if (readOnlyVariable != null && getType(readOnlyVariable.value) !== type) {
-                    eval.plus(mapOf("details" to "Variable Type Mismatch"))
+                val eval: Eval = Eval().apply {
+                    reason = "DEFAULT"
+                }
+                if (readOnlyVariable != null && getType(readOnlyVariable.value) !== type) {
+                    eval.details = "Variable Type Mismatch"
                 } else {
-                    eval.plus(mapOf("details" to "User Not Targeted"))
+                    eval.details = "User Not Targeted"
                 }
 
                 val returnVariable = Variable(

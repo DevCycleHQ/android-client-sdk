@@ -68,14 +68,16 @@ class DevCycleClientTests {
 
     private val packageInfo = mockk<PackageInfo>()
 
-    private val targetingMatch: Map<String, Any> = mapOf(
-        "reason" to "TARGETING_MATCH",
-        "details" to "User ID"
+    private val targetingMatch: Eval = createEvalReason(
+        reason = "TARGETING_MATCH",
+        details = "User ID",
+        targetId = null
     )
 
-    private val randomDistributionMatch: Map<String, Any> = mapOf(
-        "reason" to "SPLIT",
-        "details" to "Random Distribution"
+    private val randomDistributionMatch: Eval = createEvalReason(
+        reason = "SPLIT",
+        details = "Random Distribution",
+        targetId = "test_target_id"
     )
 
     @DelicateCoroutinesApi
@@ -995,14 +997,17 @@ class DevCycleClientTests {
                         .withMetaData(mapOf("test" to "value"))
                         .build())
 
+
+                    client.track(DevCycleEvent.builder()
+                        .withType("newTestEvent")
+                        .withMetaData(mapOf("test2" to "value"))
+                        .build())
+
+                    client.variableValue("activate-flag", "Flag Activated")
+
                     client.close(object: DevCycleCallback<String>{
                         override fun onSuccess(result: String) {
-                            client.track(DevCycleEvent.builder()
-                                .withType("newTestEvent")
-                                .withMetaData(mapOf("test2" to "value"))
-                                .build())
 
-                            client.variableValue("activate-flag", "Flag Activated")
                             val configRequest: RecordedRequest = mockWebServer.takeRequest()
                             val eventsRequest: RecordedRequest = mockWebServer.takeRequest()
 
@@ -1011,12 +1016,15 @@ class DevCycleClientTests {
                             Mockito.spy(eventsReqObj)
                             val events: JSONArray = eventsReqObj.get("events") as JSONArray
                             Assertions.assertEquals(3, events.length())
-                            Assertions.assertEquals("userConfig", events.getJSONObject(0).get("type"))
+                            Assertions.assertEquals("customEvent", events.getJSONObject(0).get("type"))
+                            Assertions.assertEquals("testEvent", events.getJSONObject(0).get("customType"))
+
                             Assertions.assertEquals("customEvent", events.getJSONObject(1).get("type"))
-                            Assertions.assertEquals("testEvent", events.getJSONObject(1).get("customType"))
+                            Assertions.assertEquals("newTestEvent", events.getJSONObject(1).get("customType"))
 
                             val evalEvent = events.getJSONObject(2)
                             Assertions.assertEquals("variableEvaluated", evalEvent.get("type"))
+                            Assertions.assertEquals("activate-flag", evalEvent.get("target"))
                             Assertions.assertTrue(evalEvent.isNull("metaData"))
                             countDownLatch.countDown()
                         }
@@ -1060,14 +1068,14 @@ class DevCycleClientTests {
         assert(variable.value === "Not activated")
         assert(varValue === "Not activated")
         assert(variable.isDefaulted == true)
-        assert(variable.eval?.get("reason") == "DEFAULT")
-        assert(variable.eval?.get("details") == "User Not Targeted")
+        assert(variable.eval?.reason == "DEFAULT")
+        assert(variable.eval?.details == "User Not Targeted")
 
         assert(variable2.value === "Activated")
         assert(varValue2 === "Activated")
         assert(variable2.isDefaulted == true)
-        assert(variable2.eval?.get("reason") == "DEFAULT")
-        assert(variable2.eval?.get("details") == "User Not Targeted")
+        assert(variable2.eval?.reason == "DEFAULT")
+        assert(variable2.eval?.details == "User Not Targeted")
     }
 
     @Test
@@ -1177,8 +1185,8 @@ class DevCycleClientTests {
                     // Type Mismatch default
                     assert(numVar.value == 0)
                     assert(numVar.isDefaulted == true)
-                    assert(numVar.eval?.get("reason") == "DEFAULT")
-                    assert(numVar.eval?.get("details") == "Variable Type Mismatch")
+                    assert(numVar.eval?.reason == "DEFAULT")
+                    assert(numVar.eval?.details == "Variable Type Mismatch")
                     // value doesn't get updated
                     assert(numValue == 0)
 
@@ -1798,15 +1806,15 @@ class DevCycleClientTests {
                 override fun onSuccess(result: String) {
                     calledBack = true
 
-
                     client.track(DevCycleEvent.builder()
                         .withType("testEvent")
                         .withMetaData(mapOf("test" to "value"))
                         .build())
 
+                    client.variableValue("activate-flag", "Flag activated!")
+
                     client.close(object: DevCycleCallback<String>{
                         override fun onSuccess(result: String) {
-                            client.variableValue("activate-flag", "Flag activated!")
                             val configRequest: RecordedRequest = mockWebServer.takeRequest()
                             val eventsRequest: RecordedRequest = mockWebServer.takeRequest()
 
@@ -1815,11 +1823,12 @@ class DevCycleClientTests {
                             Mockito.spy(eventsReqObj)
                             val events: JSONArray = eventsReqObj.get("events") as JSONArray
                             Assertions.assertEquals(2, events.length())
-                            Assertions.assertEquals("userConfig", events.getJSONObject(0).get("type"))
+                            Assertions.assertEquals("customEvent", events.getJSONObject(0).get("type"))
+                            Assertions.assertEquals("testEvent", events.getJSONObject(0).get("customType"))
 
                             val evalEvent = events.getJSONObject(1)
                             Assertions.assertEquals("variableEvaluated", evalEvent.get("type"))
-                            Assertions.assertEquals("activate-flag", evalEvent.get("variableKey"))
+                            Assertions.assertEquals("activate-flag", evalEvent.get("target"))
                             Assertions.assertNotNull(evalEvent.get("metaData"))
 
                             val evalEventMetadata = evalEvent.get("metaData") as JSONObject
@@ -1878,9 +1887,10 @@ class DevCycleClientTests {
                         .withMetaData(mapOf("test" to "value"))
                         .build())
 
+                    client.variableValue("show_flag", "showing_flag")
+
                     client.close(object: DevCycleCallback<String>{
                         override fun onSuccess(result: String) {
-                            client.variableValue("show_flag", "showing_flag")
                             val configRequest: RecordedRequest = mockWebServer.takeRequest()
                             val eventsRequest: RecordedRequest = mockWebServer.takeRequest()
 
@@ -1889,18 +1899,19 @@ class DevCycleClientTests {
                             Mockito.spy(eventsReqObj)
                             val events: JSONArray = eventsReqObj.get("events") as JSONArray
                             Assertions.assertEquals(2, events.length())
-                            Assertions.assertEquals("userConfig", events.getJSONObject(0).get("type"))
+                            Assertions.assertEquals("customEvent", events.getJSONObject(0).get("type"))
+                            Assertions.assertEquals("testEvent", events.getJSONObject(0).get("customType"))
 
                             val evalEvent = events.getJSONObject(1)
                             Assertions.assertEquals("variableEvaluated", evalEvent.get("type"))
-                            Assertions.assertEquals("show_flag", evalEvent.get("variableKey"))
+                            Assertions.assertEquals("show_flag", evalEvent.get("target"))
                             Assertions.assertNotNull(evalEvent.get("metaData"))
 
                             val evalEventMetadata = evalEvent.get("metaData") as JSONObject
                             val evalReason = evalEventMetadata.get("eval") as JSONObject
                             Assertions.assertEquals("SPLIT", evalReason.get("reason"))
                             Assertions.assertEquals("Random Distribution", evalReason.get("details"))
-                            countDownLatch.countDown()
+                            Assertions.assertEquals("test_target_id", evalReason.get("target_id"))
                         }
                         override fun onError(t: Throwable) {
                             error = t
@@ -1965,7 +1976,7 @@ class DevCycleClientTests {
         return builder.build()
     }
 
-    private fun generateConfig(key: String, value: String, type: Variable.TypeEnum, evalReason: Map<String, Any>? = null): BucketedUserConfig {
+    private fun generateConfig(key: String, value: String, type: Variable.TypeEnum, evalReason: Eval? = null): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewStringVariable(key, value, type, evalReason)
         val sse = SSE()
@@ -1973,7 +1984,7 @@ class DevCycleClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun generateJSONObjectConfig(key: String, value: JSONObject, evalReason: Map<String, Any>? = null): BucketedUserConfig {
+    private fun generateJSONObjectConfig(key: String, value: JSONObject, evalReason: Eval? = null): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewJSONObjectVariable(key, value, Variable.TypeEnum.JSON, evalReason)
         val sse = SSE()
@@ -1981,7 +1992,7 @@ class DevCycleClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun generateJSONArrayConfig(key: String, value: JSONArray, evalReason: Map<String, Any>? = null): BucketedUserConfig {
+    private fun generateJSONArrayConfig(key: String, value: JSONArray, evalReason: Eval? = null): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewJSONArrayVariable(key, value, Variable.TypeEnum.JSON, evalReason)
         val sse = SSE()
@@ -1989,7 +2000,7 @@ class DevCycleClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun createNewStringVariable(key: String, value: String, type: Variable.TypeEnum, eval: Map<String, Any>?): StringConfigVariable {
+    private fun createNewStringVariable(key: String, value: String, type: Variable.TypeEnum, eval: Eval?): StringConfigVariable {
         return StringConfigVariable(
             id = UUID.randomUUID().toString(),
             key = key,
@@ -1999,7 +2010,7 @@ class DevCycleClientTests {
         )
     }
 
-    private fun createNewJSONObjectVariable(key: String, value: JSONObject, type: Variable.TypeEnum, eval: Map<String, Any>?): JSONObjectConfigVariable {
+    private fun createNewJSONObjectVariable(key: String, value: JSONObject, type: Variable.TypeEnum, eval: Eval?): JSONObjectConfigVariable {
         return JSONObjectConfigVariable(
             id = UUID.randomUUID().toString(),
             key = key,
@@ -2009,7 +2020,7 @@ class DevCycleClientTests {
         )
     }
 
-    private fun createNewJSONArrayVariable(key: String, value: JSONArray, type: Variable.TypeEnum, eval: Map<String, Any>?): JSONArrayConfigVariable {
+    private fun createNewJSONArrayVariable(key: String, value: JSONArray, type: Variable.TypeEnum, eval: Eval?): JSONArrayConfigVariable {
         return JSONArrayConfigVariable(
             id = UUID.randomUUID().toString(),
             key = key,
@@ -2017,6 +2028,19 @@ class DevCycleClientTests {
             type = type,
             eval = eval
         )
+    }
+
+    private fun createEvalReason(reason: String, details: String?, targetId: String?): Eval {
+        val eval: Eval = Eval().apply {
+            this.reason = reason
+            if (details != null) {
+                this.details = details
+            }
+            if(targetId != null) {
+                this.targetId = targetId
+            }
+        }
+        return eval
     }
 
     private fun generateDispatcher(routes: List<Pair<String, MockResponse>>? = null, config: BucketedUserConfig? = null) {

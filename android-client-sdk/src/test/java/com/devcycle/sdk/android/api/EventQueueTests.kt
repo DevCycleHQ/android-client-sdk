@@ -1,6 +1,7 @@
 package com.devcycle.sdk.android.api
 
 import android.content.Context
+import com.devcycle.sdk.android.model.Eval
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.PopulatedUser
 import kotlinx.coroutines.*
@@ -42,21 +43,22 @@ class EventQueueTests {
         val user = PopulatedUser("test")
         val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
 
-        val overrideEval: Map<String, Any> = mapOf(
-            "reason" to "OVERRIDE",
-            "details" to "Override"
-        )
-        val defaultEval: Map<String, Any> = mapOf(
-            "reason" to "DEFAULT",
-            "details" to "User Not Targeted"
-        )
+        val optInEval: Eval = Eval().apply {
+            reason = "OPT_IN"
+            details = "Opt-In"
+            targetId = "test_override_target_id"
+        }
+        val defaultEval: Eval = Eval().apply {
+            reason = "DEFAULT"
+            details = "User Not Targeted"
+        }
         val event1 = Event.fromInternalEvent(
-            Event.variableEvent(false, "dummy_key1", overrideEval),
+            Event.variableEvent(false, "dummy_key1", optInEval),
             user,
             null
         )
         val event2 = Event.fromInternalEvent(
-            Event.variableEvent(false, "dummy_key1", overrideEval),
+            Event.variableEvent(false, "dummy_key1", optInEval),
             user,
             null
         )
@@ -84,7 +86,7 @@ class EventQueueTests {
 
         Assert.assertEquals(BigDecimal(2), aggregateEvaluatedEvent?.value)
         Assert.assertEquals(BigDecimal(2), aggregateDefaultedEvent?.value)
-        Assert.assertEquals(overrideEval, evalMetadata)
+        Assert.assertEquals(optInEval, evalMetadata)
         Assert.assertEquals(defaultMetadata, defaultEval)
     }
 }
