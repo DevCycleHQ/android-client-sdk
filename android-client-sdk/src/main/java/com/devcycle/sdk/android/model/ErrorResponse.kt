@@ -2,9 +2,7 @@ package com.devcycle.sdk.android.model
 
 import io.swagger.v3.oas.annotations.media.Schema
 import com.fasterxml.jackson.annotation.JsonFormat
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class ErrorResponse (
     @Schema(required = true, description = "Error message")
     @JsonFormat(with = [JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY])

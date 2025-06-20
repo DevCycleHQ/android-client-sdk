@@ -16,7 +16,6 @@ import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
 import com.devcycle.sdk.android.util.JSONMapper
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import kotlinx.coroutines.*
@@ -29,8 +28,6 @@ import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-
 /**
  * Variable
  */
@@ -42,7 +39,7 @@ class Variable<T> internal constructor(
     @JsonProperty("_id")
     var id: String? = null,
     /**
-     * Unique key by Project, can be used in the SDK / API to reference by &#x27;key&#x27; rather than _id.
+     * Unique key by Project, can be used in the SDK / API to reference by 'key' rather than _id.
      * @return key
      */
     val key: String,
