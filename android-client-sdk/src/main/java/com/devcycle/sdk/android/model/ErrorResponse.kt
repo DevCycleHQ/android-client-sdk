@@ -2,7 +2,6 @@ package com.devcycle.sdk.android.model
 
 import io.swagger.v3.oas.annotations.media.Schema
 import com.fasterxml.jackson.annotation.JsonFormat
-import java.util.*
 
 data class ErrorResponse (
     @Schema(required = true, description = "Error message")
