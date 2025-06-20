@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 /**
  * Project
  */
-data class Project {
+class Project {
     /**
      * unique database id
      * @return _id

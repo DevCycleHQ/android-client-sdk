@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 /**
  * Environment
  */
-data class Environment {
+class Environment {
     /**
      * unique database id
      * @return _id

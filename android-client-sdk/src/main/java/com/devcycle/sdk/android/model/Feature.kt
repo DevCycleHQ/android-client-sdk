@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 /**
  * Feature
  */
-data class Feature {
+class Feature {
     /**
      * unique database id
      * @return _id
