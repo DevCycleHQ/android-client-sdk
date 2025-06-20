@@ -366,7 +366,7 @@ class DevCycleClient private constructor(
         val tmpConfig = config
         if(!disableAutomaticEventLogging){
             val event: Event = Event.fromInternalEvent(
-                Event.variableEvent(variable.isDefaulted, variable.key),
+                Event.variableEvent(variable.isDefaulted, variable.key, variable.eval),
                 user,
                 tmpConfig?.featureVariationMap
             )

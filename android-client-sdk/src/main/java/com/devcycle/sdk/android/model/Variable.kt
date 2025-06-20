@@ -70,7 +70,7 @@ class Variable<T> internal constructor(
     }
 
     @JsonIgnore
-    var evalReason: String? = null
+    var eval: EvalReason? = null
 
     @JsonIgnore
     private var callback: DevCycleCallback<Variable<T>>? = null
@@ -90,7 +90,7 @@ class Variable<T> internal constructor(
         value = variable.value as T
 
         isDefaulted = false
-        evalReason = variable.evalReason
+        eval = variable.eval
 
         if (executeCallBack) {
             val self = this
@@ -105,6 +105,7 @@ class Variable<T> internal constructor(
     private fun defaultVariable() {
         val executeCallBack = hasValueChanged(value, defaultValue)
         isDefaulted = true
+        eval = EvalReason.defaultReason("User Not Targeted")
 
         if (executeCallBack) {
             value = defaultValue
@@ -133,7 +134,8 @@ class Variable<T> internal constructor(
     companion object {
         @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, readOnlyVariable: BaseConfigVariable?): Variable<T> {
             val type = getType(defaultValue)
-            if (readOnlyVariable != null && type != null && getType(readOnlyVariable.value) === type) {
+            val configVariableType = readOnlyVariable?.let { getType(it.value) }
+            if (readOnlyVariable != null && type != null && configVariableType === type) {
                 @Suppress("UNCHECKED_CAST")
                 val returnVariable = Variable(
                     id = readOnlyVariable.id,
@@ -142,7 +144,7 @@ class Variable<T> internal constructor(
                     type = type,
                     defaultValue = defaultValue as T
                 )
-                returnVariable.evalReason = readOnlyVariable.evalReason
+                returnVariable.eval = readOnlyVariable.eval
                 returnVariable.isDefaulted = false
                 return returnVariable
             } else {
@@ -153,9 +155,14 @@ class Variable<T> internal constructor(
                     defaultValue = defaultValue
                 )
                 returnVariable.isDefaulted = true
-                if (readOnlyVariable != null) {
+
+                if (readOnlyVariable != null && configVariableType !== type) {
+                    returnVariable.eval = EvalReason.defaultReason("Variable Type Mismatch")
                     DevCycleLogger.e("Mismatched variable type for variable: $key, using default")
+                } else {
+                    returnVariable.eval = EvalReason.defaultReason( "User Not Targeted")
                 }
+
                 return returnVariable
             }
         }
@@ -201,6 +208,7 @@ class Variable<T> internal constructor(
                 try {
                     updateVariable(variable)
                 } catch (e: DVCVariableException) {
+                    // Only logs the error and continues to use the existing Variable value & definition, no update is triggered
                     DevCycleLogger.e("Mismatched variable type for variable: ${variable.key}, using default")
                 }
             } else {
