@@ -75,7 +75,7 @@ class Feature {
      * @return eval
      */
     @get:Schema(description = "Evaluation reasoning")
-    var eval: Eval? = null
+    var eval: EvalReason? = null
 
     /**
      * Variation name
@@ -111,7 +111,7 @@ class Feature {
         return this
     }
 
-    fun eval(eval: Eval): Feature {
+    fun eval(eval: EvalReason): Feature {
         this.eval = eval
         return this
     }

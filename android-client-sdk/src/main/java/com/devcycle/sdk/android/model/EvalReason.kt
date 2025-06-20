@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.swagger.v3.oas.annotations.media.Schema
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonDeserialize(`as` = Eval::class)
-data class Eval(
+@JsonDeserialize(`as` = EvalReason::class)
+data class EvalReason(
     /**
      * String that defines the high level reason for the evaluation
      */
@@ -28,6 +28,6 @@ data class Eval(
     val targetId: String? = null,
 ) {
     companion object {
-        fun defaultReason(details: String) = Eval("DEFAULT", details)
+        fun defaultReason(details: String) = EvalReason("DEFAULT", details)
     }
 }

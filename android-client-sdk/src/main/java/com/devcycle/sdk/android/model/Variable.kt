@@ -70,7 +70,7 @@ class Variable<T> internal constructor(
     }
 
     @JsonIgnore
-    var eval: Eval? = null
+    var eval: EvalReason? = null
 
     @JsonIgnore
     private var callback: DevCycleCallback<Variable<T>>? = null
@@ -105,6 +105,7 @@ class Variable<T> internal constructor(
     private fun defaultVariable() {
         val executeCallBack = hasValueChanged(value, defaultValue)
         isDefaulted = true
+        eval = EvalReason.defaultReason("User Not Targeted")
 
         if (executeCallBack) {
             value = defaultValue
@@ -156,10 +157,10 @@ class Variable<T> internal constructor(
                 returnVariable.isDefaulted = true
 
                 if (readOnlyVariable != null && configVariableType !== type) {
-                    returnVariable.eval = Eval.defaultReason("Variable Type Mismatch")
+                    returnVariable.eval = EvalReason.defaultReason("Variable Type Mismatch")
                     DevCycleLogger.e("Mismatched variable type for variable: $key, using default")
                 } else {
-                    returnVariable.eval = Eval.defaultReason( "User Not Targeted")
+                    returnVariable.eval = EvalReason.defaultReason( "User Not Targeted")
                 }
 
                 return returnVariable
@@ -207,6 +208,7 @@ class Variable<T> internal constructor(
                 try {
                     updateVariable(variable)
                 } catch (e: DVCVariableException) {
+                    // Only logs the error and continues to use the existing Variable value & definition, no update is triggered
                     DevCycleLogger.e("Mismatched variable type for variable: ${variable.key}, using default")
                 }
             } else {

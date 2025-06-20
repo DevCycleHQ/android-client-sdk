@@ -1,7 +1,7 @@
 package com.devcycle.sdk.android.api
 
 import android.content.Context
-import com.devcycle.sdk.android.model.Eval
+import com.devcycle.sdk.android.model.EvalReason
 import com.devcycle.sdk.android.model.Event
 import com.devcycle.sdk.android.model.PopulatedUser
 import kotlinx.coroutines.*
@@ -43,8 +43,8 @@ class EventQueueTests {
         val user = PopulatedUser("test")
         val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 10000)
 
-        val optInEval = Eval("OPT_IN", "Opt-In", "test_opt_in_target_id")
-        val defaultEval: Eval = Eval.defaultReason("User Not Targeted")
+        val optInEval = EvalReason("OPT_IN", "Opt-In", "test_opt_in_target_id")
+        val defaultEval = EvalReason.defaultReason("User Not Targeted")
         val event1 = Event.fromInternalEvent(
             Event.variableEvent(false, "dummy_key1", optInEval),
             user,
@@ -74,12 +74,12 @@ class EventQueueTests {
 
         val aggregateEvaluatedEvent = eventQueue.aggregateEventMap[Event.Companion.EventTypes.variableEvaluated]?.get("dummy_key1")
         val aggregateDefaultedEvent = eventQueue.aggregateEventMap[Event.Companion.EventTypes.variableDefaulted]?.get("dummy_key1")
-        val evalMetadata = aggregateEvaluatedEvent?.metaData?.get("eval")
-        val defaultMetadata = aggregateDefaultedEvent?.metaData?.get("eval")
+        val evalEventMetadata = aggregateEvaluatedEvent?.metaData?.get("eval")
+        val defaultEventMetadata = aggregateDefaultedEvent?.metaData?.get("eval")
 
         Assert.assertEquals(BigDecimal(2), aggregateEvaluatedEvent?.value)
         Assert.assertEquals(BigDecimal(2), aggregateDefaultedEvent?.value)
-        Assert.assertEquals(optInEval, evalMetadata)
-        Assert.assertEquals(defaultMetadata, defaultEval)
+        Assert.assertEquals(optInEval, evalEventMetadata)
+        Assert.assertEquals(defaultEval, defaultEventMetadata)
     }
 }

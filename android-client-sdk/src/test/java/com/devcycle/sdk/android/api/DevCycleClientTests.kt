@@ -68,13 +68,13 @@ class DevCycleClientTests {
 
     private val packageInfo = mockk<PackageInfo>()
 
-    private val targetingMatch: Eval = createEvalReason(
+    private val targetingMatch = createEvalReason(
         reason = "TARGETING_MATCH",
         details = "User ID",
         targetId = null
     )
 
-    private val randomDistributionMatch: Eval = createEvalReason(
+    private val randomDistributionMatch = createEvalReason(
         reason = "SPLIT",
         details = "Random Distribution",
         targetId = "test_random_distribution_target_id"
@@ -1977,7 +1977,7 @@ class DevCycleClientTests {
         return builder.build()
     }
 
-    private fun generateConfig(key: String, value: String, type: Variable.TypeEnum, evalReason: Eval? = null): BucketedUserConfig {
+    private fun generateConfig(key: String, value: String, type: Variable.TypeEnum, evalReason: EvalReason? = null): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewStringVariable(key, value, type, evalReason)
         val sse = SSE()
@@ -1985,7 +1985,7 @@ class DevCycleClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun generateJSONObjectConfig(key: String, value: JSONObject, evalReason: Eval? = null): BucketedUserConfig {
+    private fun generateJSONObjectConfig(key: String, value: JSONObject, evalReason: EvalReason? = null): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewJSONObjectVariable(key, value, Variable.TypeEnum.JSON, evalReason)
         val sse = SSE()
@@ -1993,7 +1993,7 @@ class DevCycleClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun generateJSONArrayConfig(key: String, value: JSONArray, evalReason: Eval? = null): BucketedUserConfig {
+    private fun generateJSONArrayConfig(key: String, value: JSONArray, evalReason: EvalReason? = null): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewJSONArrayVariable(key, value, Variable.TypeEnum.JSON, evalReason)
         val sse = SSE()
@@ -2001,7 +2001,7 @@ class DevCycleClientTests {
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
-    private fun createNewStringVariable(key: String, value: String, type: Variable.TypeEnum, eval: Eval?): StringConfigVariable {
+    private fun createNewStringVariable(key: String, value: String, type: Variable.TypeEnum, eval: EvalReason?): StringConfigVariable {
         return StringConfigVariable(
             id = UUID.randomUUID().toString(),
             key = key,
@@ -2011,7 +2011,7 @@ class DevCycleClientTests {
         )
     }
 
-    private fun createNewJSONObjectVariable(key: String, value: JSONObject, type: Variable.TypeEnum, eval: Eval?): JSONObjectConfigVariable {
+    private fun createNewJSONObjectVariable(key: String, value: JSONObject, type: Variable.TypeEnum, eval: EvalReason?): JSONObjectConfigVariable {
         return JSONObjectConfigVariable(
             id = UUID.randomUUID().toString(),
             key = key,
@@ -2021,7 +2021,7 @@ class DevCycleClientTests {
         )
     }
 
-    private fun createNewJSONArrayVariable(key: String, value: JSONArray, type: Variable.TypeEnum, eval: Eval?): JSONArrayConfigVariable {
+    private fun createNewJSONArrayVariable(key: String, value: JSONArray, type: Variable.TypeEnum, eval: EvalReason?): JSONArrayConfigVariable {
         return JSONArrayConfigVariable(
             id = UUID.randomUUID().toString(),
             key = key,
@@ -2031,8 +2031,8 @@ class DevCycleClientTests {
         )
     }
 
-    private fun createEvalReason(reason: String, details: String?, targetId: String?): Eval {
-        return Eval(reason, details, targetId)
+    private fun createEvalReason(reason: String, details: String?, targetId: String?): EvalReason {
+        return EvalReason(reason, details, targetId)
     }
 
     private fun generateDispatcher(routes: List<Pair<String, MockResponse>>? = null, config: BucketedUserConfig? = null) {
