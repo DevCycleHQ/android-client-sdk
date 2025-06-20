@@ -133,7 +133,8 @@ class Variable<T> internal constructor(
     companion object {
         @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, readOnlyVariable: BaseConfigVariable?): Variable<T> {
             val type = getType(defaultValue)
-            if (readOnlyVariable != null && type != null && getType(readOnlyVariable.value) === type) {
+            val configVariableType = readOnlyVariable?.let { getType(it.value) }
+            if (readOnlyVariable != null && type != null && configVariableType === type) {
                 @Suppress("UNCHECKED_CAST")
                 val returnVariable = Variable(
                     id = readOnlyVariable.id,
@@ -152,17 +153,15 @@ class Variable<T> internal constructor(
                     type = getAndValidateType(defaultValue),
                     defaultValue = defaultValue
                 )
-
-                if (readOnlyVariable != null && getType(readOnlyVariable.value) !== type) {
-                    returnVariable.eval = Eval("DEFAULT", "Variable Type Mismatch")
-                } else {
-                    returnVariable.eval = Eval("DEFAULT", "User Not Targeted")
-                }
-
                 returnVariable.isDefaulted = true
-                if (readOnlyVariable != null) {
+
+                if (readOnlyVariable != null && configVariableType !== type) {
+                    returnVariable.eval = Eval.defaultReason("Variable Type Mismatch")
                     DevCycleLogger.e("Mismatched variable type for variable: $key, using default")
+                } else {
+                    returnVariable.eval = Eval.defaultReason( "User Not Targeted")
                 }
+
                 return returnVariable
             }
         }

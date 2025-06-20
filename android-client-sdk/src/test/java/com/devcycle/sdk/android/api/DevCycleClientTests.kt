@@ -1912,6 +1912,7 @@ class DevCycleClientTests {
                             Assertions.assertEquals("SPLIT", evalReason.get("reason"))
                             Assertions.assertEquals("Random Distribution", evalReason.get("details"))
                             Assertions.assertEquals("test_random_distribution_target_id", evalReason.get("target_id"))
+                            countDownLatch.countDown()
                         }
                         override fun onError(t: Throwable) {
                             error = t

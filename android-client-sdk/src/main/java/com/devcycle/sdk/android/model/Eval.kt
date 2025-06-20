@@ -26,4 +26,8 @@ data class Eval(
     @get:Schema(required = false, description = "String that defines the target id for the evaluation")
     @JsonProperty("target_id")
     val targetId: String? = null,
-)
+) {
+    companion object {
+        fun defaultReason(details: String) = Eval("DEFAULT", details)
+    }
+}
