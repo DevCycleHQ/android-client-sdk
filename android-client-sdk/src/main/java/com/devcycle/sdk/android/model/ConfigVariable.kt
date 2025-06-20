@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.model
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
@@ -36,7 +35,6 @@ class VariableDeserializer : JsonDeserializer<BaseConfigVariable>() {
 }
 
 @JsonDeserialize(using = VariableDeserializer::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 abstract class BaseConfigVariable {
     abstract val id: String
     abstract val value: Any
@@ -46,8 +44,7 @@ abstract class BaseConfigVariable {
 }
 
 @JsonDeserialize(`as` = StringConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
-class StringConfigVariable(
+data class StringConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: String,
@@ -57,8 +54,7 @@ class StringConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = BooleanConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
-class BooleanConfigVariable(
+data class BooleanConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: Boolean,
@@ -68,8 +64,7 @@ class BooleanConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = NumberConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
-class NumberConfigVariable(
+data class NumberConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: Number,
@@ -79,8 +74,7 @@ class NumberConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONObjectConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
-class JSONObjectConfigVariable(
+data class JSONObjectConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: JSONObject,
@@ -90,8 +84,7 @@ class JSONObjectConfigVariable(
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONArrayConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
-class JSONArrayConfigVariable(
+data class JSONArrayConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: JSONArray,

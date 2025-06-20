@@ -16,7 +16,6 @@ import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
 import com.devcycle.sdk.android.util.JSONMapper
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import kotlinx.coroutines.*
@@ -28,8 +27,6 @@ import com.devcycle.sdk.android.util.DevCycleLogger
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
-
-@JsonIgnoreProperties(ignoreUnknown = true)
 
 /**
  * Variable

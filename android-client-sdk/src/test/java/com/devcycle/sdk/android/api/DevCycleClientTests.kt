@@ -1758,24 +1758,21 @@ class DevCycleClientTests {
     private fun generateConfig(key: String, value: String, type: Variable.TypeEnum): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewStringVariable(key, value, type)
-        val sse = SSE()
-        sse.url = "https://www.bread.com"
+        val sse = SSE(url = "https://www.bread.com")
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
     private fun generateJSONObjectConfig(key: String, value: JSONObject): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewJSONObjectVariable(key, value, Variable.TypeEnum.JSON)
-        val sse = SSE()
-        sse.url = "https://www.bread.com"
+        val sse = SSE(url = "https://www.bread.com")
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
     private fun generateJSONArrayConfig(key: String, value: JSONArray): BucketedUserConfig {
         val variables: MutableMap<String, BaseConfigVariable> = HashMap()
         variables[key] = createNewJSONArrayVariable(key, value, Variable.TypeEnum.JSON)
-        val sse = SSE()
-        sse.url = "https://www.bread.com"
+        val sse = SSE(url = "https://www.bread.com")
         return BucketedUserConfig(variables = variables, sse=sse)
     }
 
