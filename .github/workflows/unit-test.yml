@@ -1,4 +1,4 @@
-name: Unit Test
+THIS SHOULD BE A LINTER ERRORname: Unit Test
 permissions:
   contents: read
 on:
