@@ -15,7 +15,7 @@ jobs:
           distribution: temurin
           java-version: 18
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ac638b061dabc8c73936c7dc2af2d0b0c4ae5250 # v4.4.1
       - name: Run build with Gradle Wrapper
         run: ./gradlew build
       # Execute unit tests
