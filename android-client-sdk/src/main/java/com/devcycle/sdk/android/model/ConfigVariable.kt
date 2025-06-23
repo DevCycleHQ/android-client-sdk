@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.model
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
@@ -36,66 +35,60 @@ class VariableDeserializer : JsonDeserializer<BaseConfigVariable>() {
 }
 
 @JsonDeserialize(using = VariableDeserializer::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 abstract class BaseConfigVariable {
     abstract val id: String
     abstract val value: Any
     abstract val key: String
     abstract val type: Variable.TypeEnum
-    abstract val evalReason: String?
+    abstract val eval: EvalReason?
 }
 
 @JsonDeserialize(`as` = StringConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 class StringConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: String,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: EvalReason?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = BooleanConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 class BooleanConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: Boolean,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: EvalReason?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = NumberConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 class NumberConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: Number,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: EvalReason?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONObjectConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 class JSONObjectConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: JSONObject,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: EvalReason?
 ) : BaseConfigVariable()
 
 @JsonDeserialize(`as` = JSONArrayConfigVariable::class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 class JSONArrayConfigVariable(
     @JsonProperty("_id")
     override val id: String,
     override val value: JSONArray,
     override val key: String,
     override val type: Variable.TypeEnum,
-    override val evalReason: String?
+    override val eval: EvalReason?
 ) : BaseConfigVariable()

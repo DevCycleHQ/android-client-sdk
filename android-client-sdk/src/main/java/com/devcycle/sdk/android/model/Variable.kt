@@ -16,7 +16,6 @@ import com.devcycle.sdk.android.listener.BucketedUserConfigListener
 import com.devcycle.sdk.android.exception.DVCVariableException
 import com.devcycle.sdk.android.util.JSONMapper
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import kotlinx.coroutines.*
@@ -29,8 +28,6 @@ import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-
 /**
  * Variable
  */
@@ -42,7 +39,7 @@ class Variable<T> internal constructor(
     @JsonProperty("_id")
     var id: String? = null,
     /**
-     * Unique key by Project, can be used in the SDK / API to reference by &#x27;key&#x27; rather than _id.
+     * Unique key by Project, can be used in the SDK / API to reference by 'key' rather than _id.
      * @return key
      */
     val key: String,
@@ -73,7 +70,7 @@ class Variable<T> internal constructor(
     }
 
     @JsonIgnore
-    var evalReason: String? = null
+    var eval: EvalReason? = null
 
     @JsonIgnore
     private var callback: DevCycleCallback<Variable<T>>? = null
@@ -93,7 +90,7 @@ class Variable<T> internal constructor(
         value = variable.value as T
 
         isDefaulted = false
-        evalReason = variable.evalReason
+        eval = variable.eval
 
         if (executeCallBack) {
             val self = this
@@ -108,6 +105,7 @@ class Variable<T> internal constructor(
     private fun defaultVariable() {
         val executeCallBack = hasValueChanged(value, defaultValue)
         isDefaulted = true
+        eval = EvalReason.defaultReason("User Not Targeted")
 
         if (executeCallBack) {
             value = defaultValue
@@ -136,7 +134,8 @@ class Variable<T> internal constructor(
     companion object {
         @JvmSynthetic internal fun <T: Any> initializeFromVariable(key: String, defaultValue: T, readOnlyVariable: BaseConfigVariable?): Variable<T> {
             val type = getType(defaultValue)
-            if (readOnlyVariable != null && type != null && getType(readOnlyVariable.value) === type) {
+            val configVariableType = readOnlyVariable?.let { getType(it.value) }
+            if (readOnlyVariable != null && type != null && configVariableType === type) {
                 @Suppress("UNCHECKED_CAST")
                 val returnVariable = Variable(
                     id = readOnlyVariable.id,
@@ -145,7 +144,7 @@ class Variable<T> internal constructor(
                     type = type,
                     defaultValue = defaultValue as T
                 )
-                returnVariable.evalReason = readOnlyVariable.evalReason
+                returnVariable.eval = readOnlyVariable.eval
                 returnVariable.isDefaulted = false
                 return returnVariable
             } else {
@@ -156,9 +155,14 @@ class Variable<T> internal constructor(
                     defaultValue = defaultValue
                 )
                 returnVariable.isDefaulted = true
-                if (readOnlyVariable != null) {
+
+                if (readOnlyVariable != null && configVariableType !== type) {
+                    returnVariable.eval = EvalReason.defaultReason("Variable Type Mismatch")
                     DevCycleLogger.e("Mismatched variable type for variable: $key, using default")
+                } else {
+                    returnVariable.eval = EvalReason.defaultReason( "User Not Targeted")
                 }
+
                 return returnVariable
             }
         }
@@ -204,6 +208,7 @@ class Variable<T> internal constructor(
                 try {
                     updateVariable(variable)
                 } catch (e: DVCVariableException) {
+                    // Only logs the error and continues to use the existing Variable value & definition, no update is triggered
                     DevCycleLogger.e("Mismatched variable type for variable: ${variable.key}, using default")
                 }
             } else {

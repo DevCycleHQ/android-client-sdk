@@ -1,11 +1,8 @@
 package com.devcycle.sdk.android.model
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
-
-@JsonIgnoreProperties(ignoreUnknown = true)
 
 /**
  * Feature
@@ -75,10 +72,10 @@ class Feature {
 
     /**
      * Evaluation reasoning
-     * @return evalReason
+     * @return eval
      */
     @get:Schema(description = "Evaluation reasoning")
-    var evalReason: String? = null
+    var eval: EvalReason? = null
 
     /**
      * Variation name
@@ -114,8 +111,8 @@ class Feature {
         return this
     }
 
-    fun evalReason(evalReason: String?): Feature {
-        this.evalReason = evalReason
+    fun eval(eval: EvalReason): Feature {
+        this.eval = eval
         return this
     }
 
