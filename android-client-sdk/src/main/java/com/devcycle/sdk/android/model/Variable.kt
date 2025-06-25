@@ -27,6 +27,8 @@ import com.devcycle.sdk.android.util.DevCycleLogger
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.lang.IllegalArgumentException
+import kotlin.Deprecated
+import kotlin.ReplaceWith
 
 /**
  * Variable
@@ -71,6 +73,15 @@ class Variable<T> internal constructor(
 
     @JsonIgnore
     var eval: EvalReason? = null
+
+    /**
+     * Evaluation Reason
+     * @deprecated Use eval instead
+     * @return null
+     */
+    @JsonIgnore
+    @Deprecated("Use eval instead", ReplaceWith("eval"))
+    var evalReason: String? = null
 
     @JsonIgnore
     private var callback: DevCycleCallback<Variable<T>>? = null

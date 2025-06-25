@@ -1,8 +1,11 @@
 package com.devcycle.sdk.android.model
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import io.swagger.v3.oas.annotations.media.Schema
+import kotlin.Deprecated
+import kotlin.ReplaceWith
 
 /**
  * Feature
@@ -76,6 +79,15 @@ class Feature {
      */
     @get:Schema(description = "Evaluation reasoning")
     var eval: EvalReason? = null
+
+    /**
+     * Evaluation Reason
+     * @deprecated Use eval instead
+     * @return null
+     */
+    @JsonIgnore
+    @Deprecated("Use eval instead", ReplaceWith("eval"))
+    var evalReason: String? = null
 
     /**
      * Variation name
