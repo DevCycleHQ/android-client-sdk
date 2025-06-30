@@ -153,7 +153,7 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:$okhttp_version")
     testImplementation("androidx.arch.core:core-testing:$android_core_version")
 
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20250517")
 
     androidTestImplementation("androidx.test.ext:junit:$androidx_junit_version")
     androidTestImplementation("androidx.test.espresso:espresso-core:$espresso_core_version")
