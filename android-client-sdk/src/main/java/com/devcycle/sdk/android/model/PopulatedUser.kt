@@ -10,6 +10,7 @@ import java.util.*
 import android.content.pm.PackageInfo
 import com.devcycle.BuildConfig
 import com.devcycle.sdk.android.util.DevCycleLogger
+import com.devcycle.sdk.android.util.DVCSharedPrefs
 import kotlin.IllegalArgumentException
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -67,8 +68,8 @@ internal data class PopulatedUser constructor(
     }
 
     internal companion object {
-        @JvmSynthetic internal fun buildAnonymous(context: Context): PopulatedUser {
-            val userId = UUID.randomUUID().toString()
+        @JvmSynthetic internal fun buildAnonymous(context: Context, dvcSharedPrefs: DVCSharedPrefs): PopulatedUser {
+            val userId = dvcSharedPrefs.getOrCreateAnonUserId()
             val isAnonymous = true
             val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 context.resources.configuration.locales[0]
