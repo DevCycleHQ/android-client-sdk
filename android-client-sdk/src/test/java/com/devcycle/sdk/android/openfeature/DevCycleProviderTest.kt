@@ -13,16 +13,36 @@ import org.json.JSONObject
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.AfterEach
 
 class DevCycleProviderTest {
 
     private lateinit var mockContext: Context
+    private lateinit var mockDevCycleClient: DevCycleClient
     private lateinit var provider: DevCycleProvider
 
     @BeforeEach
     fun setup() {
         mockContext = mockk<Context>(relaxed = true)
+        mockDevCycleClient = mockk<DevCycleClient>(relaxed = true)
+        
+        // Mock the DevCycleClient.builder() static method chain
+        mockkObject(DevCycleClient.Companion)
+        val mockBuilder = mockk<DevCycleClient.DevCycleClientBuilder>(relaxed = true)
+        every { DevCycleClient.builder() } returns mockBuilder
+        every { mockBuilder.withContext(any()) } returns mockBuilder
+        every { mockBuilder.withSDKKey(any()) } returns mockBuilder
+        every { mockBuilder.withUser(any()) } returns mockBuilder
+        every { mockBuilder.withOptions(any()) } returns mockBuilder
+        every { mockBuilder.build() } returns mockDevCycleClient
+        
+        // Create the provider - now it won't try to create a real DevCycleClient
         provider = DevCycleProvider("test-sdk-key", mockContext)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        unmockkAll()
     }
 
     @Test

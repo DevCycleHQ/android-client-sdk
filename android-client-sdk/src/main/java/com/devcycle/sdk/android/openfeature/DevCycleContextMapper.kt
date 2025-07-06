@@ -12,6 +12,7 @@ object DevCycleContextMapper {
         val builder = DevCycleUser.builder()
         var hasTargetingKey = false
         var hasStandardAttributes = false
+        var isAnonymousExplicitlySet = false
         
         // Map targeting key to user ID if available - using try/catch for API compatibility
         try {
@@ -59,6 +60,7 @@ object DevCycleContextMapper {
                 isAnonymous.asBoolean()?.let { isAnonBool ->
                     builder.withIsAnonymous(isAnonBool)
                     hasStandardAttributes = true
+                    isAnonymousExplicitlySet = true
                 }
             }
         }
@@ -135,6 +137,11 @@ object DevCycleContextMapper {
         
         // Only return a user if we have meaningful data
         return if (hasTargetingKey || hasStandardAttributes || customData.isNotEmpty() || privateCustomData.isNotEmpty()) {
+            // If user has a targeting key, they should be considered identified (not anonymous)
+            // unless explicitly set to anonymous via a boolean value
+            if (hasTargetingKey && !isAnonymousExplicitlySet) {
+                builder.withIsAnonymous(false)
+            }
             builder.build()
         } else {
             null
