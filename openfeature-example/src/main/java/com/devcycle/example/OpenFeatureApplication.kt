@@ -41,7 +41,7 @@ class OpenFeatureApplication: Application() {
                     .build()
                     
                 val provider = DevCycleProvider(
-                    sdkKey = "<DEVCYCLE_MOBILE_SDK_KEY>",
+                    sdkKey = "YOUR_DEVCYCLE_MOBILE_KEY",
                     context = applicationContext,
                     options = options
                 )

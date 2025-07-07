@@ -1,11 +1,17 @@
 package com.devcycle.sdk.android.openfeature
 
+import com.devcycle.sdk.android.util.JSONMapper
+import com.fasterxml.jackson.core.type.TypeReference
 import dev.openfeature.sdk.ImmutableContext
 import dev.openfeature.sdk.Value
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
 class DevCycleContextMapperTest {
+
+    private fun convertToJsonMap(user: Any): Map<String, Any> {
+        return JSONMapper.mapper.convertValue(user, object : TypeReference<Map<String, Any>>() {})
+    }
 
     @Test
     fun `returns null for null context`() {
@@ -19,7 +25,8 @@ class DevCycleContextMapperTest {
         val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
         
         assertNotNull(result)
-        assertEquals("user-123", result!!.userId)
+        val jsonMap = convertToJsonMap(result!!)
+        assertEquals("user-123", jsonMap["userId"])
     }
 
     @Test
@@ -37,11 +44,12 @@ class DevCycleContextMapperTest {
         val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
         
         assertNotNull(result)
-        assertEquals("user-123", result!!.userId)
-        assertEquals("test@example.com", result.email)
-        assertEquals("Test User", result.name)
-        assertEquals("US", result.country)
-        assertEquals(false, result.isAnonymous)
+        val jsonMap = convertToJsonMap(result!!)
+        assertEquals("user-123", jsonMap["userId"])
+        assertEquals("test@example.com", jsonMap["email"])
+        assertEquals("Test User", jsonMap["name"])
+        assertEquals("US", jsonMap["country"])
+        assertEquals(false, jsonMap["isAnonymous"])
     }
 
     @Test
@@ -59,11 +67,12 @@ class DevCycleContextMapperTest {
         val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
         
         assertNotNull(result)
-        assertNotNull(result!!.customData)
-        assertEquals("premium", result.customData!!["plan"])
-        assertEquals("us-east-1", result.customData!!["region"])
-        assertEquals(100, result.customData!!["score"])
-        assertEquals(true, result.customData!!["isActive"])
+        val jsonMap = convertToJsonMap(result!!)
+        val customData = jsonMap["customData"] as Map<*, *>
+        assertEquals("premium", customData["plan"])
+        assertEquals("us-east-1", customData["region"])
+        assertEquals(100, customData["score"])
+        assertEquals(true, customData["isActive"])
     }
 
     @Test
@@ -80,15 +89,16 @@ class DevCycleContextMapperTest {
         val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
         
         assertNotNull(result)
-        assertNotNull(result!!.privateCustomData)
-        assertNotNull(result.customData)
+        val jsonMap = convertToJsonMap(result!!)
+        val privateCustomData = jsonMap["privateCustomData"] as Map<*, *>
+        val customData = jsonMap["customData"] as Map<*, *>
         
         // Private data should be in privateCustomData without the prefix
-        assertEquals("123-45-6789", result.privateCustomData!!["ssn"])
-        assertEquals(9876, result.privateCustomData!!["internal_id"])
+        assertEquals("123-45-6789", privateCustomData["ssn"])
+        assertEquals(9876, privateCustomData["internal_id"])
         
         // Public data should be in customData
-        assertEquals("visible", result.customData!!["public_data"])
+        assertEquals("visible", customData["public_data"])
     }
 
     @Test
@@ -114,10 +124,11 @@ class DevCycleContextMapperTest {
         val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
         
         assertNotNull(result)
-        assertNotNull(result!!.customData)
+        val jsonMap = convertToJsonMap(result!!)
+        val customData = jsonMap["customData"] as Map<*, *>
         
         // Check nested structure
-        val preferences = result.customData!!["preferences"] as Map<*, *>
+        val preferences = customData["preferences"] as Map<*, *>
         assertEquals("dark", preferences["theme"])
         assertEquals(true, preferences["notifications"])
         
@@ -126,7 +137,7 @@ class DevCycleContextMapperTest {
         assertEquals(3000, limits["monthly"])
         
         // Check list
-        val tags = result.customData!!["tags"] as List<*>
+        val tags = customData["tags"] as List<*>
         assertEquals(2, tags.size)
         assertEquals("premium", tags[0])
         assertEquals("beta-user", tags[1])
@@ -147,17 +158,18 @@ class DevCycleContextMapperTest {
         val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
         
         assertNotNull(result)
-        assertEquals("user-123", result!!.userId)
-        assertNull(result.email) // Should be null because it wasn't a string
-        assertNull(result.name) // Should be null because it wasn't a string
-        assertEquals("US", result.country) // Should be set because it was a string
-        assertEquals(false, result.isAnonymous) // Should be false because user has targetingKey (identified user)
+        val jsonMap = convertToJsonMap(result!!)
+        assertEquals("user-123", jsonMap["userId"])
+        assertNull(jsonMap["email"]) // Should be null because it wasn't a string
+        assertNull(jsonMap["name"]) // Should be null because it wasn't a string
+        assertEquals("US", jsonMap["country"]) // Should be set because it was a string
+        assertEquals(false, jsonMap["isAnonymous"]) // Should be false because user has targetingKey (identified user)
         
         // Wrong-type standard attributes should appear in custom data
-        assertNotNull(result.customData)
-        assertEquals(123, result.customData!!["email"])
-        assertEquals(true, result.customData!!["name"])
-        assertEquals("false", result.customData!!["isAnonymous"])
+        val customData = jsonMap["customData"] as Map<*, *>
+        assertEquals(123, customData["email"])
+        assertEquals(true, customData["name"])
+        assertEquals("false", customData["isAnonymous"])
     }
 
     @Test
@@ -167,5 +179,34 @@ class DevCycleContextMapperTest {
         
         // Empty context should return null since there's no meaningful data
         assertNull(result)
+    }
+
+    @Test
+    fun `maps context with nested customData structure`() {
+        val evaluationContext = ImmutableContext(
+            targetingKey = "test_user",
+            attributes = mutableMapOf(
+                "email" to Value.String("test@devcycle.com"),
+                "name" to Value.String("Test User"),
+                "country" to Value.String("CA"),
+                "customData" to Value.Structure(mapOf(
+                    "custom_value" to Value.String("test")
+                ))
+            )
+        )
+        
+        val result = DevCycleContextMapper.evaluationContextToDevCycleUser(evaluationContext)
+        
+        assertNotNull(result)
+        val jsonMap = convertToJsonMap(result!!)
+        assertEquals("test_user", jsonMap["userId"])
+        assertEquals("test@devcycle.com", jsonMap["email"])
+        assertEquals("Test User", jsonMap["name"])
+        assertEquals("CA", jsonMap["country"])
+        assertEquals(false, jsonMap["isAnonymous"])
+        
+        // Check that the nested customData structure is properly mapped
+        val customData = jsonMap["customData"] as Map<*, *>
+        assertEquals("test", customData["custom_value"])
     }
 } 

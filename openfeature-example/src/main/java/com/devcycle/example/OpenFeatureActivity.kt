@@ -3,7 +3,7 @@ package com.devcycle.example
 import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.devcycle.kotlinexample.R
+import com.devcycle.openfeatureexample.R
 import dev.openfeature.sdk.*
 
 class OpenFeatureActivity : AppCompatActivity() {

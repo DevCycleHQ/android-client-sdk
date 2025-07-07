@@ -31,19 +31,21 @@ class DevCycleProvider(
     private var devCycleClient: DevCycleClient? = null
 
     override suspend fun initialize(initialContext: EvaluationContext?) {
-        try {
-            if (initialContext == null) {
-                DevCycleLogger.w(
-                    "DevCycleProvider initialized without context being set. " +
-                    "It is highly recommended to set a context using OpenFeature.setContext() " +
-                    "before setting an OpenFeature Provider to avoid multiple API fetch calls."
-                )
-            }
+        if (initialContext == null) {
+            DevCycleLogger.w(
+                "DevCycleProvider initialized without context being set. " +
+                "It is highly recommended to set a context using OpenFeature.setContext() " +
+                "before setting an OpenFeature Provider using OpenFeature.setProvider() " +
+                "to avoid multiple API fetch calls."
+            )
+        }
 
-            // Convert context to user or use anonymous user
+        try {
+            // If initialContext is null, use anonymous user
+            // Otherwise, convert context to user and throw any errors
             val user: DevCycleUser = if (initialContext != null) {
                 DevCycleContextMapper.evaluationContextToDevCycleUser(initialContext)
-                    ?: DevCycleUser.builder().withIsAnonymous(true).build() // Anonymous user if context mapping fails
+                    ?: throw OpenFeatureError.InvalidContextError("Invalid context provided for DevCycle user creation")
             } else {
                 DevCycleUser.builder().withIsAnonymous(true).build() // Anonymous user
             }
@@ -58,7 +60,25 @@ class DevCycleProvider(
             
             devCycleClient = clientBuilder.build()
 
-            DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully")
+            // Wait for DevCycle client to fully initialize
+            suspendCancellableCoroutine<Unit> { continuation ->
+                devCycleClient!!.onInitialized(object : DevCycleCallback<String> {
+                    override fun onSuccess(result: String) {
+                        DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully")
+                        continuation.resume(Unit)
+                    }
+
+                    override fun onError(t: Throwable) {
+                        DevCycleLogger.e("DevCycle OpenFeature provider initialization failed: ${t.message}")
+                        continuation.resumeWithException(
+                            OpenFeatureError.ProviderFatalError("DevCycle client initialization error: ${t.message}")
+                        )
+                    }
+                })
+            }
+        } catch (e: OpenFeatureError) {
+            // Re-throw OpenFeature errors as-is
+            throw e
         } catch (e: Exception) {
             DevCycleLogger.e("DevCycle OpenFeature provider initialization failed: ${e.message}")
             throw OpenFeatureError.ProviderFatalError("DevCycle client initialization error: ${e.message}")
