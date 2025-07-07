@@ -63,6 +63,7 @@ class DevCycleOptions(
             this.disableConfigCache = disableConfigCache
             return this
         }
+        
         fun disableRealtimeUpdates(disableRealtimeUpdates: Boolean): DevCycleOptionsBuilder {
             this.disableRealtimeUpdates = disableRealtimeUpdates
             return this
@@ -77,12 +78,12 @@ class DevCycleOptions(
             this.eventsApiProxyUrl = eventsApiProxyUrl
             return this
         }
-
-        fun logLevel(logLevel: LogLevel): DevCycleOptionsBuilder {
+        
+        fun withLogLevel(logLevel: LogLevel): DevCycleOptionsBuilder {
             this.logLevel = logLevel
             return this
         }
-
+        
         fun build(): DevCycleOptions {
             return DevCycleOptions(
                 flushEventsIntervalMs,

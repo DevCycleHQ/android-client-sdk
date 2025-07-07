@@ -1,8 +1,10 @@
 package com.devcycle.sdk.android.openfeature
 
 import android.content.Context
+import com.devcycle.sdk.android.api.DevCycleCallback
 import com.devcycle.sdk.android.api.DevCycleClient
 import com.devcycle.sdk.android.api.DevCycleOptions
+import com.devcycle.sdk.android.model.BaseConfigVariable
 import com.devcycle.sdk.android.model.DevCycleUser
 import com.devcycle.sdk.android.model.Variable
 import dev.openfeature.sdk.*
@@ -35,6 +37,18 @@ class DevCycleProviderTest {
         every { mockBuilder.withUser(any()) } returns mockBuilder
         every { mockBuilder.withOptions(any()) } returns mockBuilder
         every { mockBuilder.build() } returns mockDevCycleClient
+        
+        // Mock the onInitialized method to immediately call the success callback
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            val callback = firstArg<DevCycleCallback<String>>()
+            callback.onSuccess("initialized")
+        }
+        
+        // Mock the identifyUser method to immediately call the success callback
+        every { mockDevCycleClient.identifyUser(any(), any()) } answers {
+            val callback = secondArg<DevCycleCallback<Map<String, BaseConfigVariable>>>()
+            callback.onSuccess(emptyMap())
+        }
         
         // Create the provider - now it won't try to create a real DevCycleClient
         provider = DevCycleProvider("test-sdk-key", mockContext)

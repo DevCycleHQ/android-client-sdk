@@ -1,6 +1,7 @@
 package com.devcycle.sdk.android.openfeature
 
 import com.devcycle.sdk.android.model.DevCycleUser
+import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.sdk.EvaluationContext
 import dev.openfeature.sdk.Value
 
@@ -24,7 +25,31 @@ object DevCycleContextMapper {
                 }
             }
         } catch (e: Exception) {
-            // Handle API differences gracefully
+            // Handle API differences gracefully - try alternative methods
+            try {
+                val targetingKey = context.javaClass.getMethod("targetingKey").invoke(context) as? String
+                targetingKey?.let { 
+                    if (it.isNotBlank()) {
+                        builder.withUserId(it)
+                        hasTargetingKey = true
+                    }
+                }
+            } catch (e2: Exception) {
+                // Try direct property access
+                try {
+                    val field = context.javaClass.getDeclaredField("targetingKey")
+                    field.isAccessible = true
+                    val targetingKey = field.get(context) as? String
+                    targetingKey?.let { 
+                        if (it.isNotBlank()) {
+                            builder.withUserId(it)
+                            hasTargetingKey = true
+                        }
+                    }
+                } catch (e3: Exception) {
+                    // Handle API differences gracefully - targeting key not available
+                }
+            }
         }
         
         // Map standard attributes
@@ -111,6 +136,22 @@ object DevCycleContextMapper {
                             }
                         }
                     }
+                    "customData" -> {
+                        // Handle nested customData structure by flattening it
+                        if (value is Value.Structure) {
+                            val structureMap = convertValueToAny(value) as? Map<*, *>
+                            structureMap?.forEach { (nestedKey, nestedValue) ->
+                                if (nestedKey is String && nestedValue != null) {
+                                    customData[nestedKey] = nestedValue
+                                }
+                            }
+                        } else {
+                            val convertedValue = convertValueToAny(value)
+                            if (convertedValue != null) {
+                                customData[key] = convertedValue
+                            }
+                        }
+                    }
                     else -> {
                         val convertedValue = convertValueToAny(value)
                         if (convertedValue != null) {
@@ -142,8 +183,35 @@ object DevCycleContextMapper {
             if (hasTargetingKey && !isAnonymousExplicitlySet) {
                 builder.withIsAnonymous(false)
             }
-            builder.build()
+            
+            val user = builder.build()
+            
+            // Validate and log the created user for debugging
+            try {
+                DevCycleLogger.d("OpenFeature context mapped to DevCycle user: userId=${user.userId}, isAnonymous=${user.isAnonymous}, email=${user.email}, customData=${user.customData?.keys}")
+                
+                // Validate that custom data is serializable
+                user.customData?.forEach { (key, value) ->
+                    when (value) {
+                        is String, is Number, is Boolean -> {
+                            // These are safe primitive types
+                        }
+                        is Map<*, *>, is List<*> -> {
+                            // Collections should be serializable if they contain safe types
+                            DevCycleLogger.d("OpenFeature context mapper: Complex type in customData for key '$key': ${value.javaClass.simpleName}")
+                        }
+                        else -> {
+                            DevCycleLogger.w("OpenFeature context mapper: Potentially unsafe type in customData for key '$key': ${value.javaClass.simpleName}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                DevCycleLogger.e("Error validating mapped user data: ${e.message}")
+            }
+            
+            user
         } else {
+            DevCycleLogger.d("OpenFeature context had no meaningful data to map to DevCycle user")
             null
         }
     }
@@ -156,22 +224,30 @@ object DevCycleContextMapper {
             is Value.String -> value.asString()
             is Value.Structure -> {
                 try {
-                    // Access structure directly
+                    // Access structure directly and ensure all nested values are safe
                     val structureMap = value.structure
-                    structureMap?.mapValues { (_, v) -> convertValueToAny(v) }?.filterValues { it != null }
+                    structureMap?.mapValues { (_, v) -> 
+                        convertValueToAny(v) 
+                    }?.filterValues { it != null }
                 } catch (e: Exception) {
-                    null
+                    // If structure access fails, fall back to a safe empty map
+                    emptyMap<String, Any>()
                 }
             }
             is Value.List -> {
                 try {
                     val list = value.list
-                    list?.mapNotNull { convertValueToAny(it) }
+                    list?.mapNotNull { convertValueToAny(it) } ?: emptyList<Any>()
                 } catch (e: Exception) {
-                    null
+                    // If list access fails, fall back to a safe empty list
+                    emptyList<Any>()
                 }
             }
-            else -> value.toString()
+            else -> {
+                // Ensure the string representation is safe
+                val stringValue = value.toString()
+                if (stringValue.isNotBlank()) stringValue else null
+            }
         }
     }
 } 
