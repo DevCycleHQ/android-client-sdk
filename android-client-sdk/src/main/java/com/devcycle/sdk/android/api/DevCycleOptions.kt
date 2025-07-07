@@ -1,5 +1,7 @@
 package com.devcycle.sdk.android.api
 
+import com.devcycle.sdk.android.util.LogLevel
+
 class DevCycleOptions(
     val flushEventsIntervalMs: Long,
     val disableEventLogging: Boolean,
@@ -10,7 +12,8 @@ class DevCycleOptions(
     val disableAutomaticEventLogging : Boolean,
     val disableCustomEventLogging : Boolean,
     val apiProxyUrl: String?,
-    val eventsApiProxyUrl: String?
+    val eventsApiProxyUrl: String?,
+    val logLevel: LogLevel?
 ) {
     class DevCycleOptionsBuilder internal constructor() {
         private var flushEventsIntervalMs = 0L
@@ -23,6 +26,7 @@ class DevCycleOptions(
         private var disableCustomEventLogging = false
         private var apiProxyUrl: String? = null
         private var eventsApiProxyUrl: String? = null
+        private var logLevel: LogLevel? = null
 
         fun flushEventsIntervalMs(flushEventsIntervalMs: Long): DevCycleOptionsBuilder {
             this.flushEventsIntervalMs = flushEventsIntervalMs
@@ -73,6 +77,12 @@ class DevCycleOptions(
             this.eventsApiProxyUrl = eventsApiProxyUrl
             return this
         }
+
+        fun logLevel(logLevel: LogLevel): DevCycleOptionsBuilder {
+            this.logLevel = logLevel
+            return this
+        }
+
         fun build(): DevCycleOptions {
             return DevCycleOptions(
                 flushEventsIntervalMs,
@@ -84,7 +94,8 @@ class DevCycleOptions(
                 disableAutomaticEventLogging,
                 disableCustomEventLogging,
                 apiProxyUrl,
-                eventsApiProxyUrl
+                eventsApiProxyUrl,
+                logLevel
             )
         }
     }

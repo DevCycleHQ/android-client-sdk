@@ -58,8 +58,8 @@ class DevCycleClient private constructor(
     private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
     private val disableConfigCache = options?.disableConfigCache ?: false
     private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
-    private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging ?: false
-    private val disableCustomEventLogging = options?.disableCustomEventLogging ?: false
+    private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging ?: (options?.disableEventLogging ?: false)
+    private val disableCustomEventLogging = options?.disableCustomEventLogging ?: (options?.disableEventLogging ?: false)
     
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context, configCacheTTL)
     private val request: Request = Request(sdkKey, apiUrl, eventsUrl, context)
@@ -631,7 +631,14 @@ class DevCycleClient private constructor(
             require(sdkKey.isNotEmpty()) { "SDK key must be set" }
             val dvcUser = requireNotNull(dvcUser) { "User must be set" }
 
-            if (logLevel.value > 0) {
+            // Use log level from options if provided, otherwise use builder's logLevel
+            val effectiveLogLevel = options?.logLevel ?: logLevel
+            
+            // Set the minimum log level in DevCycleLogger
+            DevCycleLogger.setMinLogLevel(effectiveLogLevel)
+            
+            // Start the logger if logging is enabled
+            if (effectiveLogLevel != LogLevel.NO_LOGGING) {
                 DevCycleLogger.start(logger)
             }
 
