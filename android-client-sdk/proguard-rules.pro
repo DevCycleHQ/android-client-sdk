@@ -115,3 +115,8 @@
 # com.launchdarkly:okhttp-eventsource rules
 -keep class com.launchdarkly.eventsource.** { *; }
 -dontwarn com.launchdarkly.eventsource.**
+
+# OpenFeature integration classes
+-keep class com.devcycle.sdk.android.openfeature.** { *; }
+-keep class dev.openfeature.sdk.** { *; }
+-dontwarn dev.openfeature.sdk.**
