@@ -37,7 +37,7 @@ class OpenFeatureApplication: Application() {
                 
                 // Create DevCycle provider with options
                 val options = DevCycleOptions.builder()
-                    .withLogLevel(LogLevel.DEBUG)
+                    .logLevel(LogLevel.DEBUG)
                     .build()
                     
                 val provider = DevCycleProvider(

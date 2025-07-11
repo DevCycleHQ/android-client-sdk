@@ -26,7 +26,7 @@ class KotlinApplication: Application() {
                     .build()
             )
             .withSDKKey("<DEVCYCLE_MOBILE_SDK_KEY>")
-            .withLogLevel(LogLevel.DEBUG)
+            .logLevel(LogLevel.DEBUG)
             .withLogger(DevCycleLogger.DebugLogger())
             .build()
 
