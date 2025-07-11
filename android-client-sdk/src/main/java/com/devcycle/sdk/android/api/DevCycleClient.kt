@@ -631,7 +631,14 @@ class DevCycleClient private constructor(
             require(sdkKey.isNotEmpty()) { "SDK key must be set" }
             val dvcUser = requireNotNull(dvcUser) { "User must be set" }
 
-            if (logLevel.value > 0) {
+            // Choose the most verbose (lowest value) log level between options and builder
+            val effectiveLogLevel = listOfNotNull(options?.logLevel, logLevel).minByOrNull { it.value } ?: LogLevel.ERROR
+            
+            // Set the minimum log level in DevCycleLogger
+            DevCycleLogger.setMinLogLevel(effectiveLogLevel)
+            
+            // Start the logger if logging is enabled
+            if (effectiveLogLevel != LogLevel.NO_LOGGING) {
                 DevCycleLogger.start(logger)
             }
 

@@ -136,10 +136,16 @@ class DevCycleLogger private constructor() {
 
     /** Return whether a message at `priority` should be logged. */
     @Deprecated("Use isLoggable(String, int)", ReplaceWith("this.isLoggable(null, priority)"))
-    protected open fun isLoggable(priority: Int) = true
+    protected open fun isLoggable(priority: Int) = isLoggable(null, priority)
 
     /** Return whether a message at `priority` or `tag` should be logged. */
-    protected open fun isLoggable(tag: String?, priority: Int) = isLoggable(priority)
+    protected open fun isLoggable(tag: String?, priority: Int): Boolean {
+      val minLogLevel = Loggers.minLogLevel
+      return when (minLogLevel) {
+        LogLevel.NO_LOGGING -> false
+        else -> priority >= minLogLevel.value
+      }
+    }
 
     private fun prepareLog(priority: Int, t: Throwable?, message: String?, vararg args: Any?) {
       // Consume tag even when message is not loggable so that next message is correctly tagged.
@@ -270,6 +276,17 @@ class DevCycleLogger private constructor() {
   }
 
   companion object Loggers : Logger() {
+    /** The minimum log level that will be logged. Defaults to ERROR. */
+    @Volatile
+    var minLogLevel: LogLevel = LogLevel.ERROR
+      private set
+
+    /** Set the minimum log level that will be logged. */
+    @JvmStatic
+    fun setMinLogLevel(logLevel: LogLevel) {
+      minLogLevel = logLevel
+    }
+
     /** Log a verbose message with optional format args. */
     @JvmStatic override fun v(@NonNls message: String?, vararg args: Any?) {
       loggerArray.forEach { it.v(message, *args) }
