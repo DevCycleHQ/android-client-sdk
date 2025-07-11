@@ -632,13 +632,7 @@ class DevCycleClient private constructor(
             val dvcUser = requireNotNull(dvcUser) { "User must be set" }
 
             // Choose the most verbose (lowest value) log level between options and builder
-            val optionsLogLevel = options?.logLevel
-            val effectiveLogLevel = if (optionsLogLevel != null) {
-                // If both are set, choose the more verbose one (lower value)
-                if (optionsLogLevel.value < logLevel.value) optionsLogLevel else logLevel
-            } else {
-                logLevel
-            }
+            val effectiveLogLevel = listOfNotNull(options?.logLevel, logLevel).minByOrNull { it.value } ?: LogLevel.ERROR
             
             // Set the minimum log level in DevCycleLogger
             DevCycleLogger.setMinLogLevel(effectiveLogLevel)
