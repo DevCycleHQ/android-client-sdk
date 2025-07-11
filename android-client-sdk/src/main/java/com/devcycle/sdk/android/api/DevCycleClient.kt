@@ -58,8 +58,8 @@ class DevCycleClient private constructor(
     private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
     private val disableConfigCache = options?.disableConfigCache ?: false
     private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
-    private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging == true || options?.disableEventLogging == true
-    private val disableCustomEventLogging = options?.disableCustomEventLogging == true || options?.disableEventLogging == true
+    private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging ?: false
+    private val disableCustomEventLogging = options?.disableCustomEventLogging ?: false
     
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context, configCacheTTL)
     private val request: Request = Request(sdkKey, apiUrl, eventsUrl, context)
