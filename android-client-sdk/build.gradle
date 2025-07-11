@@ -103,7 +103,7 @@ ext {
     coroutines_version = '1.10.1'
     kotlin_reflect_version = '2.1.20'
 
-    junit_version = "5.11.4"
+    junit_version = "5.13.3"
     mockito_core_version = '5.14.2'
     mockito_inline_version = '5.2.0'
     mockk_version = '1.14.4'
