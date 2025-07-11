@@ -615,7 +615,7 @@ class DevCycleClient private constructor(
             return this
         }
 
-        fun withLogLevel(logLevel: LogLevel): DevCycleClientBuilder {
+        fun logLevel(logLevel: LogLevel): DevCycleClientBuilder {
             this.logLevel = logLevel
             return this
         }
