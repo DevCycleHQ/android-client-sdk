@@ -58,8 +58,8 @@ class DevCycleClient private constructor(
     private val configCacheTTL = options?.configCacheTTL ?: defaultCacheTTL
     private val disableConfigCache = options?.disableConfigCache ?: false
     private val disableRealtimeUpdates = options?.disableRealtimeUpdates ?: false
-    private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging ?: (options?.disableEventLogging ?: false)
-    private val disableCustomEventLogging = options?.disableCustomEventLogging ?: (options?.disableEventLogging ?: false)
+    private val disableAutomaticEventLogging = options?.disableAutomaticEventLogging == true || options?.disableEventLogging == true
+    private val disableCustomEventLogging = options?.disableCustomEventLogging == true || options?.disableEventLogging == true
     
     private val dvcSharedPrefs: DVCSharedPrefs = DVCSharedPrefs(context, configCacheTTL)
     private val request: Request = Request(sdkKey, apiUrl, eventsUrl, context)
@@ -563,7 +563,7 @@ class DevCycleClient private constructor(
         private var sdkKey: String? = null
         private var user: PopulatedUser? = null
         private var options: DevCycleOptions? = null
-        private var logLevel: LogLevel = LogLevel.ERROR
+        private var logLevel: LogLevel? = null
         private var logger: DevCycleLogger.Logger = DevCycleLogger.DebugLogger()
         private var apiUrl: String = DVCApiClient.BASE_URL
         private var eventsUrl: String = DVCEventsApiClient.BASE_URL
@@ -631,8 +631,8 @@ class DevCycleClient private constructor(
             require(sdkKey.isNotEmpty()) { "SDK key must be set" }
             val dvcUser = requireNotNull(dvcUser) { "User must be set" }
 
-            // Use log level from options if provided, otherwise use builder's logLevel
-            val effectiveLogLevel = options?.logLevel ?: logLevel
+            // Use log level from options if provided, otherwise use builder's logLevel, default to ERROR
+            val effectiveLogLevel = options?.logLevel ?: logLevel ?: LogLevel.ERROR
             
             // Set the minimum log level in DevCycleLogger
             DevCycleLogger.setMinLogLevel(effectiveLogLevel)
