@@ -230,11 +230,11 @@ class DevCycleClient private constructor(
             }
 
             override fun onError(error: Throwable) {
-                DevCycleLogger.d("Error fetching config for user_id %s", updatedUser.userId)
+                DevCycleLogger.d("Error fetching config for user_id %s: %s", updatedUser.userId, error.message)
 
                 // In the event that the config request fails (i.e. the device is offline)
                 // Fallback to using a Cached Configuration for the User if available
-                val hasCachedConfig = useCachedConfigForUserWithResult(updatedUser)
+                val hasCachedConfig = tryLoadCachedConfigForUser(updatedUser)
                 if (hasCachedConfig) {
                     // Successfully used cached config, return success
                     config?.variables?.let { callback?.onSuccess(it) }
@@ -261,6 +261,8 @@ class DevCycleClient private constructor(
             dvcSharedPrefs.clearAnonUserId()
         }
 
+        // Store previous state for recovery
+        val previousLatestIdentifiedUser = latestIdentifiedUser
         val newUser = PopulatedUser.buildAnonymous(this.context, dvcSharedPrefs)
         latestIdentifiedUser = newUser
 
@@ -272,10 +274,11 @@ class DevCycleClient private constructor(
             }
 
             override fun onError(error: Throwable) {
-                // Restore the original anonymous user id on error
+                // Restore the original anonymous user id and previous user on error
                 if (cachedAnonUserId != null) {
                     dvcSharedPrefs.setAnonUserId(cachedAnonUserId)
                 }
+                latestIdentifiedUser = previousLatestIdentifiedUser
                 callback?.onError(error)
             }
         })
@@ -588,7 +591,7 @@ class DevCycleClient private constructor(
         }
     }
 
-    private fun useCachedConfigForUserWithResult(user: PopulatedUser): Boolean {
+    private fun tryLoadCachedConfigForUser(user: PopulatedUser): Boolean {
         val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
 
         if (cachedConfig != null) {
