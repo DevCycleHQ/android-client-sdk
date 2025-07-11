@@ -563,7 +563,7 @@ class DevCycleClient private constructor(
         private var sdkKey: String? = null
         private var user: PopulatedUser? = null
         private var options: DevCycleOptions? = null
-        private var logLevel: LogLevel? = null
+        private var logLevel: LogLevel = LogLevel.ERROR
         private var logger: DevCycleLogger.Logger = DevCycleLogger.DebugLogger()
         private var apiUrl: String = DVCApiClient.BASE_URL
         private var eventsUrl: String = DVCEventsApiClient.BASE_URL
@@ -631,8 +631,14 @@ class DevCycleClient private constructor(
             require(sdkKey.isNotEmpty()) { "SDK key must be set" }
             val dvcUser = requireNotNull(dvcUser) { "User must be set" }
 
-            // Use log level from options if provided, otherwise use builder's logLevel, default to ERROR
-            val effectiveLogLevel = options?.logLevel ?: logLevel ?: LogLevel.ERROR
+            // Choose the most verbose (lowest value) log level between options and builder
+            val optionsLogLevel = options?.logLevel
+            val effectiveLogLevel = if (optionsLogLevel != null) {
+                // If both are set, choose the more verbose one (lower value)
+                if (optionsLogLevel.value < logLevel.value) optionsLogLevel else logLevel
+            } else {
+                logLevel
+            }
             
             // Set the minimum log level in DevCycleLogger
             DevCycleLogger.setMinLogLevel(effectiveLogLevel)

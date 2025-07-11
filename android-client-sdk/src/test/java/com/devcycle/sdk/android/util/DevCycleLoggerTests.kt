@@ -78,4 +78,14 @@ class DevCycleLoggerTests {
         DevCycleLogger.setMinLogLevel(LogLevel.NO_LOGGING)
         assertEquals(LogLevel.NO_LOGGING, DevCycleLogger.minLogLevel)
     }
+
+    @Test
+    fun `test LogLevel values are ordered correctly for verbosity`() {
+        // Verify that lower values are more verbose (VERBOSE=2, DEBUG=3, etc.)
+        assertTrue(LogLevel.VERBOSE.value < LogLevel.DEBUG.value)
+        assertTrue(LogLevel.DEBUG.value < LogLevel.INFO.value)
+        assertTrue(LogLevel.INFO.value < LogLevel.WARN.value)
+        assertTrue(LogLevel.WARN.value < LogLevel.ERROR.value)
+        assertEquals(0, LogLevel.NO_LOGGING.value) // Special case
+    }
 }
