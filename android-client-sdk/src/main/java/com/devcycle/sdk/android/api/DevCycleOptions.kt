@@ -79,7 +79,7 @@ class DevCycleOptions(
             return this
         }
         
-        fun withLogLevel(logLevel: LogLevel): DevCycleOptionsBuilder {
+        fun logLevel(logLevel: LogLevel): DevCycleOptionsBuilder {
             this.logLevel = logLevel
             return this
         }

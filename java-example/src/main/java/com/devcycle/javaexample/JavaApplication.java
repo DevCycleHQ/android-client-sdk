@@ -32,7 +32,7 @@ public class JavaApplication extends Application {
                 .withContext(getApplicationContext())
                 .withUser(user)
                 .withSDKKey("<DEVCYCLE_MOBILE_SDK_KEY>")
-                .withLogLevel(LogLevel.DEBUG)
+                .logLevel(LogLevel.DEBUG)
                 .build();
 
         // Use your own demo variable here to see the value change from the defaultValue

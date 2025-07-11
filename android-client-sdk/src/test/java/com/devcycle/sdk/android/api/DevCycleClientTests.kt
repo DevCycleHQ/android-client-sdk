@@ -2008,7 +2008,7 @@ class DevCycleClientTests {
             .withUser(user ?: DevCycleUser.builder().withUserId("nic_test").build())
             .withSDKKey(sdkKey)
             .withLogger(logger)
-            .withLogLevel(logLevel)
+            .logLevel(logLevel)
             .withOptions(
                 options ?: DevCycleOptions.builder()
                     .flushEventsIntervalMs(flushInMs)
