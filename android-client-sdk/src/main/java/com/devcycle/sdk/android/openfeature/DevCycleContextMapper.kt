@@ -15,40 +15,11 @@ object DevCycleContextMapper {
         var hasStandardAttributes = false
         var isAnonymousExplicitlySet = false
         
-        // Map targeting key to user ID if available - using try/catch for API compatibility
-        try {
-            val targetingKey = context.javaClass.getMethod("getTargetingKey").invoke(context) as? String
-            targetingKey?.let { 
-                if (it.isNotBlank()) {
-                    builder.withUserId(it)
-                    hasTargetingKey = true
-                }
-            }
-        } catch (e: Exception) {
-            // Handle API differences gracefully - try alternative methods
-            try {
-                val targetingKey = context.javaClass.getMethod("targetingKey").invoke(context) as? String
-                targetingKey?.let { 
-                    if (it.isNotBlank()) {
-                        builder.withUserId(it)
-                        hasTargetingKey = true
-                    }
-                }
-            } catch (e2: Exception) {
-                // Try direct property access
-                try {
-                    val field = context.javaClass.getDeclaredField("targetingKey")
-                    field.isAccessible = true
-                    val targetingKey = field.get(context) as? String
-                    targetingKey?.let { 
-                        if (it.isNotBlank()) {
-                            builder.withUserId(it)
-                            hasTargetingKey = true
-                        }
-                    }
-                } catch (e3: Exception) {
-                    // Handle API differences gracefully - targeting key not available
-                }
+        // Map targeting key to user ID if available
+        context.getTargetingKey()?.let { targetingKey ->
+            if (targetingKey.isNotBlank()) {
+                builder.withUserId(targetingKey)
+                hasTargetingKey = true
             }
         }
         
@@ -94,78 +65,72 @@ object DevCycleContextMapper {
         val customData = mutableMapOf<String, Any>()
         val privateCustomData = mutableMapOf<String, Any>()
         
-        try {
-            // Use reflection to safely access asMap method
-            val asMapMethod = context.javaClass.getMethod("asMap")
-            val contextMap = asMapMethod.invoke(context) as? Map<String, Value>
-            contextMap?.forEach { (key, value) ->
-                when (key) {
-                    "email" -> {
-                        // Only skip if it was successfully processed as a string above
-                        if (value !is Value.String) {
-                            val convertedValue = convertValueToAny(value)
-                            if (convertedValue != null) {
-                                customData[key] = convertedValue
-                            }
-                        }
-                    }
-                    "name" -> {
-                        // Only skip if it was successfully processed as a string above
-                        if (value !is Value.String) {
-                            val convertedValue = convertValueToAny(value)
-                            if (convertedValue != null) {
-                                customData[key] = convertedValue
-                            }
-                        }
-                    }
-                    "country" -> {
-                        // Only skip if it was successfully processed as a string above
-                        if (value !is Value.String) {
-                            val convertedValue = convertValueToAny(value)
-                            if (convertedValue != null) {
-                                customData[key] = convertedValue
-                            }
-                        }
-                    }
-                    "isAnonymous" -> {
-                        // Only skip if it was successfully processed as a boolean above
-                        if (value !is Value.Boolean) {
-                            val convertedValue = convertValueToAny(value)
-                            if (convertedValue != null) {
-                                customData[key] = convertedValue
-                            }
-                        }
-                    }
-                    "customData" -> {
-                        // Handle nested customData structure by flattening it
-                        if (value is Value.Structure) {
-                            val structureMap = convertValueToAny(value) as? Map<*, *>
-                            structureMap?.forEach { (nestedKey, nestedValue) ->
-                                if (nestedKey is String && nestedValue != null) {
-                                    customData[nestedKey] = nestedValue
-                                }
-                            }
-                        } else {
-                            val convertedValue = convertValueToAny(value)
-                            if (convertedValue != null) {
-                                customData[key] = convertedValue
-                            }
-                        }
-                    }
-                    else -> {
+        // Use direct asMap method call instead of reflection
+        context.asMap().forEach { (key, value) ->
+            when (key) {
+                "email" -> {
+                    // Only skip if it was successfully processed as a string above
+                    if (value !is Value.String) {
                         val convertedValue = convertValueToAny(value)
                         if (convertedValue != null) {
-                            if (key.startsWith("private_")) {
-                                privateCustomData[key.removePrefix("private_")] = convertedValue
-                            } else {
-                                customData[key] = convertedValue
+                            customData[key] = convertedValue
+                        }
+                    }
+                }
+                "name" -> {
+                    // Only skip if it was successfully processed as a string above
+                    if (value !is Value.String) {
+                        val convertedValue = convertValueToAny(value)
+                        if (convertedValue != null) {
+                            customData[key] = convertedValue
+                        }
+                    }
+                }
+                "country" -> {
+                    // Only skip if it was successfully processed as a string above
+                    if (value !is Value.String) {
+                        val convertedValue = convertValueToAny(value)
+                        if (convertedValue != null) {
+                            customData[key] = convertedValue
+                        }
+                    }
+                }
+                "isAnonymous" -> {
+                    // Only skip if it was successfully processed as a boolean above
+                    if (value !is Value.Boolean) {
+                        val convertedValue = convertValueToAny(value)
+                        if (convertedValue != null) {
+                            customData[key] = convertedValue
+                        }
+                    }
+                }
+                "customData" -> {
+                    // Handle nested customData structure by flattening it
+                    if (value is Value.Structure) {
+                        val structureMap = convertValueToAny(value) as? Map<*, *>
+                        structureMap?.forEach { (nestedKey, nestedValue) ->
+                            if (nestedKey is String && nestedValue != null) {
+                                customData[nestedKey] = nestedValue
                             }
+                        }
+                    } else {
+                        val convertedValue = convertValueToAny(value)
+                        if (convertedValue != null) {
+                            customData[key] = convertedValue
+                        }
+                    }
+                }
+                else -> {
+                    val convertedValue = convertValueToAny(value)
+                    if (convertedValue != null) {
+                        if (key.startsWith("private_")) {
+                            privateCustomData[key.removePrefix("private_")] = convertedValue
+                        } else {
+                            customData[key] = convertedValue
                         }
                     }
                 }
             }
-        } catch (e: Exception) {
-            // Handle any API issues gracefully
         }
         
         if (customData.isNotEmpty()) {
@@ -223,25 +188,16 @@ object DevCycleContextMapper {
             is Value.Double -> value.asDouble()
             is Value.String -> value.asString()
             is Value.Structure -> {
-                try {
-                    // Access structure directly and ensure all nested values are safe
-                    val structureMap = value.structure
-                    structureMap?.mapValues { (_, v) -> 
-                        convertValueToAny(v) 
-                    }?.filterValues { it != null }
-                } catch (e: Exception) {
-                    // If structure access fails, fall back to a safe empty map
-                    emptyMap<String, Any>()
-                }
+                // Access structure directly
+                val structureMap = value.structure
+                structureMap?.mapValues { (_, v) -> 
+                    convertValueToAny(v) 
+                }?.filterValues { it != null }
             }
             is Value.List -> {
-                try {
-                    val list = value.list
-                    list?.mapNotNull { convertValueToAny(it) } ?: emptyList<Any>()
-                } catch (e: Exception) {
-                    // If list access fails, fall back to a safe empty list
-                    emptyList<Any>()
-                }
+                // Access list directly
+                val list = value.list
+                list?.mapNotNull { convertValueToAny(it) } ?: emptyList<Any>()
             }
             else -> {
                 // Ensure the string representation is safe
