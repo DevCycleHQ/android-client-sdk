@@ -203,8 +203,6 @@ class DevCycleClient private constructor(
     @JvmOverloads
     @Synchronized
     fun identifyUser(user: DevCycleUser, callback: DevCycleCallback<Map<String, BaseConfigVariable>>? = null) {
-        flushEvents()
-
         // Validate user before modifying any client state
         val updatedUser: PopulatedUser = try {
             if (this@DevCycleClient.user.userId == user.userId) {
@@ -219,6 +217,8 @@ class DevCycleClient private constructor(
             callback?.onError(t)
             return
         }
+
+        flushEvents()
 
         // Store previous state for recovery
         val previousUser = latestIdentifiedUser
