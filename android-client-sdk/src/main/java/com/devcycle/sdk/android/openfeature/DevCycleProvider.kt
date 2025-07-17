@@ -86,9 +86,7 @@ class DevCycleProvider(
     }
 
     override suspend fun onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) {
-        try {
-            DevCycleLogger.d("DevCycle OpenFeature provider onContextSet: $newContext")
-            
+        try {            
             val client = devCycleClient
             if (client == null) {
                 DevCycleLogger.w(
@@ -104,7 +102,6 @@ class DevCycleProvider(
                 suspendCancellableCoroutine<Unit> { continuation ->
                     client.identifyUser(user, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
                         override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                            DevCycleLogger.d("DevCycle user updated successfully via OpenFeature context")
                             continuation.resume(Unit)
                         }
 
@@ -123,7 +120,6 @@ class DevCycleProvider(
 
     override fun shutdown() {
         devCycleClient?.close()
-        DevCycleLogger.d("DevCycle OpenFeature provider shutdown")
     }
 
     override fun getBooleanEvaluation(
@@ -277,28 +273,7 @@ class DevCycleProvider(
         }
 
         try {
-            val event = DevCycleEvent.builder()
-                .withType(trackingEventName)
-                .apply {
-                    details?.value?.let { value ->
-                        when (value) {
-                            is Number -> withValue(BigDecimal.valueOf(value.toDouble()))
-                            else -> DevCycleLogger.w("DevCycle events only support numeric values, ignoring non-numeric value")
-                        }
-                    }
-                    details?.structure?.asMap()?.let { detailData ->
-                        val metadata = mutableMapOf<String, Any>()
-                        if (detailData is Map<*, *>) {
-                            @Suppress("UNCHECKED_CAST")
-                            metadata.putAll(detailData as Map<String, Any>)
-                        }
-                        if (metadata.isNotEmpty()) {
-                            withMetaData(metadata)
-                        }
-                    }
-                }
-                .build()
-
+            val event = DevCycleEventMapper.openFeatureEventToDevCycleEvent(trackingEventName, details)
             client.track(event)
             DevCycleLogger.d("Tracked event '$trackingEventName' via OpenFeature")
         } catch (e: Exception) {
