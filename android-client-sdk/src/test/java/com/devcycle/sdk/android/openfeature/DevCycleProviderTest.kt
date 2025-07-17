@@ -11,6 +11,7 @@ import dev.openfeature.sdk.*
 import dev.openfeature.sdk.exceptions.OpenFeatureError
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -156,5 +157,12 @@ class DevCycleProviderTest {
                 provider.initialize(null)
             }
         }
+    }
+
+    private fun setupInitializedProvider() {
+        // Make the devCycleClient available (simulate successful initialization)
+        val providerField = DevCycleProvider::class.java.getDeclaredField("devCycleClient")
+        providerField.isAccessible = true
+        providerField.set(provider, mockDevCycleClient)
     }
 } 

@@ -206,7 +206,7 @@ class DevCycleProvider(
                 if (variable.isDefaulted == true) {
                     defaultValue
                 } else {
-                    Value.Structure(convertJsonObjectToMap(variable.value))
+                    Value.Structure(JsonValueConverter.convertJsonObjectToMap(variable.value))
                 }
             }
             defaultValue is Value.List -> {
@@ -214,7 +214,7 @@ class DevCycleProvider(
                 if (variable.isDefaulted == true) {
                     defaultValue
                 } else {
-                    Value.List(convertJsonArrayToList(variable.value))
+                    Value.List(JsonValueConverter.convertJsonArrayToList(variable.value))
                 }
             }
             else -> {
@@ -281,32 +281,4 @@ class DevCycleProvider(
         }
     }
 
-    private fun convertJsonObjectToMap(jsonObject: JSONObject): Map<String, Value> {
-        val map = mutableMapOf<String, Value>()
-        jsonObject.keys().forEach { key ->
-            val value = jsonObject.get(key)
-            map[key] = convertToValue(value)
-        }
-        return map
-    }
-
-    private fun convertJsonArrayToList(jsonArray: JSONArray): List<Value> {
-        val list = mutableListOf<Value>()
-        for (i in 0 until jsonArray.length()) {
-            val value = jsonArray.get(i)
-            list.add(convertToValue(value))
-        }
-        return list
-    }
-
-    private fun convertToValue(value: Any?): Value = when (value) {
-        is Boolean -> Value.Boolean(value)
-        is Int -> Value.Integer(value)
-        is Double -> Value.Double(value)
-        is String -> Value.String(value)
-        is JSONObject -> Value.Structure(convertJsonObjectToMap(value))
-        is JSONArray -> Value.List(convertJsonArrayToList(value))
-        null -> Value.String("")
-        else -> Value.String(value.toString())
-    }
 } 
