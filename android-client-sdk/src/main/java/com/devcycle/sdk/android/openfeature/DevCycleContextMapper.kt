@@ -147,37 +147,11 @@ object DevCycleContextMapper {
             // unless explicitly set to anonymous via a boolean value
             if (hasTargetingKey && !isAnonymousExplicitlySet) {
                 builder.withIsAnonymous(false)
-            }
-            
-            val user = builder.build()
-            
-            // Validate and log the created user for debugging
-            try {
-                DevCycleLogger.d("OpenFeature context mapped to DevCycle user: userId=${user.userId}, isAnonymous=${user.isAnonymous}, email=${user.email}, customData=${user.customData?.keys}")
-                
-                // Validate that custom data is serializable
-                user.customData?.forEach { (key, value) ->
-                    when (value) {
-                        is String, is Number, is Boolean -> {
-                            // These are safe primitive types
-                        }
-                        is Map<*, *>, is List<*> -> {
-                            // Collections should be serializable if they contain safe types
-                            DevCycleLogger.d("OpenFeature context mapper: Complex type in customData for key '$key': ${value.javaClass.simpleName}")
-                        }
-                        else -> {
-                            DevCycleLogger.w("OpenFeature context mapper: Potentially unsafe type in customData for key '$key': ${value.javaClass.simpleName}")
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                DevCycleLogger.e("Error validating mapped user data: ${e.message}")
-            }
-            
-            user
+            }            
+        
+            return builder.build()
         } else {
-            DevCycleLogger.d("OpenFeature context had no meaningful data to map to DevCycle user")
-            null
+            return null
         }
     }
     
