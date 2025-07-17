@@ -681,10 +681,10 @@ class DevCycleClientTests {
                 override fun onSuccess(result: String) {
                     val callback = object: DevCycleCallback<Map<String, BaseConfigVariable>> {
                         override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                            var newUser: PopulatedUser = user.get(client) as PopulatedUser
+                            val userAfterReset: PopulatedUser = user.get(client) as PopulatedUser
                             // Verify that resetUser completed successfully and user fields are valid
-                            Assertions.assertTrue(newUser.isAnonymous, "User should be anonymous after reset")
-                            Assertions.assertNotNull(newUser.userId, "User ID should not be null")
+                            Assertions.assertTrue(userAfterReset.isAnonymous, "User should be anonymous after reset")
+                            Assertions.assertNotNull(userAfterReset.userId, "User ID should not be null")
                             calledBack = true
                             countDownLatch.countDown()
                         }
@@ -2160,145 +2160,145 @@ class DevCycleClientTests {
         client.close()
     }
     
-     @Test
-     fun `identifyUser with error handling works correctly`() {
-         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-         
-         // Set up responses - both successful so we can test the basic flow
-         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
-         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
-         
-         val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
-         
-         try {
-             client.onInitialized(object : DevCycleCallback<String> {
-                 override fun onSuccess(result: String) {
-                     val newUser = DevCycleUser.builder().withUserId("new_user").build()
-                     client.identifyUser(newUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
-                         override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                             // Test passes if identify succeeds
-                             calledBack = true
-                             countDownLatch.countDown()
-                         }
-                         
-                         override fun onError(t: Throwable) {
-                             // Test also passes if error is handled properly
-                             error = t
-                             calledBack = true
-                             countDownLatch.countDown()
-                         }
-                     })
-                 }
-                 
-                 override fun onError(t: Throwable) {
-                     error = t
-                     calledBack = true
-                     countDownLatch.countDown()
-                 }
-             })
-         } catch(t: Throwable) {
-             countDownLatch.countDown()
-         } finally {
-             countDownLatch.await(3000, TimeUnit.MILLISECONDS)
-             handleFinally(calledBack, error)
-         }
-         client.close()
-     }
+    @Test
+    fun `identifyUser with error handling works correctly`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        
+        // Set up responses - both successful so we can test the basic flow
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+        
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+        
+        try {
+            client.onInitialized(object : DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    val newUser = DevCycleUser.builder().withUserId("new_user").build()
+                    client.identifyUser(newUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+                        override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                            // Test passes if identify succeeds
+                            calledBack = true
+                            countDownLatch.countDown()
+                        }
+                        
+                        override fun onError(t: Throwable) {
+                            // Test also passes if error is handled properly
+                            error = t
+                            calledBack = true
+                            countDownLatch.countDown()
+                        }
+                    })
+                }
+                
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+        client.close()
+    }
     
-     @Test
-     fun `identifyUser with valid user works correctly`() {
-         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
-         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
-         
-         val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
-         
-         try {
-             client.onInitialized(object : DevCycleCallback<String> {
-                 override fun onSuccess(result: String) {
-                     // Test with valid user
-                     val validUser = DevCycleUser.builder().withUserId("valid_user").build()
-                     client.identifyUser(validUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
-                         override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                             // Should succeed with valid user
-                             calledBack = true
-                             countDownLatch.countDown()
-                         }
-                         
-                         override fun onError(t: Throwable) {
-                             // If there's an error, that's also acceptable for this test
-                             error = t
-                             calledBack = true
-                             countDownLatch.countDown()
-                         }
-                     })
-                 }
-                 
-                 override fun onError(t: Throwable) {
-                     error = t
-                     calledBack = true
-                     countDownLatch.countDown()
-                 }
-             })
-         } catch(t: Throwable) {
-             countDownLatch.countDown()
-         } finally {
-             countDownLatch.await(3000, TimeUnit.MILLISECONDS)
-             handleFinally(calledBack, error)
-         }
-         client.close()
-     }
+    @Test
+    fun `identifyUser with valid user works correctly`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+        
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+        
+        try {
+            client.onInitialized(object : DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    // Test with valid user
+                    val validUser = DevCycleUser.builder().withUserId("valid_user").build()
+                    client.identifyUser(validUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+                        override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                            // Should succeed with valid user
+                            calledBack = true
+                            countDownLatch.countDown()
+                        }
+                        
+                        override fun onError(t: Throwable) {
+                            // If there's an error, that's also acceptable for this test
+                            error = t
+                            calledBack = true
+                            countDownLatch.countDown()
+                        }
+                    })
+                }
+                
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+        client.close()
+    }
     
-     @Test
-     fun `resetUser works correctly`() {
-         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-         
-         mockWebServer.dispatcher = object : Dispatcher() {
-             override fun dispatch(request: RecordedRequest): MockResponse {
-                 if (request.path == "/v1/events") {
-                     return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
-                 } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
-                     return MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
-                 }
-                 return MockResponse().setResponseCode(404)
-             }
-         }
-         
-         val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString(), user = DevCycleUser.builder().withIsAnonymous(true).build())
-         
-         try {
-             client.onInitialized(object : DevCycleCallback<String> {
-                 override fun onSuccess(result: String) {
-                     client.resetUser(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
-                         override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                             // Test passes if resetUser succeeds
-                             calledBack = true
-                             countDownLatch.countDown()
-                         }
-                         
-                         override fun onError(t: Throwable) {
-                             // Test also passes if resetUser fails gracefully
-                             error = t
-                             calledBack = true
-                             countDownLatch.countDown()
-                         }
-                     })
-                 }
-                 
-                 override fun onError(t: Throwable) {
-                     error = t
-                     calledBack = true
-                     countDownLatch.countDown()
-                 }
-             })
-         } catch(t: Throwable) {
-             countDownLatch.countDown()
-         } finally {
-             countDownLatch.await(3000, TimeUnit.MILLISECONDS)
-             handleFinally(calledBack, error)
-         }
-         client.close()
-     }
+    @Test
+    fun `resetUser works correctly`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.path == "/v1/events") {
+                    return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
+                } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
+                    return MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
+                }
+                return MockResponse().setResponseCode(404)
+            }
+        }
+        
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString(), user = DevCycleUser.builder().withIsAnonymous(true).build())
+        
+        try {
+            client.onInitialized(object : DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    client.resetUser(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+                        override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                            // Test passes if resetUser succeeds
+                            calledBack = true
+                            countDownLatch.countDown()
+                        }
+                        
+                        override fun onError(t: Throwable) {
+                            // Test also passes if resetUser fails gracefully
+                            error = t
+                            calledBack = true
+                            countDownLatch.countDown()
+                        }
+                    })
+                }
+                
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch(t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(3000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+        client.close()
+    }
     
     @Test
     fun `fetchConfigForUser queues requests when already executing`() {
@@ -2357,67 +2357,66 @@ class DevCycleClientTests {
         client.close()
     }
     
-     @Test
-     fun `tryLoadCachedConfigForUser returns false when no cached config exists`() {
-         val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
-         
-         // Access private method tryLoadCachedConfigForUser
-         val useCachedMethod = DevCycleClient::class.java.getDeclaredMethod("tryLoadCachedConfigForUser", PopulatedUser::class.java)
-         useCachedMethod.setAccessible(true)
-         
-         val testUser = PopulatedUser.fromUserParam(DevCycleUser.builder().withUserId("test").build(), mockContext!!)
-         
-         // For this test, we'll just verify the method can be called - proper mocking would be complex
-         val result = useCachedMethod.invoke(client, testUser) as Boolean
-         
-         // Since we can't easily mock the shared preferences, we expect false (no cache)
-         Assertions.assertFalse(result)
-         client.close()
-     }
+    @Test
+    fun `tryLoadCachedConfigForUser returns false when no cached config exists`() {
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+        
+        // Access private method tryLoadCachedConfigForUser
+        val useCachedMethod = DevCycleClient::class.java.getDeclaredMethod("tryLoadCachedConfigForUser", PopulatedUser::class.java)
+        useCachedMethod.setAccessible(true)
+        
+        val testUser = PopulatedUser.fromUserParam(DevCycleUser.builder().withUserId("test").build(), mockContext!!)
+        
+        // For this test, we'll just verify the method can be called - proper mocking would be complex
+        val result = useCachedMethod.invoke(client, testUser) as Boolean
+        
+        // Since we can't easily mock the shared preferences, we expect false (no cache)
+        Assertions.assertFalse(result)
+        client.close()
+    }
      
-     @Test
-     fun `tryLoadCachedConfigForUser returns true when cached config exists`() {
-         val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
-         
-         // First, enqueue a response to initialize the client and cache the config
-         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
-         
-         val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
-         
-         // Access private method tryLoadCachedConfigForUser
-         val useCachedMethod = DevCycleClient::class.java.getDeclaredMethod("tryLoadCachedConfigForUser", PopulatedUser::class.java)
-         useCachedMethod.setAccessible(true)
-         
-         val testUser = PopulatedUser.fromUserParam(DevCycleUser.builder().withUserId("test").build(), mockContext!!)
-         
-         // Wait for client initialization to complete and cache the config
-         var initializationComplete = false
-         val initLatch = CountDownLatch(1)
-         
-         client.onInitialized(object : DevCycleCallback<String> {
-             override fun onSuccess(result: String) {
-                 initializationComplete = true
-                 initLatch.countDown()
-             }
-             
-             override fun onError(t: Throwable) {
-                 initLatch.countDown()
-             }
-         })
-         
-         initLatch.await(3000, TimeUnit.MILLISECONDS)
-         
-         // Now test that tryLoadCachedConfigForUser can find the cached config
-         // Note: This may still return false if the cache key doesn't match the test user
-         val result = useCachedMethod.invoke(client, testUser) as Boolean
-         
-         // The result depends on whether the cache key matches - for this test we verify the method works
-         // The actual cache behavior depends on the DVCSharedPrefs implementation
-         Assertions.assertTrue(initializationComplete)
-         
-         client.close()
-     }
-     
+    @Test
+    fun `tryLoadCachedConfigForUser returns true when cached config exists`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING)
+        
+        // First, enqueue a response to initialize the client and cache the config
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+        
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+        
+        // Access private method tryLoadCachedConfigForUser
+        val useCachedMethod = DevCycleClient::class.java.getDeclaredMethod("tryLoadCachedConfigForUser", PopulatedUser::class.java)
+        useCachedMethod.setAccessible(true)
+        
+        val testUser = PopulatedUser.fromUserParam(DevCycleUser.builder().withUserId("test").build(), mockContext!!)
+        
+        // Wait for client initialization to complete and cache the config
+        var initializationComplete = false
+        val initLatch = CountDownLatch(1)
+        
+        client.onInitialized(object : DevCycleCallback<String> {
+            override fun onSuccess(result: String) {
+                initializationComplete = true
+                initLatch.countDown()
+            }
+            
+            override fun onError(t: Throwable) {
+                initLatch.countDown()
+            }
+        })
+        
+        initLatch.await(3000, TimeUnit.MILLISECONDS)
+        
+        // Now test that tryLoadCachedConfigForUser can find the cached config
+        // Note: This may still return false if the cache key doesn't match the test user
+        val result = useCachedMethod.invoke(client, testUser) as Boolean
+        
+        // The result depends on whether the cache key matches - for this test we verify the method works
+        // The actual cache behavior depends on the DVCSharedPrefs implementation
+        Assertions.assertTrue(initializationComplete)
+        
+        client.close()
+    }
 
 }
 

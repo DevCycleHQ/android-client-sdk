@@ -221,7 +221,7 @@ class DevCycleClient private constructor(
         }
 
         // Store previous state for recovery
-        val previousLatestIdentifiedUser = latestIdentifiedUser
+        val previousUser = latestIdentifiedUser
         latestIdentifiedUser = updatedUser
 
         fetchConfigForUser(updatedUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
@@ -240,7 +240,7 @@ class DevCycleClient private constructor(
                     config?.variables?.let { callback?.onSuccess(it) }
                 } else {
                     // No cached config available, restore previous state and return error
-                    latestIdentifiedUser = previousLatestIdentifiedUser
+                    latestIdentifiedUser = previousUser
                     callback?.onError(error)
                 }
             }
@@ -262,7 +262,7 @@ class DevCycleClient private constructor(
         }
 
         // Store previous state for recovery
-        val previousLatestIdentifiedUser = latestIdentifiedUser
+        val previousUser = latestIdentifiedUser
         val newUser = PopulatedUser.buildAnonymous(this.context, dvcSharedPrefs)
         latestIdentifiedUser = newUser
 
@@ -278,7 +278,7 @@ class DevCycleClient private constructor(
                 if (cachedAnonUserId != null) {
                     dvcSharedPrefs.setAnonUserId(cachedAnonUserId)
                 }
-                latestIdentifiedUser = previousLatestIdentifiedUser
+                latestIdentifiedUser = previousUser
                 callback?.onError(error)
             }
         })
