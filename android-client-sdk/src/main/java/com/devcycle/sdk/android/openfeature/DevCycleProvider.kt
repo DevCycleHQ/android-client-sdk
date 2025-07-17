@@ -160,7 +160,7 @@ class DevCycleProvider(
             )
         }
 
-        val variable = client.variable(key, defaultValue as Number)
+        val variable = client.variable(key, defaultValue)
         val doubleValue = variable.value.toDouble()
         return ProviderEvaluation(
             value = doubleValue,
@@ -182,7 +182,7 @@ class DevCycleProvider(
             )
         }
 
-        val variable = client.variable(key, defaultValue as Number)
+        val variable = client.variable(key, defaultValue)
         val intValue = variable.value.toInt()
         return ProviderEvaluation(
             value = intValue,
