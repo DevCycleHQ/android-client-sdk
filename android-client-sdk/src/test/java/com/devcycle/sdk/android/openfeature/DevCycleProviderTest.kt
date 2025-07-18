@@ -6,6 +6,7 @@ import com.devcycle.sdk.android.api.DevCycleClient
 import com.devcycle.sdk.android.api.DevCycleOptions
 import com.devcycle.sdk.android.model.BaseConfigVariable
 import com.devcycle.sdk.android.model.DevCycleUser
+import com.devcycle.sdk.android.model.EvalReason
 import com.devcycle.sdk.android.model.Variable
 import dev.openfeature.sdk.*
 import dev.openfeature.sdk.exceptions.OpenFeatureError
@@ -157,6 +158,66 @@ class DevCycleProviderTest {
                 provider.initialize(null)
             }
         }
+    }
+
+    @Test
+    fun `createProviderEvaluation includes metadata when eval details are available`() {
+        setupInitializedProvider()
+        
+        // Create a mock variable with eval information
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        val mockEvalReason = mockk<EvalReason>(relaxed = true)
+        
+        every { mockVariable.key } returns "test-variable"
+        every { mockVariable.value } returns "test-value"
+        every { mockVariable.isDefaulted } returns false
+        every { mockVariable.eval } returns mockEvalReason
+        every { mockEvalReason.reason } returns "TARGETING_MATCH"
+        every { mockEvalReason.details } returns "Test evaluation details"
+        every { mockEvalReason.targetId } returns "test-target-123"
+        
+        every { mockDevCycleClient.variable("test-variable", "default") } returns mockVariable
+        
+        val result = provider.getStringEvaluation("test-variable", "default", null)
+        
+        assertEquals("test-value", result.value)
+        assertEquals("test-variable", result.variant)
+        assertEquals("TARGETING_MATCH", result.reason)
+        
+        // Check that metadata contains the eval details and target ID
+        assertNotNull(result.metadata)
+        assertEquals("Test evaluation details", result.metadata.getString("evalDetails"))
+        assertEquals("test-target-123", result.metadata.getString("evalTargetId"))
+    }
+
+    @Test
+    fun `createProviderEvaluation includes partial metadata when only some eval details are available`() {
+        setupInitializedProvider()
+        
+        // Create a mock variable with eval information but only details (no targetId)
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        val mockEvalReason = mockk<EvalReason>(relaxed = true)
+        
+        every { mockVariable.key } returns "test-variable"
+        every { mockVariable.value } returns "test-value"
+        every { mockVariable.isDefaulted } returns false
+        every { mockVariable.eval } returns mockEvalReason
+        every { mockEvalReason.reason } returns "TARGETING_MATCH"
+        every { mockEvalReason.details } returns "Test evaluation details"
+        every { mockEvalReason.targetId } returns null // No target ID
+        
+        every { mockDevCycleClient.variable("test-variable", "default") } returns mockVariable
+        
+        val result = provider.getStringEvaluation("test-variable", "default", null)
+        
+        assertEquals("test-value", result.value)
+        assertEquals("test-variable", result.variant)
+        assertEquals("TARGETING_MATCH", result.reason)
+        
+        // Check that metadata contains the eval details but not target ID
+        assertNotNull(result.metadata)
+        assertEquals("Test evaluation details", result.metadata.getString("evalDetails"))
+        assertNull(result.metadata.getString("evalTargetId"))
     }
 
     private fun setupInitializedProvider() {
