@@ -7,6 +7,7 @@ import com.devcycle.sdk.android.api.DevCycleOptions
 import com.devcycle.sdk.android.model.BaseConfigVariable
 import com.devcycle.sdk.android.model.DevCycleEvent
 import com.devcycle.sdk.android.model.DevCycleUser
+import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.sdk.*
 import dev.openfeature.sdk.exceptions.OpenFeatureError
@@ -29,6 +30,27 @@ class DevCycleProvider(
      * The DevCycle client instance - created during initialization
      */
     private var devCycleClient: DevCycleClient? = null
+
+    /**
+     * Helper function to create a ProviderEvaluation from a DevCycle variable
+     */
+    private fun <T> createProviderEvaluation(variable: Variable<*>, value: T): ProviderEvaluation<T> {
+        return ProviderEvaluation(
+            value = value,
+            variant = variable.key,
+            reason = variable.eval?.reason ?: if (variable.isDefaulted == true) Reason.DEFAULT.toString() else Reason.TARGETING_MATCH.toString()
+        )
+    }
+
+    /**
+     * Helper function to create a default ProviderEvaluation when client is not available
+     */
+    private fun <T> createDefaultProviderEvaluation(defaultValue: T): ProviderEvaluation<T> {
+        return ProviderEvaluation(
+            value = defaultValue,
+            reason = Reason.DEFAULT.toString()
+        )
+    }
 
     override suspend fun initialize(initialContext: EvaluationContext?) {
         if (initialContext == null) {
@@ -127,20 +149,9 @@ class DevCycleProvider(
         defaultValue: Boolean,
         context: EvaluationContext?
     ): ProviderEvaluation<Boolean> {
-        val client = devCycleClient
-        if (client == null) {
-            return ProviderEvaluation(
-                value = defaultValue,
-                reason = "DEFAULT"
-            )
-        }
-
+        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return ProviderEvaluation(
-            value = variable.value,
-            variant = variable.key,
-            reason = if (variable.isDefaulted == true) "DEFAULT" else "TARGETING_MATCH"
-        )
+        return createProviderEvaluation(variable, variable.value)
     }
 
     override fun getDoubleEvaluation(
@@ -148,21 +159,9 @@ class DevCycleProvider(
         defaultValue: Double,
         context: EvaluationContext?
     ): ProviderEvaluation<Double> {
-        val client = devCycleClient
-        if (client == null) {
-            return ProviderEvaluation(
-                value = defaultValue,
-                reason = "DEFAULT"
-            )
-        }
-
+        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        val doubleValue = variable.value.toDouble()
-        return ProviderEvaluation(
-            value = doubleValue,
-            variant = variable.key,
-            reason = if (variable.isDefaulted == true) "DEFAULT" else "TARGETING_MATCH"
-        )
+        return createProviderEvaluation(variable, variable.value.toDouble())
     }
 
     override fun getIntegerEvaluation(
@@ -170,21 +169,9 @@ class DevCycleProvider(
         defaultValue: Int,
         context: EvaluationContext?
     ): ProviderEvaluation<Int> {
-        val client = devCycleClient
-        if (client == null) {
-            return ProviderEvaluation(
-                value = defaultValue,
-                reason = "DEFAULT"
-            )
-        }
-
+        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        val intValue = variable.value.toInt()
-        return ProviderEvaluation(
-            value = intValue,
-            variant = variable.key,
-            reason = if (variable.isDefaulted == true) "DEFAULT" else "TARGETING_MATCH"
-        )
+        return createProviderEvaluation(variable, variable.value.toInt())
     }
 
     override fun getObjectEvaluation(
@@ -192,52 +179,39 @@ class DevCycleProvider(
         defaultValue: Value,
         context: EvaluationContext?
     ): ProviderEvaluation<Value> {
-        val client = devCycleClient
-        if (client == null) {
-            return ProviderEvaluation(
-                value = defaultValue,
-                reason = "DEFAULT"
-            )
-        }
+        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
 
-        val result = when {
+        val (result, variable) = when {
             defaultValue is Value.Structure -> {
                 val variable = client.variable(key, JSONObject())
-                if (variable.isDefaulted == true) {
+                val value = if (variable.isDefaulted == true) {
                     defaultValue
                 } else {
                     Value.Structure(JsonValueConverter.convertJsonObjectToMap(variable.value))
                 }
+                Pair(value, variable)
             }
             defaultValue is Value.List -> {
                 val variable = client.variable(key, JSONArray())
-                if (variable.isDefaulted == true) {
+                val value = if (variable.isDefaulted == true) {
                     defaultValue
                 } else {
                     Value.List(JsonValueConverter.convertJsonArrayToList(variable.value))
                 }
+                Pair(value, variable)
             }
             else -> {
                 val variable = client.variable(key, defaultValue.asString() ?: "")
-                if (variable.isDefaulted == true) {
+                val value = if (variable.isDefaulted == true) {
                     defaultValue
                 } else {
                     Value.String(variable.value)
                 }
+                Pair(value, variable)
             }
         }
 
-        val isDefaulted = when {
-            defaultValue is Value.Structure -> client.variable(key, JSONObject()).isDefaulted == true
-            defaultValue is Value.List -> client.variable(key, JSONArray()).isDefaulted == true
-            else -> client.variable(key, defaultValue.asString() ?: "").isDefaulted == true
-        }
-
-        return ProviderEvaluation(
-            value = result,
-            variant = key,
-            reason = if (isDefaulted) "DEFAULT" else "TARGETING_MATCH"
-        )
+        return createProviderEvaluation(variable, result)
     }
 
     override fun getStringEvaluation(
@@ -245,20 +219,9 @@ class DevCycleProvider(
         defaultValue: String,
         context: EvaluationContext?
     ): ProviderEvaluation<String> {
-        val client = devCycleClient
-        if (client == null) {
-            return ProviderEvaluation(
-                value = defaultValue,
-                reason = "DEFAULT"
-            )
-        }
-
+        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return ProviderEvaluation(
-            value = variable.value,
-            variant = variable.key,
-            reason = if (variable.isDefaulted == true) "DEFAULT" else "TARGETING_MATCH"
-        )
+        return createProviderEvaluation(variable, variable.value)
     }
 
     override fun track(
