@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.AfterEach
+import dev.openfeature.sdk.EvaluationMetadata
 
 class DevCycleProviderTest {
 
@@ -217,6 +218,32 @@ class DevCycleProviderTest {
         // Check that metadata contains the eval details but not target ID
         assertNotNull(result.metadata)
         assertEquals("Test evaluation details", result.metadata.getString("evalDetails"))
+        assertNull(result.metadata.getString("evalTargetId"))
+    }
+
+    @Test
+    fun `createProviderEvaluation uses empty metadata when no eval details are available`() {
+        setupInitializedProvider()
+        
+        // Create a mock variable with no eval information
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        
+        every { mockVariable.key } returns "test-variable"
+        every { mockVariable.value } returns "test-value"
+        every { mockVariable.isDefaulted } returns true
+        every { mockVariable.eval } returns null // No eval data
+        
+        every { mockDevCycleClient.variable("test-variable", "default") } returns mockVariable
+        
+        val result = provider.getStringEvaluation("test-variable", "default", null)
+        
+        assertEquals("test-value", result.value)
+        assertEquals("test-variable", result.variant)
+        assertEquals("DEFAULT", result.reason)
+        
+        // Check that metadata is EMPTY when no eval data is available
+        assertEquals(EvaluationMetadata.EMPTY, result.metadata)
+        assertNull(result.metadata.getString("evalDetails"))
         assertNull(result.metadata.getString("evalTargetId"))
     }
 

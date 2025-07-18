@@ -36,14 +36,17 @@ class DevCycleProvider(
      */
     private fun <T> createProviderEvaluation(variable: Variable<*>, value: T): ProviderEvaluation<T> {
         val metadataBuilder = EvaluationMetadata.builder()
+        var hasMetadata = false
         
         // Add evaluation details and target ID if available
         variable.eval?.let { evalReason ->
             evalReason.details?.let { details ->
                 metadataBuilder.putString("evalDetails", details)
+                hasMetadata = true
             }
             evalReason.targetId?.let { targetId ->
                 metadataBuilder.putString("evalTargetId", targetId)
+                hasMetadata = true
             }
         }
         
@@ -51,7 +54,7 @@ class DevCycleProvider(
             value = value,
             variant = variable.key,
             reason = variable.eval?.reason ?: if (variable.isDefaulted == true) Reason.DEFAULT.toString() else Reason.TARGETING_MATCH.toString(),
-            metadata = metadataBuilder.build()
+            metadata = if (hasMetadata) metadataBuilder.build() else EvaluationMetadata.EMPTY
         )
     }
 
