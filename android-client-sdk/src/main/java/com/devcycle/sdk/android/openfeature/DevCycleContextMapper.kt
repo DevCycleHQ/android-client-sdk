@@ -15,11 +15,40 @@ object DevCycleContextMapper {
         var hasStandardAttributes = false
         var isAnonymousExplicitlySet = false
         
-        // Map targeting key to user ID if available
+        // Map targeting key to user ID if available (highest priority)
         context.getTargetingKey()?.let { targetingKey ->
             if (targetingKey.isNotBlank()) {
                 builder.withUserId(targetingKey)
                 hasTargetingKey = true
+            }
+        }
+        
+        // If no targeting key, try to get user ID from context values
+        if (!hasTargetingKey) {
+            // Check for "userId" first
+            context.getValue("userId")?.let { userId ->
+                if (userId is Value.String) {
+                    userId.asString()?.let { userIdStr ->
+                        if (userIdStr.isNotBlank()) {
+                            builder.withUserId(userIdStr)
+                            hasTargetingKey = true
+                        }
+                    }
+                }
+            }
+            
+            // If still no user ID, check for "user_id"
+            if (!hasTargetingKey) {
+                context.getValue("user_id")?.let { userId ->
+                    if (userId is Value.String) {
+                        userId.asString()?.let { userIdStr ->
+                            if (userIdStr.isNotBlank()) {
+                                builder.withUserId(userIdStr)
+                                hasTargetingKey = true
+                            }
+                        }
+                    }
+                }
             }
         }
         
@@ -68,6 +97,16 @@ object DevCycleContextMapper {
         // Use direct asMap method call instead of reflection
         context.asMap().forEach { (key, value) ->
             when (key) {
+                "userId", "user_id" -> {
+                    // Skip these if they were already processed for user ID
+                    if (!hasTargetingKey || value !is Value.String) {
+                        // Only add to custom data if not used as user ID or if wrong type
+                        val convertedValue = convertValueToAny(value)
+                        if (convertedValue != null) {
+                            customData[key] = convertedValue
+                        }
+                    }
+                }
                 "email" -> {
                     // Only skip if it was successfully processed as a string above
                     if (value !is Value.String) {
