@@ -135,6 +135,64 @@ class DevCycleEventMapperTest {
     }
 
     @Test
+    fun `processes complex nested metadata structures correctly`() {
+        val structure = ImmutableStructure(mapOf(
+            "user" to Value.Structure(mapOf(
+                "name" to Value.String("John Doe"),
+                "age" to Value.Integer(25),
+                "preferences" to Value.Structure(mapOf(
+                    "theme" to Value.String("dark"),
+                    "notifications" to Value.Boolean(true)
+                ))
+            )),
+            "tags" to Value.List(listOf(
+                Value.String("premium"),
+                Value.String("beta-user"),
+                Value.Integer(42)
+            )),
+            "scores" to Value.List(listOf(
+                Value.Double(95.5),
+                Value.Double(87.2)
+            )),
+            "product_id" to Value.String("abc123")
+        ))
+        
+        val details = TrackingEventDetails(structure = structure)
+        
+        val result = DevCycleEventMapper.openFeatureEventToDevCycleEvent("complex_event", details)
+        
+        assertNotNull(result)
+        val jsonMap = convertToJsonMap(result)
+        assertEquals("complex_event", jsonMap["type"])
+        
+        val metaData = jsonMap["metaData"] as Map<*, *>
+        
+        // Check nested user object
+        val user = metaData["user"] as Map<*, *>
+        assertEquals("John Doe", user["name"])
+        assertEquals(25, user["age"])
+        
+        val preferences = user["preferences"] as Map<*, *>
+        assertEquals("dark", preferences["theme"])
+        assertEquals(true, preferences["notifications"])
+        
+        // Check lists with mixed types
+        val tags = metaData["tags"] as List<*>
+        assertEquals(3, tags.size)
+        assertEquals("premium", tags[0])
+        assertEquals("beta-user", tags[1])
+        assertEquals(42, tags[2])
+        
+        val scores = metaData["scores"] as List<*>
+        assertEquals(2, scores.size)
+        assertEquals(95.5, scores[0])
+        assertEquals(87.2, scores[1])
+        
+        // Check primitive value
+        assertEquals("abc123", metaData["product_id"])
+    }
+
+    @Test
     fun `handles empty structure by not including metadata`() {
         val structure = ImmutableStructure(emptyMap<String, Value>())
         

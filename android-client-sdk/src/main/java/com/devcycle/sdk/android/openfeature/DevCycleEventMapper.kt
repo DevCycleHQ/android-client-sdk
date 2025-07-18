@@ -44,7 +44,7 @@ object DevCycleEventMapper {
     }
     
     /**
-     * Unwraps OpenFeature Value objects to raw Java types
+     * Unwraps OpenFeature Value objects to raw Java types recursively
      */
     private fun unwrapValue(value: Any): Any? {
         return when (value) {
@@ -52,6 +52,18 @@ object DevCycleEventMapper {
             is Value.Boolean -> value.asBoolean()
             is Value.Integer -> value.asInteger()
             is Value.Double -> value.asDouble()
+            is Value.Structure -> {
+                // Recursively unwrap nested structure
+                val structureMap = value.structure
+                structureMap?.mapValues { (_, v) -> 
+                    unwrapValue(v) 
+                }?.filterValues { it != null }
+            }
+            is Value.List -> {
+                // Recursively unwrap nested list
+                val list = value.list
+                list?.mapNotNull { unwrapValue(it) }
+            }
             else -> null
         }
     }
