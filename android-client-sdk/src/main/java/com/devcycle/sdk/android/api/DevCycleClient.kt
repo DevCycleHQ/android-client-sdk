@@ -203,41 +203,48 @@ class DevCycleClient private constructor(
     @JvmOverloads
     @Synchronized
     fun identifyUser(user: DevCycleUser, callback: DevCycleCallback<Map<String, BaseConfigVariable>>? = null) {
-        flushEvents()
-
-        val updatedUser: PopulatedUser = if (this@DevCycleClient.user.userId == user.userId) {
-            this@DevCycleClient.user.copyUserAndUpdateFromDevCycleUser(user)
-        } else {
-            // Apply the same validation logic as in DevCycleClientBuilder
-            DevCycleClient.validateDevCycleUser(user, dvcSharedPrefs)
-            PopulatedUser.fromUserParam(user, context)
-        }
-        latestIdentifiedUser = updatedUser
-
-        if (isExecuting.get()) {
-            configRequestQueue.add(UserAndCallback(updatedUser, callback))
-            DevCycleLogger.d("Queued identifyUser request for user_id %s", updatedUser.userId)
+        // Validate user before modifying any client state
+        val updatedUser: PopulatedUser = try {
+            if (this@DevCycleClient.user.userId == user.userId) {
+                this@DevCycleClient.user.copyUserAndUpdateFromDevCycleUser(user)
+            } else {
+                // Apply the same validation logic as in DevCycleClientBuilder
+                DevCycleClient.validateDevCycleUser(user, dvcSharedPrefs)
+                PopulatedUser.fromUserParam(user, context)
+            }
+        } catch (t: Throwable) {
+            // On invalid user, return error and keep existing user/config
+            callback?.onError(t)
             return
         }
 
-        isExecuting.set(true)
-        coroutineScope.launch {
-            withContext(coroutineContext) {
-                try {
-                    fetchConfig(updatedUser)
+        flushEvents()
+
+        // Store previous state for recovery
+        val previousUser = latestIdentifiedUser
+        latestIdentifiedUser = updatedUser
+
+        fetchConfigForUser(updatedUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+            override fun onSuccess(variables: Map<String, BaseConfigVariable>) {
+                callback?.onSuccess(variables)
+            }
+
+            override fun onError(error: Throwable) {
+                DevCycleLogger.d("Error fetching config for user_id %s: %s", updatedUser.userId, error.message)
+
+                // In the event that the config request fails (i.e. the device is offline)
+                // Fallback to using a Cached Configuration for the User if available
+                val hasCachedConfig = tryLoadCachedConfigForUser(updatedUser)
+                if (hasCachedConfig) {
+                    // Successfully used cached config, return success
                     config?.variables?.let { callback?.onSuccess(it) }
-                } catch (t: Throwable) {
-                    DevCycleLogger.d("Error fetching config for user_id %s", updatedUser.userId)
-                    // In the event that the config request fails (i.e. the device is offline)
-                    // Fallback to using a Cached Configuration for the User if available
-                    useCachedConfigForUser(updatedUser)
-                    callback?.onError(t)
-                } finally {
-                    handleQueuedConfigRequests()
-                    isExecuting.set(false)
+                } else {
+                    // No cached config available, restore previous state and return error
+                    latestIdentifiedUser = previousUser
+                    callback?.onError(error)
                 }
             }
-        }
+        })
     }
 
     /**
@@ -249,31 +256,32 @@ class DevCycleClient private constructor(
     @JvmOverloads
     @Synchronized
     fun resetUser(callback: DevCycleCallback<Map<String, BaseConfigVariable>>? = null) {
-        val newUser: PopulatedUser = PopulatedUser.buildAnonymous(this.context)
-        latestIdentifiedUser = newUser
-
-        if (isExecuting.get()) {
-            configRequestQueue.add(UserAndCallback(newUser, callback))
-            DevCycleLogger.d("Queued resetUser request for new anonymous user")
-            return
+        val cachedAnonUserId = dvcSharedPrefs.getAnonUserId()
+        if (cachedAnonUserId != null) {
+            dvcSharedPrefs.clearAnonUserId()
         }
+
+        // Store previous state for recovery
+        val previousUser = latestIdentifiedUser
+        val newUser = PopulatedUser.buildAnonymous(this.context, dvcSharedPrefs)
+        latestIdentifiedUser = newUser
 
         flushEvents()
 
-        coroutineScope.launch {
-            withContext(coroutineContext) {
-                isExecuting.set(true)
-                try {
-                    fetchConfig(newUser)
-                    config?.variables?.let { callback?.onSuccess(it) }
-                } catch (t: Throwable) {
-                    callback?.onError(t)
-                } finally {
-                    handleQueuedConfigRequests()
-                    isExecuting.set(false)
-                }
+        fetchConfigForUser(newUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+            override fun onSuccess(variables: Map<String, BaseConfigVariable>) {
+                callback?.onSuccess(variables)
             }
-        }
+
+            override fun onError(error: Throwable) {
+                // Restore the original anonymous user id and previous user on error
+                if (cachedAnonUserId != null) {
+                    dvcSharedPrefs.setAnonUserId(cachedAnonUserId)
+                }
+                latestIdentifiedUser = previousUser
+                callback?.onError(error)
+            }
+        })
     }
 
     fun close(callback: DevCycleCallback<String>? = null) {
@@ -510,6 +518,32 @@ class DevCycleClient private constructor(
         }
     }
 
+    private fun fetchConfigForUser(
+        user: PopulatedUser, 
+        callback: DevCycleCallback<Map<String, BaseConfigVariable>>
+    ) {
+        if (isExecuting.get()) {
+            configRequestQueue.add(UserAndCallback(user, callback))
+            return
+        }
+
+        isExecuting.set(true)
+        coroutineScope.launch {
+            withContext(coroutineContext) {
+                try {
+                    fetchConfig(user)
+                    config?.variables?.let { callback?.onSuccess(it) }
+                } catch (t: Throwable) {
+                    callback?.onError(t)
+                } finally {
+                    handleQueuedConfigRequests()
+                    isExecuting.set(false)
+                }
+            }
+        }
+    }
+
+
     private fun refetchConfig(
         sse: Boolean = false,
         lastModified: Long? = null,
@@ -554,6 +588,20 @@ class DevCycleClient private constructor(
             isConfigCached.set(true)
             DevCycleLogger.d("Loaded config from cache for user_id %s", user.userId)
             observable.configUpdated(config)
+        }
+    }
+
+    private fun tryLoadCachedConfigForUser(user: PopulatedUser): Boolean {
+        val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
+
+        if (cachedConfig != null) {
+            config = cachedConfig
+            isConfigCached.set(true)
+            DevCycleLogger.d("Loaded config from cache for user_id %s", user.userId)
+            observable.configUpdated(config)
+            return true
+        } else {
+            return false
         }
     }
 
