@@ -30,6 +30,60 @@ class DevCycleContextMapperTest {
     }
 
     @Test
+    fun `maps userId attribute to user ID when no targeting key`() {
+        val context = ImmutableContext(
+            attributes = mutableMapOf(
+                "userId" to Value.String("user-from-userId")
+            )
+        )
+        
+        val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
+        
+        assertNotNull(result)
+        val jsonMap = convertToJsonMap(result!!)
+        assertEquals("user-from-userId", jsonMap["userId"])
+        assertEquals(false, jsonMap["isAnonymous"]) // User should be identified
+    }
+
+    @Test
+    fun `maps user_id attribute to user ID when no targeting key or userId`() {
+        val context = ImmutableContext(
+            attributes = mutableMapOf(
+                "user_id" to Value.String("user-from-user_id")
+            )
+        )
+        
+        val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
+        
+        assertNotNull(result)
+        val jsonMap = convertToJsonMap(result!!)
+        assertEquals("user-from-user_id", jsonMap["userId"])
+        assertEquals(false, jsonMap["isAnonymous"]) // User should be identified
+    }
+
+    @Test
+    fun `prioritizes targeting key over userId and user_id attributes`() {
+        val context = ImmutableContext(
+            targetingKey = "targeting-key-user",
+            attributes = mutableMapOf(
+                "userId" to Value.String("userId-attribute"),
+                "user_id" to Value.String("user_id-attribute")
+            )
+        )
+        
+        val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
+        
+        assertNotNull(result)
+        val jsonMap = convertToJsonMap(result!!)
+        assertEquals("targeting-key-user", jsonMap["userId"])
+        
+        // userId and user_id should not appear in custom data when targeting key is used
+        val customData = jsonMap["customData"] as? Map<*, *>
+        assertNull(customData?.get("userId"))
+        assertNull(customData?.get("user_id"))
+    }
+
+    @Test
     fun `maps standard attributes correctly`() {
         val context = ImmutableContext(
             targetingKey = "user-123",
