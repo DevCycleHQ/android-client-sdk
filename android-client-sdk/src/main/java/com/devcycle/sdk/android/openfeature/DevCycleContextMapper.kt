@@ -11,46 +11,26 @@ object DevCycleContextMapper {
         if (context == null) return null
         
         val builder = DevCycleUser.builder()
-        var hasTargetingKey = false
+        var userId = ""
         var hasStandardAttributes = false
         var isAnonymousExplicitlySet = false
         
-        // Map targeting key to user ID if available (highest priority)
-        context.getTargetingKey()?.let { targetingKey ->
-            if (targetingKey.isNotBlank()) {
-                builder.withUserId(targetingKey)
-                hasTargetingKey = true
+        context.getTargetingKey()?.takeIf { it.isNotEmpty() }?.let {
+            userId = it
+        } ?: run {
+            context.getValue("user_id")?.takeIf { it is Value.String }?.asString()?.let {
+                userId = it
+            } ?: run {
+                context.getValue("userId")?.takeIf { it is Value.String }?.asString()?.let {
+                    userId = it
+                }
             }
         }
         
-        // If no targeting key, try to get user ID from context values
-        if (!hasTargetingKey) {
-            // Check for "userId" first
-            context.getValue("userId")?.let { userId ->
-                if (userId is Value.String) {
-                    userId.asString()?.let { userIdStr ->
-                        if (userIdStr.isNotBlank()) {
-                            builder.withUserId(userIdStr)
-                            hasTargetingKey = true
-                        }
-                    }
-                }
-            }
-            
-            // If still no user ID, check for "user_id"
-            if (!hasTargetingKey) {
-                context.getValue("user_id")?.let { userId ->
-                    if (userId is Value.String) {
-                        userId.asString()?.let { userIdStr ->
-                            if (userIdStr.isNotBlank()) {
-                                builder.withUserId(userIdStr)
-                                hasTargetingKey = true
-                            }
-                        }
-                    }
-                }
-            }
+        if (!userId.isEmpty()) {
+            builder.withUserId(userId)
         }
+        
         
         // Map standard attributes
         context.getValue("email")?.let { email ->
@@ -98,14 +78,7 @@ object DevCycleContextMapper {
         context.asMap().forEach { (key, value) ->
             when (key) {
                 "userId", "user_id" -> {
-                    // Skip these if they were already processed for user ID
-                    if (!hasTargetingKey || value !is Value.String) {
-                        // Only add to custom data if not used as user ID or if wrong type
-                        val convertedValue = convertValueToAny(value)
-                        if (convertedValue != null) {
-                            customData[key] = convertedValue
-                        }
-                    }
+                    // Skip these as they are always processed for user ID
                 }
                 "email" -> {
                     // Only skip if it was successfully processed as a string above
@@ -181,10 +154,10 @@ object DevCycleContextMapper {
         }
         
         // Only return a user if we have meaningful data
-        return if (hasTargetingKey || hasStandardAttributes || customData.isNotEmpty() || privateCustomData.isNotEmpty()) {
+        return if (!userId.isEmpty() || hasStandardAttributes || customData.isNotEmpty() || privateCustomData.isNotEmpty()) {
             // If user has a targeting key, they should be considered identified (not anonymous)
             // unless explicitly set to anonymous via a boolean value
-            if (hasTargetingKey && !isAnonymousExplicitlySet) {
+            if (!userId.isEmpty() && !isAnonymousExplicitlySet) {
                 builder.withIsAnonymous(false)
             }            
         

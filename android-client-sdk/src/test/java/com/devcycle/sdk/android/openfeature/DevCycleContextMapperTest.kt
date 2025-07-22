@@ -84,6 +84,29 @@ class DevCycleContextMapperTest {
     }
 
     @Test
+    fun `prioritizes user_id over userId attribute when no targeting key`() {
+        val context = ImmutableContext(
+            attributes = mutableMapOf(
+                "userId" to Value.String("userId-attribute"),
+                "user_id" to Value.String("user_id-attribute")
+            )
+        )
+        
+        val result = DevCycleContextMapper.evaluationContextToDevCycleUser(context)
+        
+        assertNotNull(result)
+        val jsonMap = convertToJsonMap(result!!)
+        // Should use user_id value as it has higher priority than userId (matching Java SDK)
+        assertEquals("user_id-attribute", jsonMap["userId"])
+        assertEquals(false, jsonMap["isAnonymous"]) // User should be identified
+        
+        // Neither should appear in custom data when used for user ID
+        val customData = jsonMap["customData"] as? Map<*, *>
+        assertNull(customData?.get("userId"))
+        assertNull(customData?.get("user_id"))
+    }
+
+    @Test
     fun `maps standard attributes correctly`() {
         val context = ImmutableContext(
             targetingKey = "user-123",
