@@ -11,17 +11,26 @@ object DevCycleContextMapper {
         if (context == null) return null
         
         val builder = DevCycleUser.builder()
-        var hasTargetingKey = false
+        var userId = ""
         var hasStandardAttributes = false
         var isAnonymousExplicitlySet = false
         
-        // Map targeting key to user ID if available
-        context.getTargetingKey()?.let { targetingKey ->
-            if (targetingKey.isNotBlank()) {
-                builder.withUserId(targetingKey)
-                hasTargetingKey = true
+        context.getTargetingKey()?.takeIf { it.isNotEmpty() }?.let {
+            userId = it
+        } ?: run {
+            context.getValue("user_id")?.takeIf { it is Value.String }?.asString()?.let {
+                userId = it
+            } ?: run {
+                context.getValue("userId")?.takeIf { it is Value.String }?.asString()?.let {
+                    userId = it
+                }
             }
         }
+        
+        if (!userId.isEmpty()) {
+            builder.withUserId(userId)
+        }
+        
         
         // Map standard attributes
         context.getValue("email")?.let { email ->
@@ -68,6 +77,9 @@ object DevCycleContextMapper {
         // Use direct asMap method call instead of reflection
         context.asMap().forEach { (key, value) ->
             when (key) {
+                "userId", "user_id" -> {
+                    // Skip these as they are always processed for user ID
+                }
                 "email" -> {
                     // Only skip if it was successfully processed as a string above
                     if (value !is Value.String) {
@@ -142,10 +154,10 @@ object DevCycleContextMapper {
         }
         
         // Only return a user if we have meaningful data
-        return if (hasTargetingKey || hasStandardAttributes || customData.isNotEmpty() || privateCustomData.isNotEmpty()) {
+        return if (!userId.isEmpty() || hasStandardAttributes || customData.isNotEmpty() || privateCustomData.isNotEmpty()) {
             // If user has a targeting key, they should be considered identified (not anonymous)
             // unless explicitly set to anonymous via a boolean value
-            if (hasTargetingKey && !isAnonymousExplicitlySet) {
+            if (!userId.isEmpty() && !isAnonymousExplicitlySet) {
                 builder.withIsAnonymous(false)
             }            
         
