@@ -92,7 +92,7 @@ ext {
     POM_DEVELOPER_NAME='DevCycle SDK Group'
     POM_DEVELOPER_URL='https://devcycle.com'
 
-    androidx_version = '1.15.0'
+    androidx_version = '1.16.0'
     retrofit_version = "2.11.0"
     swagger_annotations_version = '2.2.26'
     jackson_version = "2.19.1"
