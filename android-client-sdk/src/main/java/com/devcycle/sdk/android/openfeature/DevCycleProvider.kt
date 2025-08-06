@@ -5,7 +5,6 @@ import com.devcycle.sdk.android.api.DevCycleCallback
 import com.devcycle.sdk.android.api.DevCycleClient
 import com.devcycle.sdk.android.api.DevCycleOptions
 import com.devcycle.sdk.android.model.BaseConfigVariable
-import com.devcycle.sdk.android.model.DevCycleEvent
 import com.devcycle.sdk.android.model.DevCycleUser
 import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.DevCycleLogger
@@ -14,7 +13,6 @@ import dev.openfeature.sdk.exceptions.OpenFeatureError
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONArray
 import org.json.JSONObject
-import java.math.BigDecimal
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -29,7 +27,15 @@ class DevCycleProvider(
     /**
      * The DevCycle client instance - created during initialization
      */
-    private var devCycleClient: DevCycleClient? = null
+    private var _devcycleClient: DevCycleClient? = null
+
+    val devcycleClient: DevCycleClient
+        get() = _devcycleClient
+            ?: error(
+                """
+                DevCycleClient is not initialized. Call OpenFeatureAPI.setProvider() / OpenFeatureAPI.setProviderAndWait() with this provider instance to initialize the DevCycleClient.
+                """.trimIndent()
+            )
 
     /**
      * Helper function to create a ProviderEvaluation from a DevCycle variable
@@ -37,7 +43,7 @@ class DevCycleProvider(
     private fun <T> createProviderEvaluation(variable: Variable<*>, value: T): ProviderEvaluation<T> {
         val metadataBuilder = EvaluationMetadata.builder()
         var hasMetadata = false
-        
+
         // Add evaluation details and target ID if available
         variable.eval?.let { evalReason ->
             evalReason.details?.let { details ->
@@ -49,7 +55,7 @@ class DevCycleProvider(
                 hasMetadata = true
             }
         }
-        
+
         return ProviderEvaluation(
             value = value,
             variant = variable.key,
@@ -93,14 +99,14 @@ class DevCycleProvider(
                 .withContext(context)
                 .withSDKKey(sdkKey)
                 .withUser(user)
-            
+
             options?.let { clientBuilder.withOptions(it) }
-            
-            devCycleClient = clientBuilder.build()
+
+            _devcycleClient = clientBuilder.build()
 
             // Wait for DevCycle client to fully initialize
             suspendCancellableCoroutine<Unit> { continuation ->
-                devCycleClient!!.onInitialized(object : DevCycleCallback<String> {
+                _devcycleClient!!.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
                         DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully")
                         continuation.resume(Unit)
@@ -124,8 +130,8 @@ class DevCycleProvider(
     }
 
     override suspend fun onContextSet(oldContext: EvaluationContext?, newContext: EvaluationContext) {
-        try {            
-            val client = devCycleClient
+        try {
+            val client = _devcycleClient
             if (client == null) {
                 DevCycleLogger.w(
                     "Context set before DevCycleProvider was fully initialized. " +
@@ -157,7 +163,7 @@ class DevCycleProvider(
     }
 
     override fun shutdown() {
-        devCycleClient?.close()
+        _devcycleClient?.close()
     }
 
     override fun getBooleanEvaluation(
@@ -165,7 +171,7 @@ class DevCycleProvider(
         defaultValue: Boolean,
         context: EvaluationContext?
     ): ProviderEvaluation<Boolean> {
-        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
+        val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
         return createProviderEvaluation(variable, variable.value)
     }
@@ -175,7 +181,7 @@ class DevCycleProvider(
         defaultValue: Double,
         context: EvaluationContext?
     ): ProviderEvaluation<Double> {
-        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
+        val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
         return createProviderEvaluation(variable, variable.value.toDouble())
     }
@@ -185,7 +191,7 @@ class DevCycleProvider(
         defaultValue: Int,
         context: EvaluationContext?
     ): ProviderEvaluation<Int> {
-        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
+        val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
         return createProviderEvaluation(variable, variable.value.toInt())
     }
@@ -195,7 +201,7 @@ class DevCycleProvider(
         defaultValue: Value,
         context: EvaluationContext?
     ): ProviderEvaluation<Value> {
-        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
+        val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
 
         val (result, variable) = when {
             defaultValue is Value.Structure -> {
@@ -235,7 +241,7 @@ class DevCycleProvider(
         defaultValue: String,
         context: EvaluationContext?
     ): ProviderEvaluation<String> {
-        val client = devCycleClient ?: return createDefaultProviderEvaluation(defaultValue)
+        val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
         return createProviderEvaluation(variable, variable.value)
     }
@@ -245,7 +251,7 @@ class DevCycleProvider(
         context: EvaluationContext?,
         details: TrackingEventDetails?
     ) {
-        val client = devCycleClient
+        val client = _devcycleClient
         if (client == null) {
             DevCycleLogger.w("Cannot track event '$trackingEventName': DevCycle client not initialized")
             return
