@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -72,8 +73,12 @@ class DevCycleProviderTest {
     }
 
     @Test
-    fun `accessing devCycleClient throws exception when client not initialized`() {
-        assertThrows(IllegalStateException::class.java) { provider.devCycleClient }
+    fun `accessing devcycleClient throws exception when client not initialized`() {
+        val exception = assertThrows(IllegalStateException::class.java) { provider.devcycleClient }
+        assertTrue(
+            exception.message?.contains("DevCycleClient is not initialized") == true,
+            "Exception message should contain 'DevCycleClient is not initialized'"
+        )
     }
 
     @Test
@@ -257,14 +262,14 @@ class DevCycleProviderTest {
     }
 
     @Test
-    fun `accessing devCycleClient returns devCycleClient when client is initialized`() {
+    fun `accessing devcycleClient returns devcycleClient when client is initialized`() {
         setupInitializedProvider()
-        assertEquals(mockDevCycleClient, provider.devCycleClient)
+        assertEquals(mockDevCycleClient, provider.devcycleClient)
     }
 
     private fun setupInitializedProvider() {
         // Make the devCycleClient available (simulate successful initialization)
-        val providerField = DevCycleProvider::class.java.getDeclaredField("_devCycleClient")
+        val providerField = DevCycleProvider::class.java.getDeclaredField("_devcycleClient")
         providerField.isAccessible = true
         providerField.set(provider, mockDevCycleClient)
     }
