@@ -32,9 +32,9 @@ class DevCycleProvider(
     val devcycleClient: DevCycleClient
         get() = _devcycleClient
             ?: error(
-                "DevCycleClient is not initialized. " + 
-                "Call OpenFeatureAPI.setProvider() / OpenFeatureAPI.setProviderAndWait() " + 
-                "with this provider instance to initialize the DevCycleClient."
+                """
+                DevCycleClient is not initialized. Call OpenFeatureAPI.setProvider() / OpenFeatureAPI.setProviderAndWait() with this provider instance to initialize the DevCycleClient.
+                """.trimIndent()
             )
 
     /**
