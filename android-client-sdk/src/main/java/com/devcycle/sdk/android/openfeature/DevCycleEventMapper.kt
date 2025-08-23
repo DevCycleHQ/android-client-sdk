@@ -2,8 +2,8 @@ package com.devcycle.sdk.android.openfeature
 
 import com.devcycle.sdk.android.model.DevCycleEvent
 import com.devcycle.sdk.android.util.DevCycleLogger
-import dev.openfeature.sdk.TrackingEventDetails
-import dev.openfeature.sdk.Value
+import dev.openfeature.kotlin.sdk.TrackingEventDetails
+import dev.openfeature.kotlin.sdk.Value
 import java.math.BigDecimal
 
 object DevCycleEventMapper {

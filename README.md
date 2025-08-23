@@ -28,7 +28,7 @@ The DevCycle Android SDK includes support for [OpenFeature](https://openfeature.
 
 ```kotlin
 import com.devcycle.sdk.android.openfeature.DevCycleProvider
-import dev.openfeature.sdk.OpenFeatureAPI
+import dev.openfeature.kotlin.sdk.OpenFeatureAPI
 
 // Initialize the DevCycle provider
 val provider = DevCycleProvider(
