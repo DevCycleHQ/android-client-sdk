@@ -1,7 +1,6 @@
 package com.devcycle.sdk.android.openfeature
 
 import com.devcycle.sdk.android.model.DevCycleEvent
-import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.kotlin.sdk.TrackingEventDetails
 import dev.openfeature.kotlin.sdk.Value
 import java.math.BigDecimal
@@ -55,14 +54,14 @@ object DevCycleEventMapper {
             is Value.Structure -> {
                 // Recursively unwrap nested structure
                 val structureMap = value.structure
-                structureMap?.mapValues { (_, v) -> 
+                structureMap.mapValues { (_, v) ->
                     unwrapValue(v) 
-                }?.filterValues { it != null }
+                }.filterValues { it != null }
             }
             is Value.List -> {
                 // Recursively unwrap nested list
                 val list = value.list
-                list?.mapNotNull { unwrapValue(it) }
+                list.mapNotNull { unwrapValue(it) }
             }
             else -> null
         }

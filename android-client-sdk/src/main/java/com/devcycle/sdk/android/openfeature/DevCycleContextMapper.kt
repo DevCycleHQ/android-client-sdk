@@ -1,7 +1,6 @@
 package com.devcycle.sdk.android.openfeature
 
 import com.devcycle.sdk.android.model.DevCycleUser
-import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.kotlin.sdk.EvaluationContext
 import dev.openfeature.kotlin.sdk.Value
 
@@ -15,7 +14,7 @@ object DevCycleContextMapper {
         var hasStandardAttributes = false
         var isAnonymousExplicitlySet = false
         
-        context.getTargetingKey()?.takeIf { it.isNotEmpty() }?.let {
+        context.getTargetingKey().takeIf { it.isNotEmpty() }?.let {
             userId = it
         } ?: run {
             context.getValue("user_id")?.takeIf { it is Value.String }?.asString()?.let {
@@ -176,14 +175,14 @@ object DevCycleContextMapper {
             is Value.Structure -> {
                 // Access structure directly
                 val structureMap = value.structure
-                structureMap?.mapValues { (_, v) -> 
-                    convertValueToAny(v) 
-                }?.filterValues { it != null }
+                structureMap.mapValues { (_, v) ->
+                    convertValueToAny(v)
+                }.filterValues { it != null }
             }
             is Value.List -> {
                 // Access list directly
                 val list = value.list
-                list?.mapNotNull { convertValueToAny(it) } ?: emptyList<Any>()
+                list.mapNotNull { convertValueToAny(it) }
             }
             else -> {
                 // Ensure the string representation is safe
