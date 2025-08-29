@@ -5,7 +5,7 @@ import android.widget.Toast
 import com.devcycle.sdk.android.api.DevCycleOptions
 import com.devcycle.sdk.android.openfeature.DevCycleProvider
 import com.devcycle.sdk.android.util.LogLevel
-import dev.openfeature.sdk.*
+import dev.openfeature.kotlin.sdk.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

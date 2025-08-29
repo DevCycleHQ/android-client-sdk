@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.devcycle.openfeatureexample.R
-import dev.openfeature.sdk.*
+import dev.openfeature.kotlin.sdk.*
 
 class OpenFeatureActivity : AppCompatActivity() {
 

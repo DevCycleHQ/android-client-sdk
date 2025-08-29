@@ -138,8 +138,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlin_reflect_version")
     implementation("androidx.core:core-ktx:$androidx_version")
 
-    // OpenFeature Android SDK
-    implementation("dev.openfeature:android-sdk:0.4.1")
+    // OpenFeature Kotlin SDK
+    implementation("dev.openfeature:kotlin-sdk:0.6.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junit_version")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit_version")

@@ -1,6 +1,6 @@
 package com.devcycle.sdk.android.openfeature
 
-import dev.openfeature.sdk.Value
+import dev.openfeature.kotlin.sdk.Value
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
