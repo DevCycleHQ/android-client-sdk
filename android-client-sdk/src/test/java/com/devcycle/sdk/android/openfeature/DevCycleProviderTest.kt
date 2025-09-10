@@ -6,10 +6,10 @@ import com.devcycle.sdk.android.api.DevCycleClient
 import com.devcycle.sdk.android.model.BaseConfigVariable
 import com.devcycle.sdk.android.model.EvalReason
 import com.devcycle.sdk.android.model.Variable
-import dev.openfeature.sdk.EvaluationMetadata
-import dev.openfeature.sdk.ImmutableContext
-import dev.openfeature.sdk.TrackingEventDetails
-import dev.openfeature.sdk.Value
+import dev.openfeature.kotlin.sdk.EvaluationMetadata
+import dev.openfeature.kotlin.sdk.ImmutableContext
+import dev.openfeature.kotlin.sdk.TrackingEventDetails
+import dev.openfeature.kotlin.sdk.Value
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject

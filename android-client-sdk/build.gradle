@@ -100,7 +100,7 @@ ext {
     //noinspection DuplicatePlatformClasses
     jackson_jparser_version = "2.19.1"
     gson_mapper_version = "2.8.6"
-    coroutines_version = '1.10.1'
+    coroutines_version = '1.10.2'
     kotlin_reflect_version = '2.1.20'
 
     junit_version = "5.13.3"
@@ -138,8 +138,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlin_reflect_version")
     implementation("androidx.core:core-ktx:$androidx_version")
 
-    // OpenFeature Android SDK
-    implementation("dev.openfeature:android-sdk:0.4.1")
+    // OpenFeature Kotlin SDK
+    implementation("dev.openfeature:kotlin-sdk:0.6.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junit_version")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit_version")
