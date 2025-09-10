@@ -8,8 +8,8 @@ import com.devcycle.sdk.android.model.BaseConfigVariable
 import com.devcycle.sdk.android.model.DevCycleUser
 import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.DevCycleLogger
-import dev.openfeature.sdk.*
-import dev.openfeature.sdk.exceptions.OpenFeatureError
+import dev.openfeature.kotlin.sdk.*
+import dev.openfeature.kotlin.sdk.exceptions.OpenFeatureError
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONArray
 import org.json.JSONObject
