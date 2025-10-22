@@ -37,18 +37,18 @@ jobs:
           token: ${{ secrets.AUTOMATION_USER_TOKEN }}
           fetch-depth: 0
 
-      - uses: DevCycleHQ/release-action/prepare-release@v2.3.0
-        id: prepare-release
-        with:
-          github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
-          prerelease: ${{ github.event.inputs.prerelease }}
-          draft: ${{ github.event.inputs.draft }}
-          version-increment-type: ${{ github.event.inputs.version-increment-type }}
+      # - uses: DevCycleHQ/release-action/prepare-release@v2.3.0
+      #   id: prepare-release
+      #   with:
+      #     github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
+      #     prerelease: ${{ github.event.inputs.prerelease }}
+      #     draft: ${{ github.event.inputs.draft }}
+      #     version-increment-type: ${{ github.event.inputs.version-increment-type }}
 
       - name: Update Version in code
         run: |
-          sed -i "s/^version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/version = \"${{steps.prepare-release.outputs.next-release-tag}}\"/g" android-client-sdk/build.gradle
-          sed -i "s/^implementation(\"com.devcycle:android-client-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+\")/implementation(\"com.devcycle:android-client-sdk:${{steps.prepare-release.outputs.next-release-tag}}\")/g" README.md
+          sed -i "s/^version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/version = \"2.3.3\"/g" android-client-sdk/build.gradle
+          sed -i "s/^implementation(\"com.devcycle:android-client-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+\")/implementation(\"com.devcycle:android-client-sdk:2.3.3\")/g" README.md
 
       - name: Commit version change
         run: |
@@ -56,7 +56,7 @@ jobs:
           git config --global user.name "DevCycle Automation"
           git add ./android-client-sdk/build.gradle
           git add ./README.md
-          git commit -m "Release ${{steps.prepare-release.outputs.next-release-tag}}"
+          git commit -m "Release 2.3.3"
 
       - name: Push version change
         run: |
@@ -83,11 +83,11 @@ jobs:
         id: create-release
         with:
           github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
-          tag: ${{ steps.prepare-release.outputs.next-release-tag }}
+          tag: 2.3.3
           target: ${{ github.ref_name }}
           prerelease: ${{ github.event.inputs.prerelease }}
           draft: ${{ github.event.inputs.draft }}
-          changelog: ${{ steps.prepare-release.outputs.changelog }}
+          changelog: "Release 2.3.3"
 
       - name: Display link to release
         run: |
