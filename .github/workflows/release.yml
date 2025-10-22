@@ -60,7 +60,7 @@ jobs:
 
       - name: Push version change
         run: |
-          git push origin HEAD:main
+          git push origin HEAD:${{ github.ref_name }}
         if: inputs.draft != true
 
       - name: Set up Java 18
@@ -84,7 +84,7 @@ jobs:
         with:
           github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
           tag: ${{ steps.prepare-release.outputs.next-release-tag }}
-          target: main
+          target: ${{ github.ref_name }}
           prerelease: ${{ github.event.inputs.prerelease }}
           draft: ${{ github.event.inputs.draft }}
           changelog: ${{ steps.prepare-release.outputs.changelog }}
