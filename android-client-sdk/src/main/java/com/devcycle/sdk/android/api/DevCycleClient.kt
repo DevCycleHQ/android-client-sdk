@@ -11,6 +11,7 @@ import com.devcycle.sdk.android.util.DevCycleLogger
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
 import com.launchdarkly.eventsource.ConnectStrategy
+import com.launchdarkly.eventsource.ErrorStrategy
 import com.launchdarkly.eventsource.EventSource
 import com.launchdarkly.eventsource.background.BackgroundEventSource
 import com.launchdarkly.eventsource.MessageEvent
@@ -170,7 +171,7 @@ class DevCycleClient private constructor(
         val builder = EventSource.Builder(
             ConnectStrategy.http(URI(config?.sse?.url))
                 .readTimeout(EVENT_SOURCE_RETRY_DELAY_MIN, TimeUnit.MINUTES)
-        )
+        ).errorStrategy(ErrorStrategy.alwaysContinue())
 
         backgroundEventSource = BackgroundEventSource.Builder(handler, builder).build()
         backgroundEventSource?.start()
