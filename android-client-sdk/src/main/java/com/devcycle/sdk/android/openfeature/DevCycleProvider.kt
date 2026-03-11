@@ -9,7 +9,11 @@ import com.devcycle.sdk.android.model.DevCycleUser
 import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.kotlin.sdk.*
+import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
 import dev.openfeature.kotlin.sdk.exceptions.OpenFeatureError
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONArray
 import org.json.JSONObject
@@ -28,6 +32,7 @@ class DevCycleProvider(
      * The DevCycle client instance - created during initialization
      */
     private var _devcycleClient: DevCycleClient? = null
+    private val providerEvents = MutableSharedFlow<OpenFeatureProviderEvents>(replay = 1, extraBufferCapacity = 1)
 
     val devcycleClient: DevCycleClient
         get() = _devcycleClient
@@ -36,6 +41,8 @@ class DevCycleProvider(
                 DevCycleClient is not initialized. Call OpenFeatureAPI.setProvider() / OpenFeatureAPI.setProviderAndWait() with this provider instance to initialize the DevCycleClient.
                 """.trimIndent()
             )
+
+    override fun observe(): Flow<OpenFeatureProviderEvents> = providerEvents.asSharedFlow()
 
     /**
      * Helper function to create a ProviderEvaluation from a DevCycle variable
@@ -102,10 +109,22 @@ class DevCycleProvider(
 
             options?.let { clientBuilder.withOptions(it) }
 
-            _devcycleClient = clientBuilder.build()
+            val client = clientBuilder.build()
+            _devcycleClient = client
 
-            if (_devcycleClient!!.hasUsableCachedConfig()) {
+            if (client.hasUsableCachedConfig()) {
                 DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully from cached config")
+                providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderStale)
+                client.onInitialized(object : DevCycleCallback<String> {
+                    override fun onSuccess(result: String) {
+                        DevCycleLogger.d("DevCycle OpenFeature provider refreshed successfully after cached startup")
+                        providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderReady)
+                    }
+
+                    override fun onError(t: Throwable) {
+                        DevCycleLogger.e("DevCycle OpenFeature provider refresh failed after cached startup: ${t.message}")
+                    }
+                })
                 return
             }
 
