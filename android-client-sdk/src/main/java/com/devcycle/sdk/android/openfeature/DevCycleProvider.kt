@@ -104,6 +104,11 @@ class DevCycleProvider(
 
             _devcycleClient = clientBuilder.build()
 
+            if (_devcycleClient!!.hasUsableCachedConfig()) {
+                DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully from cached config")
+                return
+            }
+
             // Wait for DevCycle client to fully initialize
             suspendCancellableCoroutine<Unit> { continuation ->
                 _devcycleClient!!.onInitialized(object : DevCycleCallback<String> {

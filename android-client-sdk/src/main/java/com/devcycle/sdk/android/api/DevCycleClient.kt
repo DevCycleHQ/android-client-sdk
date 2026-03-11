@@ -193,6 +193,10 @@ class DevCycleClient private constructor(
         }
     }
 
+    internal fun hasUsableCachedConfig(): Boolean {
+        return isConfigCached.get() && config != null
+    }
+
     /**
      * Updates or builds a new User and fetches the latest config for that User
      *

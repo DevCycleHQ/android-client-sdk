@@ -14,6 +14,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
@@ -45,6 +46,8 @@ class DevCycleProviderTest {
         every { mockBuilder.withUser(any()) } returns mockBuilder
         every { mockBuilder.withOptions(any()) } returns mockBuilder
         every { mockBuilder.build() } returns mockDevCycleClient
+
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
 
         // Mock the onInitialized method to immediately call the success callback
         every { mockDevCycleClient.onInitialized(any()) } answers {
@@ -173,6 +176,53 @@ class DevCycleProviderTest {
                 provider.initialize(null)
             }
         }
+    }
+
+    @Test
+    fun `initialize returns immediately when cached config is already usable`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+
+        assertDoesNotThrow {
+            runBlocking {
+                provider.initialize(ImmutableContext(targetingKey = "test-user"))
+            }
+        }
+
+        verify(exactly = 0) { mockDevCycleClient.onInitialized(any()) }
+    }
+
+    @Test
+    fun `initialize can serve cached evaluation without waiting for onInitialized`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        every { mockVariable.value } returns "cached-value"
+        every { mockVariable.isDefaulted } returns false
+        every { mockDevCycleClient.variable("test-flag", "default") } returns mockVariable
+
+        assertDoesNotThrow {
+            runBlocking {
+                provider.initialize(ImmutableContext(targetingKey = "test-user"))
+            }
+        }
+
+        val result = provider.getStringEvaluation("test-flag", "default", null)
+
+        assertEquals("cached-value", result.value)
+        verify(exactly = 0) { mockDevCycleClient.onInitialized(any()) }
+        verify(exactly = 1) { mockDevCycleClient.variable("test-flag", "default") }
+    }
+
+    @Test
+    fun `initialize waits for full initialization when no cached config is available`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
+
+        assertDoesNotThrow {
+            runBlocking {
+                provider.initialize(ImmutableContext(targetingKey = "test-user"))
+            }
+        }
+
+        verify(exactly = 1) { mockDevCycleClient.onInitialized(any()) }
     }
 
     @Test
