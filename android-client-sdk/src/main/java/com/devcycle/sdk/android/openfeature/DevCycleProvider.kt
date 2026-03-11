@@ -130,9 +130,10 @@ class DevCycleProvider(
 
             // Wait for DevCycle client to fully initialize
             suspendCancellableCoroutine<Unit> { continuation ->
-                _devcycleClient!!.onInitialized(object : DevCycleCallback<String> {
+                client.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
                         DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully")
+                        providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderReady)
                         continuation.resume(Unit)
                     }
 

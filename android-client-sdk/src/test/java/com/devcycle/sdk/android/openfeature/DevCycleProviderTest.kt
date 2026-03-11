@@ -285,6 +285,19 @@ class DevCycleProviderTest {
     }
 
     @Test
+    fun `initialize emits ready event when no cached config is available`() = runBlocking {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
+
+        val readyEvent = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(1_000) { provider.observe().first() }
+        }
+
+        provider.initialize(ImmutableContext(targetingKey = "test-user"))
+
+        assertEquals(OpenFeatureProviderEvents.ProviderReady, readyEvent.await())
+    }
+
+    @Test
     fun `createProviderEvaluation includes metadata when eval details are available`() {
         setupInitializedProvider()
 
