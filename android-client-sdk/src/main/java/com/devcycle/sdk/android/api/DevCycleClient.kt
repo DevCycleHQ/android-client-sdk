@@ -194,7 +194,7 @@ class DevCycleClient private constructor(
     }
 
     internal fun hasUsableCachedConfig(): Boolean {
-        return isConfigCached.get() && config != null
+        return config != null && isConfigCached.get()
     }
 
     /**
