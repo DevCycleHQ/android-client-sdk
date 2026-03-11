@@ -193,6 +193,7 @@ class DevCycleClient private constructor(
         }
     }
 
+    @JvmSynthetic
     internal fun hasUsableCachedConfig(): Boolean {
         return config != null && isConfigCached.get()
     }
