@@ -11,6 +11,7 @@ import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.kotlin.sdk.*
 import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
 import dev.openfeature.kotlin.sdk.exceptions.OpenFeatureError
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -32,7 +33,11 @@ class DevCycleProvider(
      * The DevCycle client instance - created during initialization
      */
     private var _devcycleClient: DevCycleClient? = null
-    private val providerEvents = MutableSharedFlow<OpenFeatureProviderEvents>(replay = 1, extraBufferCapacity = 1)
+    private val providerEvents = MutableSharedFlow<OpenFeatureProviderEvents>(
+        replay = 1,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     val devcycleClient: DevCycleClient
         get() = _devcycleClient
@@ -44,11 +49,7 @@ class DevCycleProvider(
 
     override fun observe(): Flow<OpenFeatureProviderEvents> = providerEvents.asSharedFlow()
 
-    private suspend fun emitProviderEvent(event: OpenFeatureProviderEvents) {
-        providerEvents.emit(event)
-    }
-
-    private fun tryEmitProviderEvent(event: OpenFeatureProviderEvents) {
+    private fun emitProviderEvent(event: OpenFeatureProviderEvents) {
         if (!providerEvents.tryEmit(event)) {
             DevCycleLogger.w("Dropping OpenFeature provider event: $event")
         }
@@ -128,7 +129,7 @@ class DevCycleProvider(
                 client.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
                         DevCycleLogger.d("DevCycle OpenFeature provider refreshed successfully after cached startup")
-                        tryEmitProviderEvent(OpenFeatureProviderEvents.ProviderReady)
+                        emitProviderEvent(OpenFeatureProviderEvents.ProviderReady)
                     }
 
                     override fun onError(t: Throwable) {
@@ -143,7 +144,7 @@ class DevCycleProvider(
                 client.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
                         DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully")
-                        tryEmitProviderEvent(OpenFeatureProviderEvents.ProviderReady)
+                        emitProviderEvent(OpenFeatureProviderEvents.ProviderReady)
                         continuation.resume(Unit)
                     }
 

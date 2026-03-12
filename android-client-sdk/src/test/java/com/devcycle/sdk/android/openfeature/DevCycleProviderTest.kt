@@ -244,6 +244,20 @@ class DevCycleProviderTest {
     }
 
     @Test
+    fun `initialize does not block on repeated cached startups without event collectors`() = runBlocking {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        every { mockDevCycleClient.onInitialized(any()) } answers { }
+
+        withTimeout(1_000) {
+            repeat(3) { attempt ->
+                provider.initialize(ImmutableContext(targetingKey = "test-user-$attempt"))
+            }
+        }
+
+        verify(exactly = 3) { mockDevCycleClient.onInitialized(any()) }
+    }
+
+    @Test
     fun `initialize can serve cached evaluation without waiting for onInitialized`() {
         every { mockDevCycleClient.hasUsableCachedConfig() } returns true
         val mockVariable = mockk<Variable<String>>(relaxed = true)
