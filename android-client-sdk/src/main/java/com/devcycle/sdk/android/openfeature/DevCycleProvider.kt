@@ -44,6 +44,16 @@ class DevCycleProvider(
 
     override fun observe(): Flow<OpenFeatureProviderEvents> = providerEvents.asSharedFlow()
 
+    private suspend fun emitProviderEvent(event: OpenFeatureProviderEvents) {
+        providerEvents.emit(event)
+    }
+
+    private fun tryEmitProviderEvent(event: OpenFeatureProviderEvents) {
+        if (!providerEvents.tryEmit(event)) {
+            DevCycleLogger.w("Dropping OpenFeature provider event: $event")
+        }
+    }
+
     /**
      * Helper function to create a ProviderEvaluation from a DevCycle variable
      */
@@ -114,11 +124,11 @@ class DevCycleProvider(
 
             if (client.hasUsableCachedConfig()) {
                 DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully from cached config")
-                providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderStale)
+                emitProviderEvent(OpenFeatureProviderEvents.ProviderStale)
                 client.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
                         DevCycleLogger.d("DevCycle OpenFeature provider refreshed successfully after cached startup")
-                        providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderReady)
+                        tryEmitProviderEvent(OpenFeatureProviderEvents.ProviderReady)
                     }
 
                     override fun onError(t: Throwable) {
@@ -133,7 +143,7 @@ class DevCycleProvider(
                 client.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
                         DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully")
-                        providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderReady)
+                        tryEmitProviderEvent(OpenFeatureProviderEvents.ProviderReady)
                         continuation.resume(Unit)
                     }
 
