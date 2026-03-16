@@ -131,7 +131,11 @@ dependencies {
     }
     implementation("io.swagger.core.v3:swagger-annotations:$swagger_annotations_version")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_kotlin_version}")
+    // jackson-module-kotlin 2.21+ uses MethodHandle.invokeExact which requires minSdk 26.
+    // Use strictly to prevent jackson-bom from upgrading past 2.19.x.
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin") {
+        version { strictly jackson_kotlin_version }
+    }
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-json-org:${jackson_jparser_version}") {
         exclude group:'org.json', module:'json'
     }
