@@ -45,11 +45,11 @@
 # Jackson and JSON processing
 -keep class java.beans.Transient.** {*;}
 -keep class java.beans.ConstructorProperties.** {*;}
--keep class java.nio.file.Path.** {*;}
 -keepnames class com.fasterxml.jackson.** { *; }
 -dontwarn com.fasterxml.jackson.core.type.TypeReference
 -dontwarn com.fasterxml.jackson.databind.**
 -dontwarn javax.annotation.**
+-dontwarn java.lang.invoke.StringConcatFactory
 -dontwarn kotlin.Unit
 -dontwarn retrofit2.KotlinExtensions
 -dontwarn retrofit2.KotlinExtensions$*

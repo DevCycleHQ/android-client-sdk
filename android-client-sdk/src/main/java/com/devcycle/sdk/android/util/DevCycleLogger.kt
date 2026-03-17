@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.util
 
-import android.os.Build
 import android.util.Log
 import org.jetbrains.annotations.NonNls
 import java.io.PrintWriter
@@ -223,12 +222,7 @@ class DevCycleLogger private constructor() {
       if (m.find()) {
         tag = m.replaceAll("")
       }
-      // Tag length limit was removed in API 26.
-      return if (tag.length <= MAX_TAG_LENGTH || Build.VERSION.SDK_INT >= 26) {
-        tag
-      } else {
-        tag.substring(0, MAX_TAG_LENGTH)
-      }
+      return tag
     }
 
     /**
@@ -270,7 +264,6 @@ class DevCycleLogger private constructor() {
 
     companion object {
       private const val MAX_LOG_LENGTH = 4000
-      private const val MAX_TAG_LENGTH = 23
       private val ANONYMOUS_CLASS = Pattern.compile("(\\$\\d+)+$")
     }
   }

@@ -71,11 +71,7 @@ internal data class PopulatedUser constructor(
         @JvmSynthetic internal fun buildAnonymous(context: Context, dvcSharedPrefs: DVCSharedPrefs): PopulatedUser {
             val userId = dvcSharedPrefs.getOrCreateAnonUserId()
             val isAnonymous = true
-            val locale: Locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                context.resources.configuration.locales[0]
-            } else {
-                context.resources.configuration.locale
-            }
+            val locale: Locale = context.resources.configuration.locales[0]
             val packageManager = context.packageManager
             val packageInfo: PackageInfo = packageManager.getPackageInfo(context.packageName, 0)
 
@@ -100,12 +96,7 @@ internal data class PopulatedUser constructor(
 
         @JvmSynthetic internal fun getLanguage(context: Context): String {
             return try {
-                val locale: Locale
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    locale = context.resources.configuration.locales[0]
-                } else {
-                    locale = context.resources.configuration.locale
-                }
+                val locale: Locale = context.resources.configuration.locales[0]
                 locale.language
             } catch (e: Exception) {
                 DevCycleLogger.e(e, "Error getting language")
