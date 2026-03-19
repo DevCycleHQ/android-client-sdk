@@ -6,7 +6,7 @@ all around the world.
 
 ## Requirements
 
-This version of the DevCycle Android Client SDK supports a minimum Android API Version 23.
+This version of the DevCycle Android Client SDK supports a minimum Android API Version 23 (Android 6.0, released October 2015).
 
 ## Installation
 
