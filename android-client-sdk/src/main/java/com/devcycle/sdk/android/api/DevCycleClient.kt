@@ -193,6 +193,11 @@ class DevCycleClient private constructor(
         }
     }
 
+    @JvmSynthetic
+    internal fun hasUsableCachedConfig(): Boolean {
+        return config != null && isConfigCached.get()
+    }
+
     /**
      * Updates or builds a new User and fetches the latest config for that User
      *

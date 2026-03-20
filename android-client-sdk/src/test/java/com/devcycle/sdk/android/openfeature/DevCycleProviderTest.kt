@@ -10,11 +10,18 @@ import dev.openfeature.kotlin.sdk.EvaluationMetadata
 import dev.openfeature.kotlin.sdk.ImmutableContext
 import dev.openfeature.kotlin.sdk.TrackingEventDetails
 import dev.openfeature.kotlin.sdk.Value
+import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import io.mockk.verify
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -45,6 +52,8 @@ class DevCycleProviderTest {
         every { mockBuilder.withUser(any()) } returns mockBuilder
         every { mockBuilder.withOptions(any()) } returns mockBuilder
         every { mockBuilder.build() } returns mockDevCycleClient
+
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
 
         // Mock the onInitialized method to immediately call the success callback
         every { mockDevCycleClient.onInitialized(any()) } answers {
@@ -173,6 +182,133 @@ class DevCycleProviderTest {
                 provider.initialize(null)
             }
         }
+    }
+
+    @Test
+    fun `initialize returns immediately when cached config is already usable`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        var initCallback: DevCycleCallback<String>? = null
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            initCallback = firstArg()
+        }
+
+        assertDoesNotThrow {
+            runBlocking {
+                withTimeout(1_000) {
+                    provider.initialize(ImmutableContext(targetingKey = "test-user"))
+                }
+            }
+        }
+
+        assertNotNull(initCallback)
+        verify(exactly = 1) { mockDevCycleClient.onInitialized(any()) }
+    }
+
+    @Test
+    fun `initialize emits stale event when cached config is already usable`() = runBlocking {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        every { mockDevCycleClient.onInitialized(any()) } answers { }
+
+        val staleEvent = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(1_000) { provider.observe().first() }
+        }
+
+        provider.initialize(ImmutableContext(targetingKey = "test-user"))
+
+        assertEquals(OpenFeatureProviderEvents.ProviderStale, staleEvent.await())
+    }
+
+    @Test
+    fun `initialize emits ready after cached startup refresh succeeds`() = runBlocking {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        var initCallback: DevCycleCallback<String>? = null
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            initCallback = firstArg()
+        }
+
+        val staleEvent = async {
+            withTimeout(1_000) { provider.observe().first() }
+        }
+
+        provider.initialize(ImmutableContext(targetingKey = "test-user"))
+        assertNotNull(initCallback)
+        assertEquals(OpenFeatureProviderEvents.ProviderStale, staleEvent.await())
+
+        val readyEvent = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(1_000) { provider.observe().drop(1).first() }
+        }
+
+        initCallback!!.onSuccess("initialized")
+
+        assertEquals(OpenFeatureProviderEvents.ProviderReady, readyEvent.await())
+    }
+
+    @Test
+    fun `initialize does not block on repeated cached startups without event collectors`() = runBlocking {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        every { mockDevCycleClient.onInitialized(any()) } answers { }
+
+        withTimeout(1_000) {
+            repeat(3) { attempt ->
+                provider.initialize(ImmutableContext(targetingKey = "test-user-$attempt"))
+            }
+        }
+
+        verify(exactly = 3) { mockDevCycleClient.onInitialized(any()) }
+    }
+
+    @Test
+    fun `initialize can serve cached evaluation without waiting for onInitialized`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        var initCallback: DevCycleCallback<String>? = null
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            initCallback = firstArg()
+        }
+        every { mockVariable.value } returns "cached-value"
+        every { mockVariable.isDefaulted } returns false
+        every { mockDevCycleClient.variable("test-flag", "default") } returns mockVariable
+
+        assertDoesNotThrow {
+            runBlocking {
+                withTimeout(1_000) {
+                    provider.initialize(ImmutableContext(targetingKey = "test-user"))
+                }
+            }
+        }
+
+        val result = provider.getStringEvaluation("test-flag", "default", null)
+
+        assertEquals("cached-value", result.value)
+        assertNotNull(initCallback)
+        verify(exactly = 1) { mockDevCycleClient.onInitialized(any()) }
+        verify(exactly = 1) { mockDevCycleClient.variable("test-flag", "default") }
+    }
+
+    @Test
+    fun `initialize waits for full initialization when no cached config is available`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
+
+        assertDoesNotThrow {
+            runBlocking {
+                provider.initialize(ImmutableContext(targetingKey = "test-user"))
+            }
+        }
+
+        verify(exactly = 1) { mockDevCycleClient.onInitialized(any()) }
+    }
+
+    @Test
+    fun `initialize emits ready event when no cached config is available`() = runBlocking {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
+
+        val readyEvent = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeout(1_000) { provider.observe().first() }
+        }
+
+        provider.initialize(ImmutableContext(targetingKey = "test-user"))
+
+        assertEquals(OpenFeatureProviderEvents.ProviderReady, readyEvent.await())
     }
 
     @Test
