@@ -188,6 +188,21 @@ internal class DVCSharedPrefs(context: Context, private val configCacheTTL: Long
 
 
     @Synchronized
+    fun clearConfigForUser(user: PopulatedUser) {
+        try {
+            val userKey = generateUserConfigKey(user.userId, user.isAnonymous)
+            val userExpiryDateKey = generateUserExpiryDateKey(user.userId, user.isAnonymous)
+            val editor = preferences.edit()
+            editor.remove(userKey)
+            editor.remove(userExpiryDateKey)
+            editor.apply()
+            DevCycleLogger.d("Cleared persisted config for user_id %s", user.userId)
+        } catch (e: Exception) {
+            DevCycleLogger.e(e, "Error clearing config for user: ${e.message}")
+        }
+    }
+
+    @Synchronized
     fun remove(key: String?) {
         try {
             val editor: SharedPreferences.Editor = preferences.edit()

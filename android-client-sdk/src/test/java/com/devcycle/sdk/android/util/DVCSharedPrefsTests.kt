@@ -513,6 +513,28 @@ class DVCSharedPrefsTests {
         verify(mockEditor, never()).apply()
     }
     
+    @Test
+    fun `should clear config and expiry for a specific user`() {
+        val user = createPopulatedUser(testUserId, false)
+        
+        dvcSharedPrefs.clearConfigForUser(user)
+        
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.$testUserId"))
+        verify(mockEditor).remove(eq("IDENTIFIED_CONFIG.$testUserId.EXPIRY_DATE"))
+        verify(mockEditor).apply()
+    }
+    
+    @Test
+    fun `should clear config for anonymous user`() {
+        val user = createPopulatedUser(testAnonUserId, true)
+        
+        dvcSharedPrefs.clearConfigForUser(user)
+        
+        verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.$testAnonUserId"))
+        verify(mockEditor).remove(eq("ANONYMOUS_CONFIG.$testAnonUserId.EXPIRY_DATE"))
+        verify(mockEditor).apply()
+    }
+    
     private fun createPopulatedUser(userId: String, isAnonymous: Boolean): PopulatedUser {
         return PopulatedUser(
             userId = userId,
