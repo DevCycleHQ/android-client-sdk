@@ -26,7 +26,7 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
         if (response.isSuccessful) {
             return response.body() ?: throw Throwable("Unexpected result from API")
         } else {
-            val httpResponseCode = HttpResponseCode.byCode(response.code())
+            val statusCode = response.code()
             var errorResponse = ErrorResponse(listOf("Unknown Error"), null)
 
             response.errorBody()?.let { errorBody ->
@@ -35,13 +35,13 @@ internal class Request constructor(sdkKey: String, apiBaseUrl: String, eventsBas
                         errorBody.string(),
                         ErrorResponse::class.java
                     )
-                    throw DVCRequestException(httpResponseCode, errorResponse)
+                    throw DVCRequestException(statusCode, errorResponse)
                 } catch (e: IOException) {
                     errorResponse = ErrorResponse(listOf(e.message ?: ""), null)
-                    throw DVCRequestException(httpResponseCode, errorResponse)
+                    throw DVCRequestException(statusCode, errorResponse)
                 }
             }
-            throw DVCRequestException(httpResponseCode, errorResponse)
+            throw DVCRequestException(statusCode, errorResponse)
         }
     }
 
