@@ -372,6 +372,11 @@ class DevCycleClient private constructor(
         Variable.getAndValidateType(defaultValue)
         val variable = this.getCachedVariable(key, defaultValue)
 
+        val currentEval = variable.eval
+        if (isConfigCached.get() && currentEval != null) {
+            variable.eval = EvalReason.withCachedSource(currentEval)
+        }
+
         val tmpConfig = config
         if(!disableAutomaticEventLogging){
             val event: Event = Event.fromInternalEvent(
