@@ -176,6 +176,34 @@ class DevCycleProviderTest {
     }
 
     @Test
+    fun `initialize returns immediately when cached config is available`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+
+        assertDoesNotThrow {
+            runBlocking {
+                provider.initialize(ImmutableContext(targetingKey = "cached-user"))
+            }
+        }
+
+        // onInitialized should NOT have been called since we short-circuited
+        io.mockk.verify(exactly = 0) { mockDevCycleClient.onInitialized(any()) }
+    }
+
+    @Test
+    fun `initialize blocks on network when no cached config`() {
+        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
+
+        assertDoesNotThrow {
+            runBlocking {
+                provider.initialize(ImmutableContext(targetingKey = "fresh-user"))
+            }
+        }
+
+        // onInitialized SHOULD have been called since there was no cache
+        io.mockk.verify(exactly = 1) { mockDevCycleClient.onInitialized(any()) }
+    }
+
+    @Test
     fun `createProviderEvaluation includes metadata when eval details are available`() {
         setupInitializedProvider()
 
@@ -265,6 +293,54 @@ class DevCycleProviderTest {
     fun `accessing devcycleClient returns devcycleClient when client is initialized`() {
         setupInitializedProvider()
         assertEquals(mockDevCycleClient, provider.devcycleClient)
+    }
+
+    @Test
+    fun `createProviderEvaluation maps CACHED source to CACHED reason for non-defaulted variable`() {
+        setupInitializedProvider()
+
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        val mockEvalReason = mockk<EvalReason>(relaxed = true)
+
+        every { mockVariable.key } returns "test-variable"
+        every { mockVariable.value } returns "cached-value"
+        every { mockVariable.isDefaulted } returns false
+        every { mockVariable.eval } returns mockEvalReason
+        every { mockEvalReason.reason } returns "TARGETING_MATCH"
+        every { mockEvalReason.source } returns "CACHED"
+        every { mockEvalReason.details } returns null
+        every { mockEvalReason.targetId } returns null
+
+        every { mockDevCycleClient.variable("test-variable", "default") } returns mockVariable
+
+        val result = provider.getStringEvaluation("test-variable", "default", null)
+
+        assertEquals("cached-value", result.value)
+        assertEquals("CACHED", result.reason)
+    }
+
+    @Test
+    fun `createProviderEvaluation keeps DEFAULT reason for defaulted variable even when source is CACHED`() {
+        setupInitializedProvider()
+
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        val mockEvalReason = mockk<EvalReason>(relaxed = true)
+
+        every { mockVariable.key } returns "missing-key"
+        every { mockVariable.value } returns "default"
+        every { mockVariable.isDefaulted } returns true
+        every { mockVariable.eval } returns mockEvalReason
+        every { mockEvalReason.reason } returns "DEFAULT"
+        every { mockEvalReason.source } returns "CACHED"
+        every { mockEvalReason.details } returns "User Not Targeted"
+        every { mockEvalReason.targetId } returns null
+
+        every { mockDevCycleClient.variable("missing-key", "default") } returns mockVariable
+
+        val result = provider.getStringEvaluation("missing-key", "default", null)
+
+        assertEquals("default", result.value)
+        assertEquals("DEFAULT", result.reason)
     }
 
     private fun setupInitializedProvider() {

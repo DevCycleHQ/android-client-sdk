@@ -9,7 +9,11 @@ import com.devcycle.sdk.android.model.DevCycleUser
 import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.kotlin.sdk.*
+import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
 import dev.openfeature.kotlin.sdk.exceptions.OpenFeatureError
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,6 +27,8 @@ class DevCycleProvider(
     override val hooks: List<Hook<*>> = emptyList(),
     override val metadata: ProviderMetadata = DevCycleProviderMetadata()
 ) : FeatureProvider {
+
+    private val _providerEvents = MutableSharedFlow<OpenFeatureProviderEvents>(extraBufferCapacity = 1)
 
     /**
      * The DevCycle client instance - created during initialization
@@ -56,10 +62,16 @@ class DevCycleProvider(
             }
         }
 
+        val reason = when {
+            variable.isDefaulted == true -> Reason.DEFAULT.toString()
+            variable.eval?.source == "CACHED" -> "CACHED"
+            else -> variable.eval?.reason ?: Reason.TARGETING_MATCH.toString()
+        }
+
         return ProviderEvaluation(
             value = value,
             variant = variable.key,
-            reason = variable.eval?.reason ?: if (variable.isDefaulted == true) Reason.DEFAULT.toString() else Reason.TARGETING_MATCH.toString(),
+            reason = reason,
             metadata = if (hasMetadata) metadataBuilder.build() else EvaluationMetadata.EMPTY
         )
     }
@@ -104,7 +116,26 @@ class DevCycleProvider(
 
             _devcycleClient = clientBuilder.build()
 
-            // Wait for DevCycle client to fully initialize
+            _devcycleClient!!.onConfigUpdated(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+                override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                    _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged)
+                    DevCycleLogger.d("Emitted PROVIDER_CONFIGURATION_CHANGED event")
+                }
+
+                override fun onError(t: Throwable) {
+                    DevCycleLogger.e("Config error: ${t.message}")
+                    _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
+                        OpenFeatureError.GeneralError(t.message ?: "Config error")
+                    ))
+                }
+            })
+
+            if (_devcycleClient!!.hasUsableCachedConfig()) {
+                DevCycleLogger.d("DevCycle OpenFeature provider initialized from cache (PROVIDER_READY)")
+                return
+            }
+
+            // Cache miss: block until network fetch completes
             suspendCancellableCoroutine<Unit> { continuation ->
                 _devcycleClient!!.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
@@ -161,6 +192,8 @@ class DevCycleProvider(
             throw OpenFeatureError.GeneralError("Error setting context: ${e.message}")
         }
     }
+
+    override fun observe(): Flow<OpenFeatureProviderEvents> = _providerEvents.asSharedFlow()
 
     override fun shutdown() {
         _devcycleClient?.close()

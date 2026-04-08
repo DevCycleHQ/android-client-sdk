@@ -689,7 +689,9 @@ class DevCycleClient private constructor(
                 if (isConfigError) {
                     dvcSharedPrefs.clearConfigForUser(userAtRefreshStart)
                     DevCycleLogger.w("Background refresh config error (${(error as DVCRequestException).statusCode}). Persisted cache cleared.")
-                    notifyConfigError(error)
+                    if (configUpdatedCallbacks.isNotEmpty()) {
+                        notifyConfigError(error)
+                    }
                 } else {
                     DevCycleLogger.w("Background refresh failed: ${error.message}. Keeping caches.")
                 }
