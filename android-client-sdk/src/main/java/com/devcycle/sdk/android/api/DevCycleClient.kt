@@ -20,6 +20,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.net.URI
@@ -156,6 +157,52 @@ class DevCycleClient private constructor(
         }
     }
 
+    /**
+     * Handles incoming SSE messages. The message may arrive as a full event envelope
+     * (with id, timestamp, name, etc.) where the "data" field is a JSON-encoded string
+     * containing the actual payload, or it may already be the inner payload directly.
+     */
+    private fun handleSSEMessage(messageEvent: MessageEvent?) {
+        if (messageEvent == null) return
+
+        try {
+            val data = JSONObject(messageEvent.data)
+
+            val innerData = if (data.has("data")) {
+                val dataField = data.get("data")
+                when (dataField) {
+                    is String -> JSONObject(dataField)
+                    is JSONObject -> dataField
+                    else -> {
+                        DevCycleLogger.w("SSE Message: Unexpected 'data' field type: ${dataField::class.java.simpleName}")
+                        return
+                    }
+                }
+            } else {
+                data
+            }
+
+            val lastModified = if (innerData.has("lastModified")) {
+                innerData.optLong("lastModified", 0L).takeIf { it > 0 }
+            } else null
+
+            val type = if (innerData.has("type")) {
+                innerData.optString("type", "")
+            } else ""
+
+            val etag = if (innerData.has("etag") && !innerData.isNull("etag")) {
+                innerData.getString("etag")
+            } else null
+
+            if (type == "refetchConfig" || type == "") {
+                DevCycleLogger.d("SSE Message: Refetching config")
+                refetchConfig(true, lastModified, etag)
+            }
+        } catch (e: JSONException) {
+            DevCycleLogger.w(e, "SSE Message: Error parsing SSE message data: ${messageEvent.data}")
+        }
+    }
+
     private fun initEventSource () {
         if (disableRealtimeUpdates) {
             DevCycleLogger.i("Realtime Updates disabled via initialization parameter")
@@ -163,32 +210,7 @@ class DevCycleClient private constructor(
         }
         if (config?.sse?.url == null) { return }
 
-        val handler = SSEEventHandler(fun(messageEvent: MessageEvent?) {
-            if (messageEvent == null) {
-                return
-            }
-
-            val data = JSONObject(messageEvent.data)
-            if (!data.has("data")) {
-                return
-            }
-
-            val innerData = JSONObject(data.get("data") as String)
-            val lastModified = if (innerData.has("lastModified")) {
-                (innerData.get("lastModified") as Long)
-            } else null
-            val type = if (innerData.has("type")) {
-                (innerData.get("type") as String).toLong()
-            } else ""
-            val etag = if (innerData.has("etag")) {
-                (innerData.get("etag") as String)
-            } else null
-
-            if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
-                DevCycleLogger.d("SSE Message: Refetching config")
-                refetchConfig(true, lastModified, etag)
-            }
-        })
+        val handler = SSEEventHandler(::handleSSEMessage)
         val builder = EventSource.Builder(
             ConnectStrategy.http(URI(config?.sse?.url))
                 .readTimeout(EVENT_SOURCE_RETRY_DELAY_MIN, TimeUnit.MINUTES)
