@@ -2358,6 +2358,150 @@ class DevCycleClientTests {
     }
     
     @Test
+    fun `cache-first init resolves immediately when cache exists`() {
+        val config = generateConfig("cached-flag", "Cached value!", Variable.TypeEnum.STRING, targetingMatch)
+
+        // First response for background refresh
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+
+        // Pre-populate the cache by using the editor stubs
+        val configJson = objectMapper.writeValueAsString(config)
+        `when`(sharedPreferences?.getString(ArgumentMatchers.eq("IDENTIFIED_CONFIG.nic_test"), ArgumentMatchers.isNull())).thenReturn(configJson)
+        `when`(sharedPreferences?.getLong(ArgumentMatchers.eq("IDENTIFIED_CONFIG.nic_test.EXPIRY_DATE"), ArgumentMatchers.eq(0L))).thenReturn(System.currentTimeMillis() + 86400000L)
+
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+
+        var initCalledBack = false
+        val initLatch = CountDownLatch(1)
+
+        client.onInitialized(object : DevCycleCallback<String> {
+            override fun onSuccess(result: String) {
+                initCalledBack = true
+                initLatch.countDown()
+            }
+
+            override fun onError(t: Throwable) {
+                initLatch.countDown()
+            }
+        })
+
+        // onInitialized should resolve immediately on cache hit
+        Assertions.assertTrue(initLatch.await(3000, TimeUnit.MILLISECONDS), "onInitialized should resolve on cache hit")
+        Assertions.assertTrue(initCalledBack, "onInitialized should call success callback on cache hit")
+        client.close()
+    }
+
+    @Test
+    fun `identifyUser with auth error clears persisted cache`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING, targetingMatch)
+
+        val requestCount = AtomicInteger(0)
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.path == "/v1/events") {
+                    return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
+                } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
+                    val count = requestCount.incrementAndGet()
+                    return if (count == 1) {
+                        MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
+                    } else {
+                        MockResponse().setResponseCode(401).setBody("{\"message\":[\"Unauthorized\"],\"statusCode\":401}")
+                    }
+                }
+                return MockResponse().setResponseCode(404)
+            }
+        }
+
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+
+        val initLatch = CountDownLatch(1)
+        client.onInitialized(object : DevCycleCallback<String> {
+            override fun onSuccess(result: String) {
+                initLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                initLatch.countDown()
+            }
+        })
+        initLatch.await(3000, TimeUnit.MILLISECONDS)
+
+        val identifyLatch = CountDownLatch(1)
+        var identifyError: Throwable? = null
+        val newUser = DevCycleUser.builder().withUserId("auth_error_user").build()
+        client.identifyUser(newUser, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+            override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                identifyLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                identifyError = t
+                identifyLatch.countDown()
+            }
+        })
+
+        identifyLatch.await(3000, TimeUnit.MILLISECONDS)
+        Assertions.assertNotNull(identifyError, "identifyUser should return error on 401")
+
+        // Verify persisted cache was cleared for the new user
+        Mockito.verify(editor, Mockito.atLeastOnce())?.remove(ArgumentMatchers.contains("IDENTIFIED_CONFIG"))
+        client.close()
+    }
+
+    @Test
+    fun `onConfigUpdated callback fires on config change after init`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING, targetingMatch)
+        val updatedConfig = generateConfig("activate-flag", "Updated!", Variable.TypeEnum.STRING, targetingMatch)
+
+        val requestCount = AtomicInteger(0)
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.path == "/v1/events") {
+                    return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
+                } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
+                    val count = requestCount.incrementAndGet()
+                    return if (count == 1) {
+                        MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
+                    } else {
+                        MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(updatedConfig))
+                    }
+                }
+                return MockResponse().setResponseCode(404)
+            }
+        }
+
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+
+        var configUpdatedCalled = false
+        val updateLatch = CountDownLatch(1)
+        client.onConfigUpdated(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+            override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                configUpdatedCalled = true
+                updateLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                updateLatch.countDown()
+            }
+        })
+
+        val initLatch = CountDownLatch(1)
+        client.onInitialized(object : DevCycleCallback<String> {
+            override fun onSuccess(result: String) {
+                // Trigger a config change via identifyUser with same user (property update)
+                val sameUser = DevCycleUser.builder().withUserId("nic_test").build()
+                client.identifyUser(sameUser)
+                initLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                initLatch.countDown()
+            }
+        })
+
+        initLatch.await(3000, TimeUnit.MILLISECONDS)
+        updateLatch.await(3000, TimeUnit.MILLISECONDS)
+        Assertions.assertTrue(configUpdatedCalled, "onConfigUpdated should be called on post-init config change")
+        client.close()
+    }
+
+    @Test
     fun `tryLoadCachedConfigForUser returns false when no cached config exists`() {
         val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
         
