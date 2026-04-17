@@ -20,6 +20,10 @@ on:
           - minor
           - patch
         default: "patch"
+      version-override:
+        description: "Override the computed version (e.g. 2.7.0). Use when auto-increment computes the wrong base."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -29,7 +33,7 @@ jobs:
     name: Version Bump and Release
     runs-on: ubuntu-latest
     outputs:
-      next-release-tag: ${{ steps.prepare-release.outputs.next-release-tag }}
+      next-release-tag: ${{ steps.resolve-version.outputs.version }}
     steps:
       # Check out the repo with credentials that can bypass branch protection, and fetch git history instead of just latest commit
       - uses: actions/checkout@v5
@@ -45,10 +49,23 @@ jobs:
           draft: ${{ github.event.inputs.draft }}
           version-increment-type: ${{ github.event.inputs.version-increment-type }}
 
+      - name: Resolve version
+        id: resolve-version
+        env:
+          VERSION_OVERRIDE: ${{ inputs.version-override }}
+          COMPUTED_VERSION: ${{ steps.prepare-release.outputs.next-release-tag }}
+        run: |
+          VERSION="${VERSION_OVERRIDE:-$COMPUTED_VERSION}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version: $VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Update Version in code
         run: |
-          sed -i "s/^version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/version = \"${{steps.prepare-release.outputs.next-release-tag}}\"/g" android-client-sdk/build.gradle
-          sed -i "s/^implementation(\"com.devcycle:android-client-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+\")/implementation(\"com.devcycle:android-client-sdk:${{steps.prepare-release.outputs.next-release-tag}}\")/g" README.md
+          sed -i "s/^version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/version = \"${{steps.resolve-version.outputs.version}}\"/g" android-client-sdk/build.gradle
+          sed -i "s/^implementation(\"com.devcycle:android-client-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+\")/implementation(\"com.devcycle:android-client-sdk:${{steps.resolve-version.outputs.version}}\")/g" README.md
 
       - name: Commit version change
         run: |
@@ -56,11 +73,11 @@ jobs:
           git config --global user.name "DevCycle Automation"
           git add ./android-client-sdk/build.gradle
           git add ./README.md
-          git commit -m "Release ${{steps.prepare-release.outputs.next-release-tag}}"
+          git commit -m "Release ${{steps.resolve-version.outputs.version}}"
 
       - name: Push version change
         run: |
-          git push origin HEAD:main
+          git push origin HEAD:${{ github.ref_name }}
         if: inputs.draft != true
 
       - name: Set up Java 18
@@ -83,8 +100,8 @@ jobs:
         id: create-release
         with:
           github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
-          tag: ${{ steps.prepare-release.outputs.next-release-tag }}
-          target: main
+          tag: ${{ steps.resolve-version.outputs.version }}
+          target: ${{ github.ref_name }}
           prerelease: ${{ github.event.inputs.prerelease }}
           draft: ${{ github.event.inputs.draft }}
           changelog: ${{ steps.prepare-release.outputs.changelog }}
