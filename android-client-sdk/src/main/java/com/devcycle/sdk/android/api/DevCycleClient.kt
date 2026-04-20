@@ -20,7 +20,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
-import org.json.JSONException
 import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.net.URI
@@ -161,45 +160,25 @@ class DevCycleClient private constructor(
      * Handles incoming SSE messages. The message may arrive as a full event envelope
      * (with id, timestamp, name, etc.) where the "data" field is a JSON-encoded string
      * containing the actual payload, or it may already be the inner payload directly.
+     *
+     * Parsing is delegated to [SSEMessage.parse].
      */
     private fun handleSSEMessage(messageEvent: MessageEvent?) {
         if (messageEvent == null) return
 
         try {
-            val data = JSONObject(messageEvent.data)
-
-            val innerData = if (data.has("data")) {
-                val dataField = data.get("data")
-                when (dataField) {
-                    is String -> JSONObject(dataField)
-                    is JSONObject -> dataField
-                    else -> {
-                        DevCycleLogger.w("SSE Message: Unexpected 'data' field type: ${dataField::class.java.simpleName}")
-                        return
-                    }
-                }
-            } else {
-                data
+            val message = SSEMessage.parse(messageEvent.data)
+            if (message == null) {
+                DevCycleLogger.w("SSE Message: Failed to parse message data: ${messageEvent.data}")
+                return
             }
 
-            val lastModified = if (innerData.has("lastModified")) {
-                innerData.optLong("lastModified", 0L).takeIf { it > 0 }
-            } else null
-
-            val type = if (innerData.has("type")) {
-                innerData.optString("type", "")
-            } else ""
-
-            val etag = if (innerData.has("etag") && !innerData.isNull("etag")) {
-                innerData.getString("etag")
-            } else null
-
-            if (type == "refetchConfig" || type == "") {
+            if (message.type == "refetchConfig" || message.type == "") {
                 DevCycleLogger.d("SSE Message: Refetching config")
-                refetchConfig(true, lastModified, etag)
+                refetchConfig(true, message.lastModified, message.etag)
             }
-        } catch (e: JSONException) {
-            DevCycleLogger.w(e, "SSE Message: Error parsing SSE message data: ${messageEvent.data}")
+        } catch (e: Exception) {
+            DevCycleLogger.w(e, "SSE Message: Error handling SSE message: ${messageEvent.data}")
         }
     }
 
