@@ -13,16 +13,19 @@ buildscript {
     // Force patched versions of vulnerable transitive dependencies in the build classpath
     configurations.classpath {
         resolutionStrategy {
-            force 'io.netty:netty-codec-http:4.1.129.Final'
-            force 'io.netty:netty-codec-http2:4.1.129.Final'
-            force 'io.netty:netty-codec:4.1.129.Final'
-            force 'io.netty:netty-handler:4.1.129.Final'
-            force 'io.netty:netty-common:4.1.129.Final'
+            force 'io.netty:netty-codec-http:4.1.132.Final'
+            force 'io.netty:netty-codec-http2:4.1.132.Final'
+            force 'io.netty:netty-codec:4.1.132.Final'
+            force 'io.netty:netty-handler:4.1.132.Final'
+            force 'io.netty:netty-common:4.1.132.Final'
             force 'org.bitbucket.b_c:jose4j:0.9.6'
             force 'org.jdom:jdom2:2.0.6.1'
             force 'com.google.protobuf:protobuf-java:3.25.5'
             force 'com.google.protobuf:protobuf-kotlin:3.25.5'
             force 'org.apache.commons:commons-compress:1.26.0'
+            force 'org.bouncycastle:bcprov-jdk18on:1.84'
+            force 'org.bouncycastle:bcpkix-jdk18on:1.84'
+            force 'org.apache.commons:commons-lang3:3.18.0'
         }
     }
 }
@@ -31,16 +34,19 @@ buildscript {
 subprojects {
     configurations.configureEach {
         resolutionStrategy {
-            force 'io.netty:netty-codec-http:4.1.129.Final'
-            force 'io.netty:netty-codec-http2:4.1.129.Final'
-            force 'io.netty:netty-codec:4.1.129.Final'
-            force 'io.netty:netty-handler:4.1.129.Final'
-            force 'io.netty:netty-common:4.1.129.Final'
+            force 'io.netty:netty-codec-http:4.1.132.Final'
+            force 'io.netty:netty-codec-http2:4.1.132.Final'
+            force 'io.netty:netty-codec:4.1.132.Final'
+            force 'io.netty:netty-handler:4.1.132.Final'
+            force 'io.netty:netty-common:4.1.132.Final'
             force 'org.bitbucket.b_c:jose4j:0.9.6'
             force 'org.jdom:jdom2:2.0.6.1'
             force 'com.google.protobuf:protobuf-java:3.25.5'
             force 'com.google.protobuf:protobuf-kotlin:3.25.5'
             force 'org.apache.commons:commons-compress:1.26.0'
+            force 'org.bouncycastle:bcprov-jdk18on:1.84'
+            force 'org.bouncycastle:bcpkix-jdk18on:1.84'
+            force 'org.apache.commons:commons-lang3:3.18.0'
         }
     }
 }
