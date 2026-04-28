@@ -156,6 +156,32 @@ class DevCycleClient private constructor(
         }
     }
 
+    /**
+     * Handles incoming SSE messages. The message may arrive as a full event envelope
+     * (with id, timestamp, name, etc.) where the "data" field is a JSON-encoded string
+     * containing the actual payload, or it may already be the inner payload directly.
+     *
+     * Parsing is delegated to [SSEMessage.parse].
+     */
+    private fun handleSSEMessage(messageEvent: MessageEvent?) {
+        if (messageEvent == null) return
+
+        try {
+            val message = SSEMessage.parse(messageEvent.data)
+            if (message == null) {
+                DevCycleLogger.w("SSE Message: Failed to parse message data: ${messageEvent.data}")
+                return
+            }
+
+            if (message.type == "refetchConfig" || message.type == "") {
+                DevCycleLogger.d("SSE Message: Refetching config")
+                refetchConfig(true, message.lastModified, message.etag)
+            }
+        } catch (e: Exception) {
+            DevCycleLogger.w(e, "SSE Message: Error handling SSE message: ${messageEvent.data}")
+        }
+    }
+
     private fun initEventSource () {
         if (disableRealtimeUpdates) {
             DevCycleLogger.i("Realtime Updates disabled via initialization parameter")
@@ -163,32 +189,7 @@ class DevCycleClient private constructor(
         }
         if (config?.sse?.url == null) { return }
 
-        val handler = SSEEventHandler(fun(messageEvent: MessageEvent?) {
-            if (messageEvent == null) {
-                return
-            }
-
-            val data = JSONObject(messageEvent.data)
-            if (!data.has("data")) {
-                return
-            }
-
-            val innerData = JSONObject(data.get("data") as String)
-            val lastModified = if (innerData.has("lastModified")) {
-                (innerData.get("lastModified") as Long)
-            } else null
-            val type = if (innerData.has("type")) {
-                (innerData.get("type") as String).toLong()
-            } else ""
-            val etag = if (innerData.has("etag")) {
-                (innerData.get("etag") as String)
-            } else null
-
-            if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
-                DevCycleLogger.d("SSE Message: Refetching config")
-                refetchConfig(true, lastModified, etag)
-            }
-        })
+        val handler = SSEEventHandler(::handleSSEMessage)
         val builder = EventSource.Builder(
             ConnectStrategy.http(URI(config?.sse?.url))
                 .readTimeout(EVENT_SOURCE_RETRY_DELAY_MIN, TimeUnit.MINUTES)
