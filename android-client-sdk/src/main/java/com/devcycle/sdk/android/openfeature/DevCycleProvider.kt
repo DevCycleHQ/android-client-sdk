@@ -44,13 +44,20 @@ class DevCycleProvider(
             )
 
     /**
-     * Helper function to create a ProviderEvaluation from a DevCycle variable
+     * Helper function to create a ProviderEvaluation from a DevCycle variable.
+     *
+     * [isUsingCachedConfig] must be captured from the same client reference used to retrieve
+     * [variable], so the reason reflects the config state at the moment of evaluation rather than
+     * a later read of the mutable [_devcycleClient] field.
      */
-    private fun <T> createProviderEvaluation(variable: Variable<*>, value: T): ProviderEvaluation<T> {
+    private fun <T> createProviderEvaluation(
+        variable: Variable<*>,
+        value: T,
+        isUsingCachedConfig: Boolean,
+    ): ProviderEvaluation<T> {
         val metadataBuilder = EvaluationMetadata.builder()
         var hasMetadata = false
 
-        // Add evaluation details and target ID if available
         variable.eval?.let { evalReason ->
             evalReason.details?.let { details ->
                 metadataBuilder.putString("evalDetails", details)
@@ -64,7 +71,7 @@ class DevCycleProvider(
 
         val reason = when {
             variable.isDefaulted == true -> Reason.DEFAULT.toString()
-            variable.eval?.source == "CACHED" -> "CACHED"
+            isUsingCachedConfig -> Reason.CACHED.toString()
             else -> variable.eval?.reason ?: Reason.TARGETING_MATCH.toString()
         }
 
@@ -130,7 +137,7 @@ class DevCycleProvider(
                 }
             })
 
-            if (_devcycleClient!!.hasUsableCachedConfig()) {
+            if (_devcycleClient!!.isUsingCachedConfig) {
                 DevCycleLogger.d("DevCycle OpenFeature provider initialized from cache (PROVIDER_READY)")
                 return
             }
@@ -206,7 +213,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<Boolean> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value)
+        return createProviderEvaluation(variable, variable.value, client.isUsingCachedConfig)
     }
 
     override fun getDoubleEvaluation(
@@ -216,7 +223,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<Double> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value.toDouble())
+        return createProviderEvaluation(variable, variable.value.toDouble(), client.isUsingCachedConfig)
     }
 
     override fun getIntegerEvaluation(
@@ -226,7 +233,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<Int> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value.toInt())
+        return createProviderEvaluation(variable, variable.value.toInt(), client.isUsingCachedConfig)
     }
 
     override fun getObjectEvaluation(
@@ -235,6 +242,7 @@ class DevCycleProvider(
         context: EvaluationContext?
     ): ProviderEvaluation<Value> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
+        val isUsingCachedConfig = client.isUsingCachedConfig
 
         val (result, variable) = when {
             defaultValue is Value.Structure -> {
@@ -266,7 +274,7 @@ class DevCycleProvider(
             }
         }
 
-        return createProviderEvaluation(variable, result)
+        return createProviderEvaluation(variable, result, isUsingCachedConfig)
     }
 
     override fun getStringEvaluation(
@@ -276,7 +284,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<String> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value)
+        return createProviderEvaluation(variable, variable.value, client.isUsingCachedConfig)
     }
 
     override fun track(

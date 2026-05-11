@@ -1,6 +1,5 @@
 package com.devcycle.sdk.android.model
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -27,19 +26,8 @@ data class EvalReason(
     @get:Schema(required = false, description = "String that defines the target id for the evaluation")
     @JsonProperty("target_id")
     val targetId: String? = null,
-
-    /**
-     * Indicates the data source for this evaluation: "CACHED" when served from
-     * persistent cache, null when served from a live server response.
-     */
-    @get:Schema(required = false, description = "Data source indicator: CACHED or null (live)")
-    @JsonIgnore
-    val source: String? = null,
 ) {
     companion object {
         fun defaultReason(details: String) = EvalReason("DEFAULT", details)
-
-        fun withCachedSource(original: EvalReason) =
-            original.copy(source = "CACHED")
     }
 }

@@ -2022,7 +2022,7 @@ class DevCycleClientTests {
             handleFinally(calledBack, error)
         }
 
-        Assertions.assertTrue(client.hasUsableCachedConfig(), "Client should report a usable cached config")
+        Assertions.assertTrue(client.isUsingCachedConfig, "Client should report a usable cached config")
         Assertions.assertEquals("cached-value", client.variableValue("cached-flag", "default"))
 
         client.close()
@@ -2053,7 +2053,7 @@ class DevCycleClientTests {
             }
 
             Assertions.assertTrue(
-                provider.devcycleClient.hasUsableCachedConfig(),
+                provider.devcycleClient.isUsingCachedConfig,
                 "Provider's underlying client should report a usable cached config"
             )
             val eval = provider.getStringEvaluation("cached-flag", "default", null)

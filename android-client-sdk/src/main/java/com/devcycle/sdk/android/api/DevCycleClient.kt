@@ -214,7 +214,19 @@ class DevCycleClient private constructor(
         }
     }
 
-    internal fun hasUsableCachedConfig(): Boolean = config != null && isConfigCached.get()
+    internal val isUsingCachedConfig: Boolean
+        @Synchronized get() = config != null && isConfigCached.get()
+
+    /**
+     * Atomically updates [config] and [isConfigCached] under the intrinsic lock so that
+     * [isUsingCachedConfig] never observes a torn write where one field reflects the new value
+     * and the other still holds the old one.
+     */
+    @Synchronized
+    private fun setConfig(newConfig: BucketedUserConfig, isCached: Boolean) {
+        config = newConfig
+        isConfigCached.set(isCached)
+    }
 
     /**
      * Updates or builds a new User and fetches the latest config for that User
@@ -404,11 +416,6 @@ class DevCycleClient private constructor(
         Variable.getAndValidateType(defaultValue)
         val variable = this.getCachedVariable(key, defaultValue)
 
-        val currentEval = variable.eval
-        if (isConfigCached.get() && currentEval != null) {
-            variable.eval = EvalReason.withCachedSource(currentEval)
-        }
-
         val tmpConfig = config
         if(!disableAutomaticEventLogging){
             val event: Event = Event.fromInternalEvent(
@@ -537,9 +544,8 @@ class DevCycleClient private constructor(
         etag: String? = null
     ) {
         val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified, etag)
-        config = result
+        setConfig(result, isCached = false)
         dvcSharedPrefs.saveConfig(result, user)
-        isConfigCached.set(false)
         observable.configUpdated(config)
         DevCycleLogger.d("A new config has been fetched for $user")
 
@@ -626,8 +632,7 @@ class DevCycleClient private constructor(
     private fun useCachedConfigForUser(user: PopulatedUser): Boolean {
         val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
         if (cachedConfig != null) {
-            config = cachedConfig
-            isConfigCached.set(true)
+            setConfig(cachedConfig, isCached = true)
             DevCycleLogger.d("Loaded config from cache for user_id %s", user.userId)
             observable.configUpdated(config)
             return true
@@ -637,16 +642,13 @@ class DevCycleClient private constructor(
 
     private fun tryLoadCachedConfigForUser(user: PopulatedUser): Boolean {
         val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
-
         if (cachedConfig != null) {
-            config = cachedConfig
-            isConfigCached.set(true)
+            setConfig(cachedConfig, isCached = true)
             DevCycleLogger.d("Loaded config from cache for user_id %s", user.userId)
             observable.configUpdated(config)
             return true
-        } else {
-            return false
         }
+        return false
     }
 
     internal fun onConfigUpdated(callback: DevCycleCallback<Map<String, BaseConfigVariable>>) {
