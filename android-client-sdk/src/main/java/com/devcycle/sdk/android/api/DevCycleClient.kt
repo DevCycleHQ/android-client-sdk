@@ -78,6 +78,27 @@ class DevCycleClient private constructor(
 
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
     private val configUpdatedCallbacks = java.util.concurrent.CopyOnWriteArrayList<DevCycleCallback<Map<String, BaseConfigVariable>>>()
+    private val onPauseApplication = fun () {
+        coroutineScope.launch {
+            withContext(Dispatchers.IO) {
+                DevCycleLogger.d("Closing Realtime Updates connection")
+                backgroundEventSource?.close()
+            }
+        }
+    }
+
+    private val onResumeApplication = fun () {
+        if (backgroundEventSource?.eventSource?.state != ReadyState.OPEN) {
+            coroutineScope.launch {
+                withContext(Dispatchers.IO) {
+                    backgroundEventSource?.close()
+                    DevCycleLogger.d("Attempting to restart Realtime Updates connection")
+                    initEventSource()
+                    refetchConfig(false, null, null)
+                }
+            }
+        }
+    }
 
     init {
         val cacheHit = useCachedConfigForUser(user)
@@ -129,28 +150,6 @@ class DevCycleClient private constructor(
                 coroutineScope.launch(coroutineContext) {
                     handleQueuedConfigRequests()
                     isExecuting.set(false)
-                }
-            }
-        }
-    }
-
-    private val onPauseApplication = fun () {
-        coroutineScope.launch {
-            withContext(Dispatchers.IO) {
-                DevCycleLogger.d("Closing Realtime Updates connection")
-                backgroundEventSource?.close()
-            }
-        }
-    }
-
-    private val onResumeApplication = fun () {
-        if (backgroundEventSource?.eventSource?.state != ReadyState.OPEN) {
-            coroutineScope.launch {
-                withContext(Dispatchers.IO) {
-                    backgroundEventSource?.close()
-                    DevCycleLogger.d("Attempting to restart Realtime Updates connection")
-                    initEventSource()
-                    refetchConfig(false, null, null)
                 }
             }
         }
