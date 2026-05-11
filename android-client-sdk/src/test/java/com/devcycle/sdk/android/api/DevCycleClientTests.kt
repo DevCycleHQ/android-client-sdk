@@ -1981,6 +1981,88 @@ class DevCycleClientTests {
         client.close()
     }
 
+    /**
+     * Primes the mocked SharedPreferences so DVCSharedPrefs.getConfig(user) returns a valid,
+     * non-expired BucketedUserConfig — making DevCycleClient take the cache-hit init branch.
+     */
+    private fun primeCachedConfig() {
+        val cachedConfig = generateConfig("cached-flag", "cached-value", Variable.TypeEnum.STRING)
+        val cachedConfigJson = objectMapper.writeValueAsString(cachedConfig)
+        val futureExpiry = System.currentTimeMillis() + 60_000L
+
+        // DVCSharedPrefs.getConfig calls getString(key, null); `anyString()` would not match
+        // the null default value, so use `nullable` for the second arg.
+        `when`(sharedPreferences?.getString(anyString(), Mockito.nullable(String::class.java))).thenReturn(cachedConfigJson)
+        `when`(sharedPreferences?.getLong(anyString(), ArgumentMatchers.anyLong())).thenReturn(futureExpiry)
+    }
+
+    @Test
+    fun `DevCycleClient initializes successfully from cached config`() {
+        primeCachedConfig()
+
+        // No mockWebServer.enqueue() — a cache hit must not require a network fetch.
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+
+        try {
+            client.onInitialized(object : DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch (t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+
+        Assertions.assertTrue(client.hasUsableCachedConfig(), "Client should report a usable cached config")
+        Assertions.assertEquals("cached-value", client.variableValue("cached-flag", "default"))
+
+        client.close()
+    }
+
+    @Test
+    fun `DevCycleProvider initializes successfully from cached config`() {
+        primeCachedConfig()
+
+        val provider = com.devcycle.sdk.android.openfeature.DevCycleProvider(
+            sdkKey = TEST_SDK_KEY,
+            context = requireNotNull(mockContext) { "mockContext should not be null in tests" },
+            // NO_LOGGING bypasses the default DebugLogger which calls android.util.Log
+            // (unmocked in JVM unit tests). DevCycleProvider doesn't expose a withLogger
+            // option, so this is how we silence logging from the underlying DevCycleClient.
+            options = DevCycleOptions.builder()
+                .logLevel(LogLevel.NO_LOGGING)
+                .apiProxyUrl(mockWebServer.url("/").toString())
+                .eventsApiProxyUrl(mockWebServer.url("/").toString())
+                .build()
+        )
+
+        try {
+            kotlinx.coroutines.runBlocking {
+                provider.initialize(
+                    dev.openfeature.kotlin.sdk.ImmutableContext(targetingKey = "nic_test")
+                )
+            }
+
+            Assertions.assertTrue(
+                provider.devcycleClient.hasUsableCachedConfig(),
+                "Provider's underlying client should report a usable cached config"
+            )
+            val eval = provider.getStringEvaluation("cached-flag", "default", null)
+            Assertions.assertEquals("cached-value", eval.value)
+        } finally {
+            provider.shutdown()
+        }
+    }
+
     private fun handleFinally(
         calledBack: Boolean,
         error: Throwable?,
