@@ -177,7 +177,7 @@ class DevCycleProviderTest {
 
     @Test
     fun `initialize returns immediately when cached config is available`() {
-        every { mockDevCycleClient.hasUsableCachedConfig() } returns true
+        every { mockDevCycleClient.isUsingCachedConfig } returns true
 
         assertDoesNotThrow {
             runBlocking {
@@ -191,7 +191,7 @@ class DevCycleProviderTest {
 
     @Test
     fun `initialize blocks on network when no cached config`() {
-        every { mockDevCycleClient.hasUsableCachedConfig() } returns false
+        every { mockDevCycleClient.isUsingCachedConfig } returns false
 
         assertDoesNotThrow {
             runBlocking {
@@ -296,7 +296,7 @@ class DevCycleProviderTest {
     }
 
     @Test
-    fun `createProviderEvaluation maps CACHED source to CACHED reason for non-defaulted variable`() {
+    fun `createProviderEvaluation maps cached config to CACHED reason for non-defaulted variable`() {
         setupInitializedProvider()
 
         val mockVariable = mockk<Variable<String>>(relaxed = true)
@@ -307,10 +307,10 @@ class DevCycleProviderTest {
         every { mockVariable.isDefaulted } returns false
         every { mockVariable.eval } returns mockEvalReason
         every { mockEvalReason.reason } returns "TARGETING_MATCH"
-        every { mockEvalReason.source } returns "CACHED"
         every { mockEvalReason.details } returns null
         every { mockEvalReason.targetId } returns null
 
+        every { mockDevCycleClient.isUsingCachedConfig } returns true
         every { mockDevCycleClient.variable("test-variable", "default") } returns mockVariable
 
         val result = provider.getStringEvaluation("test-variable", "default", null)
@@ -320,7 +320,7 @@ class DevCycleProviderTest {
     }
 
     @Test
-    fun `createProviderEvaluation keeps DEFAULT reason for defaulted variable even when source is CACHED`() {
+    fun `createProviderEvaluation keeps DEFAULT reason for defaulted variable even when config is cached`() {
         setupInitializedProvider()
 
         val mockVariable = mockk<Variable<String>>(relaxed = true)
@@ -331,10 +331,10 @@ class DevCycleProviderTest {
         every { mockVariable.isDefaulted } returns true
         every { mockVariable.eval } returns mockEvalReason
         every { mockEvalReason.reason } returns "DEFAULT"
-        every { mockEvalReason.source } returns "CACHED"
         every { mockEvalReason.details } returns "User Not Targeted"
         every { mockEvalReason.targetId } returns null
 
+        every { mockDevCycleClient.isUsingCachedConfig } returns true
         every { mockDevCycleClient.variable("missing-key", "default") } returns mockVariable
 
         val result = provider.getStringEvaluation("missing-key", "default", null)

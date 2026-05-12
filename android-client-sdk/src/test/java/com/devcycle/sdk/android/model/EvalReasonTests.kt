@@ -6,14 +6,12 @@ import org.junit.jupiter.api.Test
 class EvalReasonTests {
 
     @Test
-    fun `withCachedSource preserves original reason and sets source to CACHED`() {
-        val original = EvalReason("TARGETING_MATCH", "User ID", "target-123")
-        val cached = EvalReason.withCachedSource(original)
+    fun `defaultReason creates EvalReason with DEFAULT reason and given details`() {
+        val evalReason = EvalReason.defaultReason("User Not Targeted")
 
-        assertEquals("TARGETING_MATCH", cached.reason)
-        assertEquals("User ID", cached.details)
-        assertEquals("target-123", cached.targetId)
-        assertEquals("CACHED", cached.source)
+        assertEquals("DEFAULT", evalReason.reason)
+        assertEquals("User Not Targeted", evalReason.details)
+        assertNull(evalReason.targetId)
     }
 
 }
