@@ -101,13 +101,17 @@ class DevCycleClient private constructor(
     }
 
     init {
-        val cacheHit = useCachedConfigForUser(user)
+        useCachedConfigForUser(user)
 
-        if (cacheHit) {
-            isInitialized.set(true)
-            initializeJob = CompletableDeferred(Unit)
-
-            coroutineScope.launch(coroutineContext) {
+        initializeJob = coroutineScope.async(coroutineContext) {
+            isExecuting.set(true)
+            try {
+                fetchConfig(user)
+                isInitialized.set(true)
+            } catch (t: Throwable) {
+                DevCycleLogger.e(t, "DevCycle SDK Failed to Initialize!")
+                throw t
+            } finally {
                 withContext(Dispatchers.IO) {
                     initEventSource()
                     val application: Application = context.applicationContext as Application
@@ -119,38 +123,13 @@ class DevCycleClient private constructor(
                     )
                     application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
                 }
-                // Fetch fresh config in background (ADR 0009). SSE only fires on
-                // server-side changes, so an explicit fetch is needed to verify the cache.
-                performBackgroundRefresh()
             }
-        } else {
-            initializeJob = coroutineScope.async(coroutineContext) {
-                isExecuting.set(true)
-                try {
-                    fetchConfig(user)
-                    isInitialized.set(true)
-                    withContext(Dispatchers.IO) {
-                        initEventSource()
-                        val application: Application = context.applicationContext as Application
-                        val lifecycleCallbacks = DVCLifecycleCallbacks(
-                            onPauseApplication,
-                            onResumeApplication,
-                            config?.sse?.inactivityDelay?.toLong(),
-                            customLifecycleHandler
-                        )
-                        application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
-                    }
-                } catch (t: Throwable) {
-                    DevCycleLogger.e(t, "DevCycle SDK Failed to Initialize!")
-                    throw t
-                }
-            }
+        }
 
-            initializeJob.invokeOnCompletion {
-                coroutineScope.launch(coroutineContext) {
-                    handleQueuedConfigRequests()
-                    isExecuting.set(false)
-                }
+        initializeJob.invokeOnCompletion {
+            coroutineScope.launch(coroutineContext) {
+                handleQueuedConfigRequests()
+                isExecuting.set(false)
             }
         }
     }
@@ -214,12 +193,12 @@ class DevCycleClient private constructor(
         }
     }
 
-    internal val isUsingCachedConfig: Boolean
+    val hasUsableCachedConfig: Boolean
         @Synchronized get() = config != null && isConfigCached.get()
 
     /**
      * Atomically updates [config] and [isConfigCached] under the intrinsic lock so that
-     * [isUsingCachedConfig] never observes a torn write where one field reflects the new value
+     * [hasUsableCachedConfig] never observes a torn write where one field reflects the new value
      * and the other still holds the old one.
      */
     @Synchronized
@@ -267,22 +246,14 @@ class DevCycleClient private constructor(
 
             override fun onError(error: Throwable) {
                 DevCycleLogger.d("Error fetching config for user_id %s: %s", updatedUser.userId, error.message)
-
-                if (error is DVCRequestException && (error.isAuthError || error.statusCode == 400)) {
-                    dvcSharedPrefs.clearConfigForUser(updatedUser)
-                    DevCycleLogger.w("Config error during identifyUser (${error.statusCode}). Persisted cache cleared.")
-                    latestIdentifiedUser = previousUser
-                    callback?.onError(error)
-                    return
-                }
-
                 // In the event that the config request fails (i.e. the device is offline)
                 // Fallback to using a Cached Configuration for the User if available
                 val hasCachedConfig = tryLoadCachedConfigForUser(updatedUser)
                 if (hasCachedConfig) {
                     // Successfully used cached config, return success
+                    DevCycleLogger.i("Using cached config for identifyUser due to network error: $error")
+                    this@DevCycleClient.user = updatedUser
                     config?.variables?.let { callback?.onSuccess(it) }
-                    performBackgroundRefresh()
                 } else {
                     // No cached config available, restore previous state and return error
                     latestIdentifiedUser = previousUser
@@ -611,7 +582,12 @@ class DevCycleClient private constructor(
                     fetchConfig(latestIdentifiedUser, sse, lastModified, etag)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
-                    callback?.onError(t)
+                    if (callback != null) {
+                        callback.onError(t)
+                    } else {
+                        // SSE-triggered refetch — no caller callback; surface error via onConfigUpdated listeners.
+                        notifyConfigError(t)
+                    }
                 } finally {
                     handleQueuedConfigRequests()
                     isExecuting.set(false)
@@ -651,8 +627,18 @@ class DevCycleClient private constructor(
         return false
     }
 
-    internal fun onConfigUpdated(callback: DevCycleCallback<Map<String, BaseConfigVariable>>) {
+    fun onConfigUpdated(callback: DevCycleCallback<Map<String, BaseConfigVariable>>) {
         configUpdatedCallbacks.add(callback)
+    }
+
+    private fun notifyConfigError(t: Throwable) {
+        configUpdatedCallbacks.forEach { callback ->
+            try {
+                callback.onError(t)
+            } catch (e: Exception) {
+                DevCycleLogger.e(e, "Error in config updated error callback")
+            }
+        }
     }
 
     private fun notifyConfigUpdated(variables: Map<String, BaseConfigVariable>?) {
@@ -665,40 +651,6 @@ class DevCycleClient private constructor(
                 }
             }
         }
-    }
-
-    private fun notifyConfigError(error: Throwable) {
-        configUpdatedCallbacks.forEach { callback ->
-            try {
-                callback.onError(error)
-            } catch (e: Exception) {
-                DevCycleLogger.e(e, "Error in config error callback")
-            }
-        }
-    }
-
-    private fun performBackgroundRefresh() {
-        val userAtRefreshStart = latestIdentifiedUser
-        refetchConfig(false, null, null, object : DevCycleCallback<Map<String, BaseConfigVariable>> {
-            override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                DevCycleLogger.d("Background refresh succeeded")
-            }
-
-            override fun onError(error: Throwable) {
-                val isConfigError = error is DVCRequestException &&
-                        (error.isAuthError || error.statusCode == 400)
-
-                if (isConfigError) {
-                    dvcSharedPrefs.clearConfigForUser(userAtRefreshStart)
-                    DevCycleLogger.w("Background refresh config error (${(error as DVCRequestException).statusCode}). Persisted cache cleared.")
-                    if (configUpdatedCallbacks.isNotEmpty()) {
-                        notifyConfigError(error)
-                    }
-                } else {
-                    DevCycleLogger.w("Background refresh failed: ${error.message}. Keeping caches.")
-                }
-            }
-        })
     }
 
     class DevCycleClientBuilder {

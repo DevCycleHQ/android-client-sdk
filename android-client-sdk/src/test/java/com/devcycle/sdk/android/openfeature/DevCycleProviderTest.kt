@@ -10,11 +10,16 @@ import dev.openfeature.kotlin.sdk.EvaluationMetadata
 import dev.openfeature.kotlin.sdk.ImmutableContext
 import dev.openfeature.kotlin.sdk.TrackingEventDetails
 import dev.openfeature.kotlin.sdk.Value
+import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -177,7 +182,7 @@ class DevCycleProviderTest {
 
     @Test
     fun `initialize returns immediately when cached config is available`() {
-        every { mockDevCycleClient.isUsingCachedConfig } returns true
+        every { mockDevCycleClient.hasUsableCachedConfig } returns true
 
         assertDoesNotThrow {
             runBlocking {
@@ -185,13 +190,14 @@ class DevCycleProviderTest {
             }
         }
 
-        // onInitialized should NOT have been called since we short-circuited
-        io.mockk.verify(exactly = 0) { mockDevCycleClient.onInitialized(any()) }
+        // onInitialized SHOULD be registered even on cache hit — it handles the post-cache-hit
+        // background network result (ProviderConfigurationChanged or ProviderError).
+        io.mockk.verify(exactly = 1) { mockDevCycleClient.onInitialized(any()) }
     }
 
     @Test
     fun `initialize blocks on network when no cached config`() {
-        every { mockDevCycleClient.isUsingCachedConfig } returns false
+        every { mockDevCycleClient.hasUsableCachedConfig } returns false
 
         assertDoesNotThrow {
             runBlocking {
@@ -310,7 +316,7 @@ class DevCycleProviderTest {
         every { mockEvalReason.details } returns null
         every { mockEvalReason.targetId } returns null
 
-        every { mockDevCycleClient.isUsingCachedConfig } returns true
+        every { mockDevCycleClient.hasUsableCachedConfig } returns true
         every { mockDevCycleClient.variable("test-variable", "default") } returns mockVariable
 
         val result = provider.getStringEvaluation("test-variable", "default", null)
@@ -334,7 +340,7 @@ class DevCycleProviderTest {
         every { mockEvalReason.details } returns "User Not Targeted"
         every { mockEvalReason.targetId } returns null
 
-        every { mockDevCycleClient.isUsingCachedConfig } returns true
+        every { mockDevCycleClient.hasUsableCachedConfig } returns true
         every { mockDevCycleClient.variable("missing-key", "default") } returns mockVariable
 
         val result = provider.getStringEvaluation("missing-key", "default", null)
@@ -343,10 +349,137 @@ class DevCycleProviderTest {
         assertEquals("DEFAULT", result.reason)
     }
 
+    @Test
+    fun `configurationChanged event emitted when background refresh succeeds after cache hit init`() {
+        every { mockDevCycleClient.hasUsableCachedConfig } returns true
+
+        // Capture the onInitialized callback without invoking it yet (async background refresh)
+        var capturedInitCallback: DevCycleCallback<String>? = null
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            capturedInitCallback = firstArg()
+        }
+
+        val emittedEvents = mutableListOf<OpenFeatureProviderEvents>()
+        runBlocking {
+            val collectJob = launch {
+                provider.observe().take(1).collect { emittedEvents.add(it) }
+            }
+            // yield() ensures the collector is subscribed before initialize() emits any events.
+            // SharedFlow has replay=0, so events emitted before subscription are dropped.
+            yield()
+            provider.initialize(ImmutableContext(targetingKey = "cached-user"))
+
+            // Simulate background network refresh completing successfully
+            capturedInitCallback?.onSuccess("initialized")
+            collectJob.join()
+        }
+
+        assertTrue(
+            emittedEvents.any { it is OpenFeatureProviderEvents.ProviderConfigurationChanged },
+            "ProviderConfigurationChanged should be emitted after background refresh succeeds"
+        )
+    }
+
+    @Test
+    fun `provider emits error event when background refresh fails with non-retryable error after cache hit init`() {
+        every { mockDevCycleClient.hasUsableCachedConfig } returns true
+
+        var capturedInitCallback: DevCycleCallback<String>? = null
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            capturedInitCallback = firstArg()
+        }
+
+        val emittedEvents = mutableListOf<OpenFeatureProviderEvents>()
+        runBlocking {
+            val collectJob = launch {
+                provider.observe().take(1).collect { emittedEvents.add(it) }
+            }
+            // yield() ensures the collector is subscribed before initialize() emits any events.
+            // SharedFlow has replay=0, so events emitted before subscription are dropped.
+            yield()
+            provider.initialize(ImmutableContext(targetingKey = "cached-user"))
+
+            // Simulate a non-retryable background refresh error (e.g. 401)
+            capturedInitCallback?.onError(RuntimeException("401 Unauthorized"))
+            collectJob.join()
+        }
+
+        assertTrue(
+            emittedEvents.any { it is OpenFeatureProviderEvents.ProviderError },
+            "ProviderError should be emitted when background refresh fails with a non-retryable error"
+        )
+    }
+
+    @Test
+    fun `provider stays usable after non-retryable background refresh error following cache hit init`() {
+        every { mockDevCycleClient.hasUsableCachedConfig } returns true
+
+        var capturedInitCallback: DevCycleCallback<String>? = null
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            capturedInitCallback = firstArg()
+        }
+
+        val mockVariable = mockk<Variable<Boolean>>(relaxed = true)
+        every { mockVariable.value } returns true
+        every { mockVariable.isDefaulted } returns false
+        every { mockVariable.eval } returns null
+        every { mockDevCycleClient.variable("my-flag", false) } returns mockVariable
+
+        runBlocking {
+            provider.initialize(ImmutableContext(targetingKey = "cached-user"))
+        }
+
+        // Simulate a non-retryable background refresh error
+        capturedInitCallback?.onError(RuntimeException("401 Unauthorized"))
+
+        // Provider should still serve cached values
+        val eval = provider.getBooleanEvaluation("my-flag", false, null)
+        assertEquals(true, eval.value)
+    }
+
+    @Test
+    fun `provider resolves fatally on network error when no cache available`() {
+        every { mockDevCycleClient.hasUsableCachedConfig } returns false
+        every { mockDevCycleClient.onInitialized(any()) } answers {
+            val callback = firstArg<DevCycleCallback<String>>()
+            callback.onError(RuntimeException("Network failure"))
+        }
+
+        assertThrows(Exception::class.java) {
+            runBlocking {
+                provider.initialize(ImmutableContext(targetingKey = "fresh-user"))
+            }
+        }
+    }
+
+    @Test
+    fun `evaluate immediately after cache-hit initialize reports CACHED reason`() {
+        every { mockDevCycleClient.hasUsableCachedConfig } returns true
+
+        val mockVariable = mockk<Variable<String>>(relaxed = true)
+        val mockEvalReason = mockk<EvalReason>(relaxed = true)
+        every { mockVariable.key } returns "my-flag"
+        every { mockVariable.value } returns "cached-value"
+        every { mockVariable.isDefaulted } returns false
+        every { mockVariable.eval } returns mockEvalReason
+        every { mockEvalReason.reason } returns "TARGETING_MATCH"
+        every { mockEvalReason.details } returns null
+        every { mockEvalReason.targetId } returns null
+        every { mockDevCycleClient.variable("my-flag", "default") } returns mockVariable
+
+        runBlocking {
+            provider.initialize(ImmutableContext(targetingKey = "cached-user"))
+        }
+
+        val eval = provider.getStringEvaluation("my-flag", "default", null)
+        assertEquals("cached-value", eval.value)
+        assertEquals("CACHED", eval.reason)
+    }
+
     private fun setupInitializedProvider() {
         // Make the devCycleClient available (simulate successful initialization)
         val providerField = DevCycleProvider::class.java.getDeclaredField("_devcycleClient")
         providerField.isAccessible = true
         providerField.set(provider, mockDevCycleClient)
     }
-} 
+}

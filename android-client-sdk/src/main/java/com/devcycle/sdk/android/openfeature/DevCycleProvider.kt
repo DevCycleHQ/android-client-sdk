@@ -44,16 +44,14 @@ class DevCycleProvider(
             )
 
     /**
-     * Helper function to create a ProviderEvaluation from a DevCycle variable.
-     *
-     * [isUsingCachedConfig] must be captured from the same client reference used to retrieve
-     * [variable], so the reason reflects the config state at the moment of evaluation rather than
-     * a later read of the mutable [_devcycleClient] field.
+     * [hasUsableCachedConfig] must be captured from the same client reference used to retrieve
+     * [variable] so the reason reflects the config state at evaluation time rather than a later
+     * read of the mutable [_devcycleClient] field.
      */
     private fun <T> createProviderEvaluation(
         variable: Variable<*>,
         value: T,
-        isUsingCachedConfig: Boolean,
+        hasUsableCachedConfig: Boolean,
     ): ProviderEvaluation<T> {
         val metadataBuilder = EvaluationMetadata.builder()
         var hasMetadata = false
@@ -71,7 +69,7 @@ class DevCycleProvider(
 
         val reason = when {
             variable.isDefaulted == true -> Reason.DEFAULT.toString()
-            isUsingCachedConfig -> Reason.CACHED.toString()
+            hasUsableCachedConfig -> Reason.CACHED.toString()
             else -> variable.eval?.reason ?: Reason.TARGETING_MATCH.toString()
         }
 
@@ -123,46 +121,76 @@ class DevCycleProvider(
 
             _devcycleClient = clientBuilder.build()
 
-            _devcycleClient!!.onConfigUpdated(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
-                override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                    _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged)
-                    DevCycleLogger.d("Emitted PROVIDER_CONFIGURATION_CHANGED event")
-                }
-
-                override fun onError(t: Throwable) {
-                    DevCycleLogger.e("Config error: ${t.message}")
-                    _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
-                        OpenFeatureError.GeneralError(t.message ?: "Config error")
-                    ))
-                }
-            })
-
-            if (_devcycleClient!!.isUsingCachedConfig) {
-                DevCycleLogger.d("DevCycle OpenFeature provider initialized from cache (PROVIDER_READY)")
-                return
+            // consumeResume guard — ensures continuation.resume is called exactly once.
+            // On a cache hit the cache check below resolves immediately; onInitialized fires later
+            // (after network) and emits ProviderConfigurationChanged.
+            // On a cache miss onInitialized is the sole resolve.
+            val lock = Any()
+            var didResume = false
+            fun consumeResume(): Boolean = synchronized(lock) {
+                if (didResume) false else { didResume = true; true }
             }
 
-            // Cache miss: block until network fetch completes
-            suspendCancellableCoroutine<Unit> { continuation ->
-                _devcycleClient!!.onInitialized(object : DevCycleCallback<String> {
-                    override fun onSuccess(result: String) {
-                        DevCycleLogger.d("DevCycle OpenFeature provider initialized successfully")
-                        continuation.resume(Unit)
-                    }
+            // Captured before registering callbacks to avoid a race where onInitialized fires
+            // first and incorrectly treats a cache-hit init as a fatal error.
+            val isCacheHit = _devcycleClient!!.hasUsableCachedConfig
 
+            suspendCancellableCoroutine<Unit> { continuation ->
+
+                // SSE-triggered config updates fire post-init whenever the realtime connection
+                // delivers a new config.
+                _devcycleClient!!.onConfigUpdated(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+                    override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                        _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged)
+                    }
                     override fun onError(t: Throwable) {
-                        DevCycleLogger.e("DevCycle OpenFeature provider initialization failed: ${t.message}")
-                        continuation.resumeWithException(
-                            OpenFeatureError.ProviderFatalError("DevCycle client initialization error: ${t.message}")
-                        )
+                        _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
+                            OpenFeatureError.GeneralError(t.message ?: "Config error")
+                        ))
                     }
                 })
+
+                // onInitialized always fires after the network fetch completes.
+                // Cache miss: sole resolve — resume the continuation.
+                // Cache hit: continuation already resumed below; surface the network result as an event.
+                _devcycleClient!!.onInitialized(object : DevCycleCallback<String> {
+                    override fun onSuccess(result: String) {
+                        if (!continuation.isActive) return
+                        if (consumeResume()) {
+                            continuation.resume(Unit)
+                        } else {
+                            _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged)
+                        }
+                    }
+                    override fun onError(t: Throwable) {
+                        if (!continuation.isActive) return
+                        if (!isCacheHit) {
+                            // No cache — fatal.
+                            if (consumeResume()) {
+                                continuation.resumeWithException(
+                                    OpenFeatureError.ProviderFatalError("DevCycle client initialization error: ${t.message}")
+                                )
+                            }
+                        } else {
+                            // Cache hit: network error is non-fatal; cached config remains usable.
+                            _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
+                                OpenFeatureError.GeneralError("Background refresh failed: ${t.message}")
+                            ))
+                        }
+                    }
+                })
+
+                // Cache hit: resolve immediately — the network fetch continues in the background.
+                if (isCacheHit) {
+                    if (continuation.isActive && consumeResume()) {
+                        continuation.resume(Unit)
+                    }
+                }
             }
         } catch (e: OpenFeatureError) {
             // Re-throw OpenFeature errors as-is
             throw e
         } catch (e: Exception) {
-            DevCycleLogger.e("DevCycle OpenFeature provider initialization failed: ${e.message}")
             throw OpenFeatureError.ProviderFatalError("DevCycle client initialization error: ${e.message}")
         }
     }
@@ -213,7 +241,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<Boolean> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value, client.isUsingCachedConfig)
+        return createProviderEvaluation(variable, variable.value, client.hasUsableCachedConfig)
     }
 
     override fun getDoubleEvaluation(
@@ -223,7 +251,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<Double> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value.toDouble(), client.isUsingCachedConfig)
+        return createProviderEvaluation(variable, variable.value.toDouble(), client.hasUsableCachedConfig)
     }
 
     override fun getIntegerEvaluation(
@@ -233,7 +261,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<Int> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value.toInt(), client.isUsingCachedConfig)
+        return createProviderEvaluation(variable, variable.value.toInt(), client.hasUsableCachedConfig)
     }
 
     override fun getObjectEvaluation(
@@ -242,7 +270,7 @@ class DevCycleProvider(
         context: EvaluationContext?
     ): ProviderEvaluation<Value> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
-        val isUsingCachedConfig = client.isUsingCachedConfig
+        val hasUsableCachedConfig = client.hasUsableCachedConfig
 
         val (result, variable) = when {
             defaultValue is Value.Structure -> {
@@ -274,7 +302,7 @@ class DevCycleProvider(
             }
         }
 
-        return createProviderEvaluation(variable, result, isUsingCachedConfig)
+        return createProviderEvaluation(variable, result, hasUsableCachedConfig)
     }
 
     override fun getStringEvaluation(
@@ -284,7 +312,7 @@ class DevCycleProvider(
     ): ProviderEvaluation<String> {
         val client = _devcycleClient ?: return createDefaultProviderEvaluation(defaultValue)
         val variable = client.variable(key, defaultValue)
-        return createProviderEvaluation(variable, variable.value, client.isUsingCachedConfig)
+        return createProviderEvaluation(variable, variable.value, client.hasUsableCachedConfig)
     }
 
     override fun track(
