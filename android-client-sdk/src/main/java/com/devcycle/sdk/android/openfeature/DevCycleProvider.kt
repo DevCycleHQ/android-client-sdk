@@ -155,24 +155,24 @@ class DevCycleProvider(
                 // Cache hit: continuation already resumed below; surface the network result as an event.
                 _devcycleClient!!.onInitialized(object : DevCycleCallback<String> {
                     override fun onSuccess(result: String) {
-                        if (!continuation.isActive) return
                         if (consumeResume()) {
-                            continuation.resume(Unit)
+                            // Cache miss: first to resolve — resume the continuation if still active.
+                            if (continuation.isActive) continuation.resume(Unit)
                         } else {
+                            // Cache hit: continuation already resolved; surface network result as event.
                             _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged)
                         }
                     }
                     override fun onError(t: Throwable) {
-                        if (!continuation.isActive) return
                         if (!isCacheHit) {
-                            // No cache — fatal.
-                            if (consumeResume()) {
+                            // Cache miss: fatal init error — resume with exception if still active.
+                            if (consumeResume() && continuation.isActive) {
                                 continuation.resumeWithException(
                                     OpenFeatureError.ProviderFatalError("DevCycle client initialization error: ${t.message}")
                                 )
                             }
                         } else {
-                            // Cache hit: network error is non-fatal; cached config remains usable.
+                            // Cache hit: network error is non-fatal; always emit — continuation is already resolved.
                             _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
                                 OpenFeatureError.GeneralError("Background refresh failed: ${t.message}")
                             ))
