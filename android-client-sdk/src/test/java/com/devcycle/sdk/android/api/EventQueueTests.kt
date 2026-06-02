@@ -13,6 +13,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.Mockito
 import java.math.BigDecimal
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
 class EventQueueTests {
@@ -82,4 +85,59 @@ class EventQueueTests {
         Assert.assertEquals(optInEval, evalEventMetadata)
         Assert.assertEquals(defaultEval, defaultEventMetadata)
     }
+
+    @Test
+    fun `queueAggregateEvent throws synchronously when target is missing`() {
+        val request = Request("some-key", "http://fake.com", "http://fake.com", mockContext)
+        val user = PopulatedUser("test")
+        val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 60000)
+        val eval = EvalReason("OPT_IN", "Opt-In", "target")
+        val eventWithNoTarget =
+            Event.fromInternalEvent(Event.variableEvent(false, "", eval), user, null)
+
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            eventQueue.queueAggregateEvent(eventWithNoTarget)
+        }
+    }
+
+    @Test
+    fun `concurrent queueAggregateEvent produces correct aggregate counts`() {
+        val request = Request("some-key", "http://fake.com", "http://fake.com", mockContext)
+        val user = PopulatedUser("test")
+        val eventQueue = EventQueue(request, { user }, CoroutineScope(Dispatchers.Default), 60000)
+        val eval = EvalReason("OPT_IN", "Opt-In", "target")
+        val keys = listOf("key0", "key1", "key2", "key3")
+
+        val threads = 8
+        val callsPerThread = 5000
+        val pool = Executors.newFixedThreadPool(threads)
+        val start = CountDownLatch(1)
+        val done = CountDownLatch(threads)
+        repeat(threads) {
+            pool.submit {
+                start.await()
+                repeat(callsPerThread) { i ->
+                    val key = keys[i % keys.size]
+                    eventQueue.queueAggregateEvent(
+                        Event.fromInternalEvent(Event.variableEvent(false, key, eval), user, null)
+                    )
+                }
+                done.countDown()
+            }
+        }
+        start.countDown()
+        Assert.assertTrue("workers did not finish", done.await(30, TimeUnit.SECONDS))
+        pool.shutdown()
+
+        val expectedPerKey = (threads * callsPerThread) / keys.size
+        keys.forEach { key ->
+            val event = eventQueue.aggregateEventMap[Event.Companion.EventTypes.variableEvaluated]?.get(key)
+            Assert.assertEquals(
+                "lost updates for $key",
+                BigDecimal(expectedPerKey),
+                event?.value
+            )
+        }
+    }
+
 }
