@@ -49,9 +49,5 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.android.material:material:1.5.0'
     implementation(project(":android-client-sdk"))
-    implementation 'dev.openfeature:android-sdk:0.4.1'
-}
-
-task wrapper(type: Wrapper){
-    gradleVersion = '7.4'
+    implementation 'dev.openfeature:kotlin-sdk:0.6.2'
 }

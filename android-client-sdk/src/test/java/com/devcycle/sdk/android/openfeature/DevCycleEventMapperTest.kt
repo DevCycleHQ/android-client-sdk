@@ -2,9 +2,9 @@ package com.devcycle.sdk.android.openfeature
 
 import com.devcycle.sdk.android.util.JSONMapper
 import com.fasterxml.jackson.core.type.TypeReference
-import dev.openfeature.sdk.ImmutableStructure
-import dev.openfeature.sdk.TrackingEventDetails
-import dev.openfeature.sdk.Value
+import dev.openfeature.kotlin.sdk.ImmutableStructure
+import dev.openfeature.kotlin.sdk.TrackingEventDetails
+import dev.openfeature.kotlin.sdk.Value
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import java.math.BigDecimal
