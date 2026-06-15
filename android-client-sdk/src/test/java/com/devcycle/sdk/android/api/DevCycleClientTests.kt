@@ -1981,6 +1981,91 @@ class DevCycleClientTests {
         client.close()
     }
 
+    /**
+     * Primes the mocked SharedPreferences so DVCSharedPrefs.getConfig(user) returns a valid,
+     * non-expired BucketedUserConfig — making DevCycleClient take the cache-hit init branch.
+     */
+    private fun primeCachedConfig() {
+        val cachedConfig = generateConfig("cached-flag", "cached-value", Variable.TypeEnum.STRING)
+        val cachedConfigJson = objectMapper.writeValueAsString(cachedConfig)
+        val futureExpiry = System.currentTimeMillis() + 60_000L
+
+        // DVCSharedPrefs.getConfig calls getString(key, null); `anyString()` would not match
+        // the null default value, so use `nullable` for the second arg.
+        `when`(sharedPreferences?.getString(anyString(), Mockito.nullable(String::class.java))).thenReturn(cachedConfigJson)
+        `when`(sharedPreferences?.getLong(anyString(), ArgumentMatchers.anyLong())).thenReturn(futureExpiry)
+    }
+
+    @Test
+    fun `DevCycleClient initializes successfully from cached config`() {
+        primeCachedConfig()
+
+        // Init always fetches from network; use a distinct network value to verify the
+        // final state reflects the network response, not the primed cache.
+        val config = generateConfig("cached-flag", "network-value", Variable.TypeEnum.STRING)
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config)))
+
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+
+        try {
+            client.onInitialized(object : DevCycleCallback<String> {
+                override fun onSuccess(result: String) {
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+                override fun onError(t: Throwable) {
+                    error = t
+                    calledBack = true
+                    countDownLatch.countDown()
+                }
+            })
+        } catch (t: Throwable) {
+            countDownLatch.countDown()
+        } finally {
+            countDownLatch.await(2000, TimeUnit.MILLISECONDS)
+            handleFinally(calledBack, error)
+        }
+
+        Assertions.assertEquals("network-value", client.variableValue("cached-flag", "default"))
+
+        client.close()
+    }
+
+    @Test
+    fun `DevCycleProvider initializes successfully from cached config`() {
+        primeCachedConfig()
+
+        val provider = com.devcycle.sdk.android.openfeature.DevCycleProvider(
+            sdkKey = TEST_SDK_KEY,
+            context = requireNotNull(mockContext) { "mockContext should not be null in tests" },
+            // NO_LOGGING bypasses the default DebugLogger which calls android.util.Log
+            // (unmocked in JVM unit tests). DevCycleProvider doesn't expose a withLogger
+            // option, so this is how we silence logging from the underlying DevCycleClient.
+            options = DevCycleOptions.builder()
+                .logLevel(LogLevel.NO_LOGGING)
+                .apiProxyUrl(mockWebServer.url("/").toString())
+                .eventsApiProxyUrl(mockWebServer.url("/").toString())
+                .build()
+        )
+
+        try {
+            kotlinx.coroutines.runBlocking {
+                provider.initialize(
+                    dev.openfeature.kotlin.sdk.ImmutableContext(targetingKey = "nic_test")
+                )
+            }
+
+            Assertions.assertTrue(
+                provider.devcycleClient.hasUsableCachedConfig,
+                "Provider's underlying client should report a usable cached config"
+            )
+            val eval = provider.getStringEvaluation("cached-flag", "default", null)
+            Assertions.assertEquals("cached-value", eval.value)
+        } finally {
+            provider.shutdown()
+        }
+    }
+
     private fun handleFinally(
         calledBack: Boolean,
         error: Throwable?,
@@ -2357,6 +2442,61 @@ class DevCycleClientTests {
         client.close()
     }
     
+    @Test
+    fun `onConfigUpdated callback fires on config change after init`() {
+        val config = generateConfig("activate-flag", "Flag activated!", Variable.TypeEnum.STRING, targetingMatch)
+        val updatedConfig = generateConfig("activate-flag", "Updated!", Variable.TypeEnum.STRING, targetingMatch)
+
+        val requestCount = AtomicInteger(0)
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.path == "/v1/events") {
+                    return MockResponse().setResponseCode(201).setBody("{\"message\": \"Success\"}")
+                } else if (request.path?.contains("/v1/mobileSDKConfig") == true) {
+                    val count = requestCount.incrementAndGet()
+                    return if (count == 1) {
+                        MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(config))
+                    } else {
+                        MockResponse().setResponseCode(200).setBody(objectMapper.writeValueAsString(updatedConfig))
+                    }
+                }
+                return MockResponse().setResponseCode(404)
+            }
+        }
+
+        val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
+
+        var configUpdatedCalled = false
+        val updateLatch = CountDownLatch(1)
+        client.onConfigUpdated(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
+            override fun onSuccess(result: Map<String, BaseConfigVariable>) {
+                configUpdatedCalled = true
+                updateLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                updateLatch.countDown()
+            }
+        })
+
+        val initLatch = CountDownLatch(1)
+        client.onInitialized(object : DevCycleCallback<String> {
+            override fun onSuccess(result: String) {
+                // Trigger a config change via identifyUser with same user (property update)
+                val sameUser = DevCycleUser.builder().withUserId("nic_test").build()
+                client.identifyUser(sameUser)
+                initLatch.countDown()
+            }
+            override fun onError(t: Throwable) {
+                initLatch.countDown()
+            }
+        })
+
+        initLatch.await(3000, TimeUnit.MILLISECONDS)
+        updateLatch.await(3000, TimeUnit.MILLISECONDS)
+        Assertions.assertTrue(configUpdatedCalled, "onConfigUpdated should be called on post-init config change")
+        client.close()
+    }
+
     @Test
     fun `tryLoadCachedConfigForUser returns false when no cached config exists`() {
         val client = createClient(TEST_SDK_KEY, mockWebServer.url("/").toString())
