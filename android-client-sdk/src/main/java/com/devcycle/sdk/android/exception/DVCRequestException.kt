@@ -4,16 +4,17 @@ import com.devcycle.sdk.android.model.ErrorResponse
 import com.devcycle.sdk.android.model.HttpResponseCode
 
 class DVCRequestException(
-    private val httpResponseCode:HttpResponseCode,
-    private val errorResponse: ErrorResponse): Exception(errorResponse.message?.getOrNull(0)) {
+    val statusCode: Int,
+    private val errorResponse: ErrorResponse
+): Exception(errorResponse.message?.getOrNull(0)) {
 
-    fun getHttpResponseCode(): HttpResponseCode {
-        return httpResponseCode
-    }
+    private val httpResponseCode = HttpResponseCode.byCode(statusCode)
 
-    fun getErrorResponse(): ErrorResponse {
-        return errorResponse
-    }
+    fun getHttpResponseCode(): HttpResponseCode = httpResponseCode
 
-    val isRetryable get() = httpResponseCode.code >= 500
+    fun getErrorResponse(): ErrorResponse = errorResponse
+
+    val isRetryable get() = statusCode == 429 || statusCode >= 500
+
+    val isAuthError get() = statusCode == 401 || statusCode == 403
 }
