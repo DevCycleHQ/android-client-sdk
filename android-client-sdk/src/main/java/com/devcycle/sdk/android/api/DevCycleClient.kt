@@ -11,6 +11,7 @@ import com.devcycle.sdk.android.util.DevCycleLogger
 import com.devcycle.sdk.android.util.DVCSharedPrefs
 import com.devcycle.sdk.android.util.LogLevel
 import com.launchdarkly.eventsource.ConnectStrategy
+import com.launchdarkly.eventsource.ErrorStrategy
 import com.launchdarkly.eventsource.EventSource
 import com.launchdarkly.eventsource.background.BackgroundEventSource
 import com.launchdarkly.eventsource.MessageEvent
@@ -76,42 +77,7 @@ class DevCycleClient private constructor(
     private var latestIdentifiedUser: PopulatedUser = user
 
     private val variableInstanceMap: MutableMap<String, MutableMap<Any, WeakReference<Variable<*>>>> = mutableMapOf()
-
-    init {
-        useCachedConfigForUser(user)
-
-        initializeJob = coroutineScope.async(coroutineContext) {
-            isExecuting.set(true)
-            try {
-                fetchConfig(user)
-                isInitialized.set(true)
-                withContext(Dispatchers.IO){
-                    initEventSource()
-                    val application : Application = context.applicationContext as Application
-
-                    val lifecycleCallbacks = DVCLifecycleCallbacks(
-                        onPauseApplication,
-                        onResumeApplication,
-                        config?.sse?.inactivityDelay?.toLong(),
-                        customLifecycleHandler
-                    )
-                    application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
-                }
-
-            } catch (t: Throwable) {
-                DevCycleLogger.e(t, "DevCycle SDK Failed to Initialize!")
-                throw t
-            }
-        }
-
-        initializeJob.invokeOnCompletion {
-            coroutineScope.launch(coroutineContext) {
-                handleQueuedConfigRequests()
-                isExecuting.set(false)
-            }
-        }
-    }
-
+    private val configUpdatedCallbacks = java.util.concurrent.CopyOnWriteArrayList<DevCycleCallback<Map<String, BaseConfigVariable>>>()
     private val onPauseApplication = fun () {
         coroutineScope.launch {
             withContext(Dispatchers.IO) {
@@ -134,6 +100,66 @@ class DevCycleClient private constructor(
         }
     }
 
+    init {
+        useCachedConfigForUser(user)
+
+        initializeJob = coroutineScope.async(coroutineContext) {
+            isExecuting.set(true)
+            try {
+                fetchConfig(user)
+                isInitialized.set(true)
+            } catch (t: Throwable) {
+                DevCycleLogger.e(t, "DevCycle SDK Failed to Initialize!")
+                throw t
+            } finally {
+                withContext(Dispatchers.IO) {
+                    initEventSource()
+                    val application: Application = context.applicationContext as Application
+                    val lifecycleCallbacks = DVCLifecycleCallbacks(
+                        onPauseApplication,
+                        onResumeApplication,
+                        config?.sse?.inactivityDelay?.toLong(),
+                        customLifecycleHandler
+                    )
+                    application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
+                }
+            }
+        }
+
+        initializeJob.invokeOnCompletion {
+            coroutineScope.launch(coroutineContext) {
+                handleQueuedConfigRequests()
+                isExecuting.set(false)
+            }
+        }
+    }
+
+    /**
+     * Handles incoming SSE messages. The message may arrive as a full event envelope
+     * (with id, timestamp, name, etc.) where the "data" field is a JSON-encoded string
+     * containing the actual payload, or it may already be the inner payload directly.
+     *
+     * Parsing is delegated to [SSEMessage.parse].
+     */
+    private fun handleSSEMessage(messageEvent: MessageEvent?) {
+        if (messageEvent == null) return
+
+        try {
+            val message = SSEMessage.parse(messageEvent.data)
+            if (message == null) {
+                DevCycleLogger.w("SSE Message: Failed to parse message data: ${messageEvent.data}")
+                return
+            }
+
+            if (message.type == "refetchConfig" || message.type == "") {
+                DevCycleLogger.d("SSE Message: Refetching config")
+                refetchConfig(true, message.lastModified, message.etag)
+            }
+        } catch (e: Exception) {
+            DevCycleLogger.w(e, "SSE Message: Error handling SSE message: ${messageEvent.data}")
+        }
+    }
+
     private fun initEventSource () {
         if (disableRealtimeUpdates) {
             DevCycleLogger.i("Realtime Updates disabled via initialization parameter")
@@ -141,36 +167,11 @@ class DevCycleClient private constructor(
         }
         if (config?.sse?.url == null) { return }
 
-        val handler = SSEEventHandler(fun(messageEvent: MessageEvent?) {
-            if (messageEvent == null) {
-                return
-            }
-
-            val data = JSONObject(messageEvent.data)
-            if (!data.has("data")) {
-                return
-            }
-
-            val innerData = JSONObject(data.get("data") as String)
-            val lastModified = if (innerData.has("lastModified")) {
-                (innerData.get("lastModified") as Long)
-            } else null
-            val type = if (innerData.has("type")) {
-                (innerData.get("type") as String).toLong()
-            } else ""
-            val etag = if (innerData.has("etag")) {
-                (innerData.get("etag") as String)
-            } else null
-
-            if (type == "refetchConfig" || type == "") { // Refetch the config if theres no type
-                DevCycleLogger.d("SSE Message: Refetching config")
-                refetchConfig(true, lastModified, etag)
-            }
-        })
+        val handler = SSEEventHandler(::handleSSEMessage)
         val builder = EventSource.Builder(
             ConnectStrategy.http(URI(config?.sse?.url))
                 .readTimeout(EVENT_SOURCE_RETRY_DELAY_MIN, TimeUnit.MINUTES)
-        )
+        ).errorStrategy(ErrorStrategy.alwaysContinue())
 
         backgroundEventSource = BackgroundEventSource.Builder(handler, builder).build()
         backgroundEventSource?.start()
@@ -190,6 +191,20 @@ class DevCycleClient private constructor(
                 callback.onError(t)
             }
         }
+    }
+
+    val hasUsableCachedConfig: Boolean
+        @Synchronized get() = config != null && isConfigCached.get()
+
+    /**
+     * Atomically updates [config] and [isConfigCached] under the intrinsic lock so that
+     * [hasUsableCachedConfig] never observes a torn write where one field reflects the new value
+     * and the other still holds the old one.
+     */
+    @Synchronized
+    private fun setConfig(newConfig: BucketedUserConfig, isCached: Boolean) {
+        config = newConfig
+        isConfigCached.set(isCached)
     }
 
     /**
@@ -231,12 +246,13 @@ class DevCycleClient private constructor(
 
             override fun onError(error: Throwable) {
                 DevCycleLogger.d("Error fetching config for user_id %s: %s", updatedUser.userId, error.message)
-
                 // In the event that the config request fails (i.e. the device is offline)
                 // Fallback to using a Cached Configuration for the User if available
                 val hasCachedConfig = tryLoadCachedConfigForUser(updatedUser)
                 if (hasCachedConfig) {
                     // Successfully used cached config, return success
+                    DevCycleLogger.i("Using cached config for identifyUser due to network error: $error")
+                    this@DevCycleClient.user = updatedUser
                     config?.variables?.let { callback?.onSuccess(it) }
                 } else {
                     // No cached config available, restore previous state and return error
@@ -499,11 +515,14 @@ class DevCycleClient private constructor(
         etag: String? = null
     ) {
         val result = request.getConfigJson(sdkKey, user, enableEdgeDB, sse, lastModified, etag)
-        config = result
-        observable.configUpdated(config)
+        setConfig(result, isCached = false)
         dvcSharedPrefs.saveConfig(result, user)
-        isConfigCached.set(false)
+        observable.configUpdated(config)
         DevCycleLogger.d("A new config has been fetched for $user")
+
+        if (isInitialized.get()) {
+            notifyConfigUpdated(result.variables)
+        }
 
         this@DevCycleClient.user = user
 
@@ -563,7 +582,12 @@ class DevCycleClient private constructor(
                     fetchConfig(latestIdentifiedUser, sse, lastModified, etag)
                     config?.variables?.let { callback?.onSuccess(it) }
                 } catch (t: Throwable) {
-                    callback?.onError(t)
+                    if (callback != null) {
+                        callback.onError(t)
+                    } else {
+                        // SSE-triggered refetch — no caller callback; surface error via onConfigUpdated listeners.
+                        notifyConfigError(t)
+                    }
                 } finally {
                     handleQueuedConfigRequests()
                     isExecuting.set(false)
@@ -581,27 +605,51 @@ class DevCycleClient private constructor(
         }
     }
 
-    private fun useCachedConfigForUser(user: PopulatedUser) {
+    private fun useCachedConfigForUser(user: PopulatedUser): Boolean {
         val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
         if (cachedConfig != null) {
-            config = cachedConfig
-            isConfigCached.set(true)
+            setConfig(cachedConfig, isCached = true)
             DevCycleLogger.d("Loaded config from cache for user_id %s", user.userId)
             observable.configUpdated(config)
+            return true
         }
+        return false
     }
 
     private fun tryLoadCachedConfigForUser(user: PopulatedUser): Boolean {
         val cachedConfig = if (disableConfigCache) null else dvcSharedPrefs.getConfig(user)
-
         if (cachedConfig != null) {
-            config = cachedConfig
-            isConfigCached.set(true)
+            setConfig(cachedConfig, isCached = true)
             DevCycleLogger.d("Loaded config from cache for user_id %s", user.userId)
             observable.configUpdated(config)
             return true
-        } else {
-            return false
+        }
+        return false
+    }
+
+    fun onConfigUpdated(callback: DevCycleCallback<Map<String, BaseConfigVariable>>) {
+        configUpdatedCallbacks.add(callback)
+    }
+
+    private fun notifyConfigError(t: Throwable) {
+        configUpdatedCallbacks.forEach { callback ->
+            try {
+                callback.onError(t)
+            } catch (e: Exception) {
+                DevCycleLogger.e(e, "Error in config updated error callback")
+            }
+        }
+    }
+
+    private fun notifyConfigUpdated(variables: Map<String, BaseConfigVariable>?) {
+        variables?.let { vars ->
+            configUpdatedCallbacks.forEach { callback ->
+                try {
+                    callback.onSuccess(vars)
+                } catch (e: Exception) {
+                    DevCycleLogger.e(e, "Error in config updated callback")
+                }
+            }
         }
     }
 

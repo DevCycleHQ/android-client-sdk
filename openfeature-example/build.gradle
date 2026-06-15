@@ -51,7 +51,3 @@ dependencies {
     implementation(project(":android-client-sdk"))
     implementation 'dev.openfeature:kotlin-sdk:0.6.2'
 }
-
-task wrapper(type: Wrapper){
-    gradleVersion = '7.4'
-}
