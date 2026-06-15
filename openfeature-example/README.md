@@ -82,5 +82,5 @@ client.track(
 
 This example uses:
 - DevCycle Android SDK (via project dependency)
-- OpenFeature Android SDK (0.4.1)
+- OpenFeature Kotlin SDK (0.6.2)
 - Standard Android libraries 

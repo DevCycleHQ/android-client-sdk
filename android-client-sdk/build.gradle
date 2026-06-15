@@ -8,7 +8,7 @@ plugins {
 import com.vanniktech.maven.publish.SonatypeHost
 
 group = "com.devcycle"
-version = "2.6.2"
+version = "2.8.1"
 
 mavenPublishing {
     coordinates(group, "android-client-sdk", version)
@@ -95,16 +95,18 @@ ext {
     androidx_version = '1.15.0'
     retrofit_version = "2.11.0"
     swagger_annotations_version = '2.2.26'
-    jackson_version = "2.19.1"
+    jackson_version = "2.21.1"
+    // jackson-module-kotlin 2.21+ uses MethodHandle.invokeExact which requires minSdk 26.
+    // Keep at 2.19.1 until minSdk is raised to 26+.
     jackson_kotlin_version = "2.19.1"
     //noinspection DuplicatePlatformClasses
-    jackson_jparser_version = "2.19.1"
+    jackson_jparser_version = "2.21.1"
     gson_mapper_version = "2.8.6"
-    coroutines_version = '1.10.1'
+    coroutines_version = '1.10.2'
     kotlin_reflect_version = '2.1.20'
 
     junit_version = "5.13.3"
-    mockito_core_version = '5.14.2'
+    mockito_core_version = '5.19.0'
     mockito_inline_version = '5.2.0'
     mockk_version = '1.14.4'
     hamcrest_version = "3.0"
@@ -114,7 +116,7 @@ ext {
 
     android_core_version = "2.2.0"
     androidx_junit_version = "1.2.1"
-    espresso_core_version = "3.6.1"
+    espresso_core_version = "3.7.0"
 }
 
 dependencies {
@@ -129,7 +131,9 @@ dependencies {
     }
     implementation("io.swagger.core.v3:swagger-annotations:$swagger_annotations_version")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_kotlin_version}")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin") {
+        version { strictly jackson_kotlin_version }
+    }
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-json-org:${jackson_jparser_version}") {
         exclude group:'org.json', module:'json'
     }
@@ -138,8 +142,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlin_reflect_version")
     implementation("androidx.core:core-ktx:$androidx_version")
 
-    // OpenFeature Android SDK
-    implementation("dev.openfeature:android-sdk:0.4.1")
+    // OpenFeature Kotlin SDK
+    implementation("dev.openfeature:kotlin-sdk:0.6.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junit_version")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit_version")

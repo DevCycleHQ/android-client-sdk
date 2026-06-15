@@ -14,6 +14,8 @@ import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 internal class EventQueue constructor(
     private val request: Request,
@@ -27,12 +29,15 @@ internal class EventQueue constructor(
 
     private val scheduler = Scheduler(coroutineScope, flushInMs)
     private var scheduleJob: Job? = null
-    // mutex to control flushing events, ensuring only one operation at a time
+    // coroutine mutex to control flushing events, ensuring only one operation at a time;
+    // held across the suspending network publish, so it must remain a coroutine Mutex
     private val flushMutex = Mutex()
-    // mutex to gate modifications to the aggregateEventMap
-    private val aggregateMutex = Mutex()
-    // mutex to gate modifications to the eventQueue
-    private val queueMutex = Mutex()
+    // lock to gate modifications to the aggregateEventMap; the critical section is non-suspending
+    // in-memory work reached from the synchronous variable() API, so a thread lock is used
+    private val aggregateLock = ReentrantLock()
+    // lock to gate modifications to the eventQueue; non-suspending, reached from the synchronous
+    // track() API, so a thread lock is used
+    private val queueLock = ReentrantLock()
     // ensures flushEvents does not get called after the sdk is closed
     val isClosed = AtomicBoolean(false)
     private val flushAgain = AtomicBoolean(true)
@@ -46,11 +51,13 @@ internal class EventQueue constructor(
                 val eventsToFlush: MutableList<Event> = mutableListOf()
                 eventsToFlush.addAll(currentEventQueue)
 
-                queueMutex.withLock {
+                // queueLock/aggregateLock are thread locks; these blocks never suspend, so they
+                // acquire and release on the same thread, before the suspending publish below.
+                queueLock.withLock {
                     eventQueue.removeAll(currentEventQueue)
                 }
 
-                aggregateMutex.withLock {
+                aggregateLock.withLock {
                     eventsToFlush.addAll(eventsFromAggregateEventMap())
                     aggregateEventMap.clear()
                 }
@@ -136,12 +143,10 @@ internal class EventQueue constructor(
             DevCycleLogger.w("Attempting to queue event after closing DevCycle.")
             return
         }
-        runBlocking {
-            queueMutex.withLock {
-                eventQueue.add(event)
-                DevCycleLogger.i("Event queued successfully %s", event)
-                scheduleJob = scheduler.scheduleWithDelay { run() }
-            }
+        queueLock.withLock {
+            eventQueue.add(event)
+            DevCycleLogger.i("Event queued successfully %s", event)
+            scheduleJob = scheduler.scheduleWithDelay { run() }
         }
     }
 
@@ -155,30 +160,28 @@ internal class EventQueue constructor(
             DevCycleLogger.w("Attempting to queue aggregate event after closing DVC.")
             return
         }
-        runBlocking {
-            aggregateMutex.withLock {
-                if (event.target == null || event.target == "") {
-                    throw IllegalArgumentException("Target must be set")
-                }
-                if (event.type == "") {
-                    throw IllegalArgumentException("Type must be set")
-                }
-
-                var aggEventType = aggregateEventMap[event.type]
-
-                if (aggEventType == null) {
-                    aggEventType = aggregateEventMap.getOrPut(event.type) { HashMap<String, Event>() }
-                    aggEventType[event.target] = event
-                } else if (aggEventType.containsKey(event.target)) {
-                    aggEventType[event.target] = event.copy(
-                        value = aggEventType[event.target]?.value?.plus(BigDecimal.ONE)
-                    )
-                } else {
-                    aggEventType[event.target] = event
-                }
-
-                scheduleJob = scheduler.scheduleWithDelay { run() }
+        aggregateLock.withLock {
+            if (event.target == null || event.target == "") {
+                throw IllegalArgumentException("Target must be set")
             }
+            if (event.type == "") {
+                throw IllegalArgumentException("Type must be set")
+            }
+
+            var aggEventType = aggregateEventMap[event.type]
+
+            if (aggEventType == null) {
+                aggEventType = aggregateEventMap.getOrPut(event.type) { HashMap<String, Event>() }
+                aggEventType[event.target] = event
+            } else if (aggEventType.containsKey(event.target)) {
+                aggEventType[event.target] = event.copy(
+                    value = aggEventType[event.target]?.value?.plus(BigDecimal.ONE)
+                )
+            } else {
+                aggEventType[event.target] = event
+            }
+
+            scheduleJob = scheduler.scheduleWithDelay { run() }
         }
     }
 

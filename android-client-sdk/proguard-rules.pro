@@ -118,5 +118,5 @@
 
 # OpenFeature integration classes
 -keep class com.devcycle.sdk.android.openfeature.** { *; }
--keep class dev.openfeature.sdk.** { *; }
--dontwarn dev.openfeature.sdk.**
+-keep class dev.openfeature.kotlin.sdk.** { *; }
+-dontwarn dev.openfeature.kotlin.sdk.**
