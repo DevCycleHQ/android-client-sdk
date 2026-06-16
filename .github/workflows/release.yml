@@ -36,7 +36,7 @@ jobs:
       next-release-tag: ${{ steps.resolve-version.outputs.version }}
     steps:
       # Check out the repo with credentials that can bypass branch protection, and fetch git history instead of just latest commit
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.AUTOMATION_USER_TOKEN }}
           fetch-depth: 0
