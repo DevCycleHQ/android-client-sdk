@@ -27,8 +27,8 @@ buildscript {
             force 'org.bouncycastle:bcprov-jdk18on:1.84'
             force 'org.bouncycastle:bcpkix-jdk18on:1.84'
             force 'org.apache.commons:commons-lang3:3.20.0'
-            force 'com.fasterxml.jackson.core:jackson-databind:2.21.4'
-            force 'com.fasterxml.jackson.core:jackson-core:2.21.4'
+            force 'com.fasterxml.jackson.core:jackson-databind:2.21.5'
+            force 'com.fasterxml.jackson.core:jackson-core:2.21.5'
         }
     }
 }
@@ -51,8 +51,8 @@ subprojects {
             force 'org.bouncycastle:bcprov-jdk18on:1.84'
             force 'org.bouncycastle:bcpkix-jdk18on:1.84'
             force 'org.apache.commons:commons-lang3:3.20.0'
-            force 'com.fasterxml.jackson.core:jackson-databind:2.21.4'
-            force 'com.fasterxml.jackson.core:jackson-core:2.21.4'
+            force 'com.fasterxml.jackson.core:jackson-databind:2.21.5'
+            force 'com.fasterxml.jackson.core:jackson-core:2.21.5'
         }
     }
 }
