@@ -179,7 +179,7 @@ class DevCycleProvider(
                             // Cache hit: network error is non-fatal; always emit — continuation is already resolved.
                             _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
                                 eventDetails = OpenFeatureProviderEvents.EventDetails(
-                                    message = "Background refresh failed: ${t.message}",
+                                    message = "Background refresh failed: ${t.message ?: "Unknown error"}",
                                     errorCode = ErrorCode.GENERAL
                                 )
                             ))
@@ -342,4 +342,4 @@ class DevCycleProvider(
         }
     }
 
-} 
+}
