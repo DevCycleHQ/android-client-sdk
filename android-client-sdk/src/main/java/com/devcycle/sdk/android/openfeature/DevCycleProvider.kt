@@ -10,6 +10,7 @@ import com.devcycle.sdk.android.model.Variable
 import com.devcycle.sdk.android.util.DevCycleLogger
 import dev.openfeature.kotlin.sdk.*
 import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
+import dev.openfeature.kotlin.sdk.exceptions.ErrorCode
 import dev.openfeature.kotlin.sdk.exceptions.OpenFeatureError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -141,11 +142,14 @@ class DevCycleProvider(
                 // delivers a new config.
                 _devcycleClient!!.onConfigUpdated(object : DevCycleCallback<Map<String, BaseConfigVariable>> {
                     override fun onSuccess(result: Map<String, BaseConfigVariable>) {
-                        _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged)
+                        _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged())
                     }
                     override fun onError(t: Throwable) {
                         _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
-                            OpenFeatureError.GeneralError(t.message ?: "Config error")
+                            eventDetails = OpenFeatureProviderEvents.EventDetails(
+                                message = t.message ?: "Config error",
+                                errorCode = ErrorCode.GENERAL
+                            )
                         ))
                     }
                 })
@@ -160,7 +164,7 @@ class DevCycleProvider(
                             if (continuation.isActive) continuation.resume(Unit)
                         } else {
                             // Cache hit: continuation already resolved; surface network result as event.
-                            _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged)
+                            _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderConfigurationChanged())
                         }
                     }
                     override fun onError(t: Throwable) {
@@ -174,7 +178,10 @@ class DevCycleProvider(
                         } else {
                             // Cache hit: network error is non-fatal; always emit — continuation is already resolved.
                             _providerEvents.tryEmit(OpenFeatureProviderEvents.ProviderError(
-                                OpenFeatureError.GeneralError("Background refresh failed: ${t.message}")
+                                eventDetails = OpenFeatureProviderEvents.EventDetails(
+                                    message = "Background refresh failed: ${t.message ?: "Unknown error"}",
+                                    errorCode = ErrorCode.GENERAL
+                                )
                             ))
                         }
                     }
@@ -335,4 +342,4 @@ class DevCycleProvider(
         }
     }
 
-} 
+}
