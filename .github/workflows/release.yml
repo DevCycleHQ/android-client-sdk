@@ -41,7 +41,7 @@ jobs:
           token: ${{ secrets.AUTOMATION_USER_TOKEN }}
           fetch-depth: 0
 
-      - uses: DevCycleHQ/release-action/prepare-release@v2.3.0
+      - uses: DevCycleHQ/release-action/prepare-release@v2.4.0
         id: prepare-release
         with:
           github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
@@ -96,7 +96,7 @@ jobs:
         run: |
           ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
 
-      - uses: DevCycleHQ/release-action/create-release@v2.3.0
+      - uses: DevCycleHQ/release-action/create-release@v2.4.0
         id: create-release
         with:
           github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
