@@ -98,7 +98,7 @@ ext {
     jackson_version = "2.21.5"
     gson_mapper_version = "2.8.6"
     coroutines_version = '1.11.0'
-    kotlin_reflect_version = '2.4.20-Beta1'
+    kotlin_reflect_version = '2.1.20'
 
     junit_version = "5.13.3"
     mockito_core_version = '5.19.0'
@@ -107,7 +107,7 @@ ext {
     hamcrest_version = "3.0"
     okhttp_version = "4.12.0"
     okhttp_eventsource_version = "4.1.1"
-    kotlin_version = '2.4.20-Beta1'
+    kotlin_version = '2.1.20'
 
     android_core_version = "2.2.0"
     androidx_junit_version = "1.2.1"
