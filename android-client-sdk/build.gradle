@@ -101,7 +101,7 @@ ext {
     kotlin_reflect_version = '2.1.20'
 
     junit_version = "5.13.3"
-    mockito_core_version = '5.19.0'
+    mockito_core_version = '5.23.0'
     mockito_inline_version = '5.2.0'
     mockk_version = '1.14.6'
     hamcrest_version = "3.0"
