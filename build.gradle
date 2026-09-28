@@ -7,7 +7,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.2'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.20-Beta1'
         classpath "de.mannodermaus.gradle.plugins:android-junit5:1.11.2.0"
     }
     // Force patched versions of vulnerable transitive dependencies in the build classpath
@@ -24,8 +24,8 @@ buildscript {
             force 'com.google.protobuf:protobuf-java:3.25.5'
             force 'com.google.protobuf:protobuf-kotlin:3.25.5'
             force 'org.apache.commons:commons-compress:1.26.0'
-            force 'org.bouncycastle:bcprov-jdk18on:1.84'
-            force 'org.bouncycastle:bcpkix-jdk18on:1.84'
+            force 'org.bouncycastle:bcprov-jdk18on:1.85'
+            force 'org.bouncycastle:bcpkix-jdk18on:1.85'
             force 'org.apache.commons:commons-lang3:3.20.0'
             force 'com.fasterxml.jackson.core:jackson-databind:2.21.5'
             force 'com.fasterxml.jackson.core:jackson-core:2.21.5'
@@ -48,8 +48,8 @@ subprojects {
             force 'com.google.protobuf:protobuf-java:3.25.5'
             force 'com.google.protobuf:protobuf-kotlin:3.25.5'
             force 'org.apache.commons:commons-compress:1.26.0'
-            force 'org.bouncycastle:bcprov-jdk18on:1.84'
-            force 'org.bouncycastle:bcpkix-jdk18on:1.84'
+            force 'org.bouncycastle:bcprov-jdk18on:1.85'
+            force 'org.bouncycastle:bcpkix-jdk18on:1.85'
             force 'org.apache.commons:commons-lang3:3.20.0'
             force 'com.fasterxml.jackson.core:jackson-databind:2.21.5'
             force 'com.fasterxml.jackson.core:jackson-core:2.21.5'
