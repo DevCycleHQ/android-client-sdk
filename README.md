@@ -14,7 +14,7 @@ The SDK can be installed into your Android project by adding the following to _b
 
 <!-- x-release-please-start-version -->
 ```yaml
-implementation("com.devcycle:android-client-sdk:2.9.2")
+implementation("com.devcycle:android-client-sdk:2.9.3")
 ```
 <!-- x-release-please-end -->
 
