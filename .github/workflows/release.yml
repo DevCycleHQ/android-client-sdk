@@ -1,84 +1,44 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      prerelease:
-        description: "Prerelease"
-        required: true
-        type: boolean
-      draft:
-        description: "Draft"
-        required: true
-        type: boolean
-      version-increment-type:
-        description: "Which part of the version to increment:"
-        required: true
-        type: choice
-        options:
-          - major
-          - minor
-          - patch
-        default: "patch"
-      version-override:
-        description: "Override the computed version (e.g. 2.7.0). Use when auto-increment computes the wrong base."
-        required: false
-        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  release:
-    name: Version Bump and Release
+  release-please:
+    name: Release Please
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     outputs:
-      next-release-tag: ${{ steps.resolve-version.outputs.version }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
     steps:
-      # Check out the repo with credentials that can bypass branch protection, and fetch git history instead of just latest commit
+      # Uses GITHUB_TOKEN, so CI does not run on the release PR by itself.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+
+  publish:
+    name: Publish to Maven Central
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v7
         with:
-          token: ${{ secrets.AUTOMATION_USER_TOKEN }}
-          fetch-depth: 0
-
-      - uses: DevCycleHQ/release-action/prepare-release@a9e66801e2b8838e2548d8c24e1d76a109323238
-        id: prepare-release
-        with:
-          github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
-          prerelease: ${{ github.event.inputs.prerelease }}
-          draft: ${{ github.event.inputs.draft }}
-          version-increment-type: ${{ github.event.inputs.version-increment-type }}
-
-      - name: Resolve version
-        id: resolve-version
-        env:
-          VERSION_OVERRIDE: ${{ inputs.version-override }}
-          COMPUTED_VERSION: ${{ steps.prepare-release.outputs.next-release-tag }}
-        run: |
-          VERSION="${VERSION_OVERRIDE:-$COMPUTED_VERSION}"
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid version: $VERSION" >&2
-            exit 1
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Update Version in code
-        run: |
-          sed -i "s/^version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/version = \"${{steps.resolve-version.outputs.version}}\"/g" android-client-sdk/build.gradle
-          sed -i "s/^implementation(\"com.devcycle:android-client-sdk:[0-9]\+\.[0-9]\+\.[0-9]\+\")/implementation(\"com.devcycle:android-client-sdk:${{steps.resolve-version.outputs.version}}\")/g" README.md
-
-      - name: Commit version change
-        run: |
-          git config --global user.email "foundation-admin@devcycle.com"
-          git config --global user.name "DevCycle Automation"
-          git add ./android-client-sdk/build.gradle
-          git add ./README.md
-          git commit -m "Release ${{steps.resolve-version.outputs.version}}"
-
-      - name: Push version change
-        run: |
-          git push origin HEAD:${{ github.ref_name }}
-        if: inputs.draft != true
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Set up Java 18
         uses: actions/setup-java@v6
@@ -96,27 +56,11 @@ jobs:
         run: |
           ./gradlew publishAllPublicationsToMavenCentral --no-configuration-cache
 
-      - uses: DevCycleHQ/release-action/create-release@a9e66801e2b8838e2548d8c24e1d76a109323238
-        id: create-release
-        with:
-          github-token: ${{ secrets.AUTOMATION_USER_TOKEN }}
-          tag: ${{ steps.resolve-version.outputs.version }}
-          target: ${{ github.ref_name }}
-          prerelease: ${{ github.event.inputs.prerelease }}
-          draft: ${{ github.event.inputs.draft }}
-          changelog: ${{ steps.prepare-release.outputs.changelog }}
-
-      - name: Display link to release
-        run: |
-          echo "::notice title=Release ID::${{ steps.create-release.outputs.release-id }}"
-          echo "::notice title=Release URL::${{ steps.create-release.outputs.release-url }}"
-
   update-flutter-sdk:
     uses: DevCycleHQ/flutter-client-sdk/.github/workflows/update-android-sdk-version.yaml@main
-    needs: release
-    if: inputs.draft != 'true'
+    needs: [release-please, publish]
     with:
-      target-version: ${{ needs.release.outputs.next-release-tag }}
+      target-version: ${{ needs.release-please.outputs.version }}
     secrets: inherit
     permissions:
       contents: write
